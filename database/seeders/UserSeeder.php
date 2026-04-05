@@ -17,7 +17,7 @@ class UserSeeder extends Seeder
         $manajerRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'manajer']);
 
         $adminUser = \App\Models\User::firstOrCreate(
-            ['email' => 'adminSipokat@gmail.com'],
+            ['email' => 'adminsipokat@gmail.com'],
             [
                 'name' => 'Super Admin',
                 'password' => 'password',
@@ -27,7 +27,7 @@ class UserSeeder extends Seeder
         $adminUser->assignRole($adminRole);
 
         $staffUser = \App\Models\User::firstOrCreate(
-            ['email' => 'staffSipokat@gmail.com'],
+            ['email' => 'staffsipokat@gmail.com'],
             [
                 'name' => 'Staff',
                 'password' => 'password',
@@ -37,7 +37,7 @@ class UserSeeder extends Seeder
         $staffUser->assignRole($staffRole);
 
         $manajerUser = \App\Models\User::firstOrCreate(
-            ['email' => 'manajerSipokat@gmail.com'],
+            ['email' => 'manajersipokat@gmail.com'],
             [
                 'name' => 'Manajer',
                 'password' => 'password',
