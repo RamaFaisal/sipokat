@@ -16,6 +16,7 @@ class UnitForm
                     ->required(),
                 TextInput::make('alias')
                     ->label('Alias Satuan')
+                    ->maxLength(3)
                     ->required(),
             ]);
     }

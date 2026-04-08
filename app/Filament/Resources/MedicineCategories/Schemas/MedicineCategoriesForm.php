@@ -18,7 +18,7 @@ class MedicineCategoriesForm
                     ->maxLength(255),
                 RichEditor::make('description')
                     ->label('Deskripsi')
-                    ->required()
+                    ->maxLength(255)
                     ->columnSpanFull(),
             ]);
     }

@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\Suppliers\Tables;
 
+use App\Models\Supplier;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -18,24 +21,48 @@ class SuppliersTable
                     ->label('Nama Supplier')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('code')
+                    ->label('Kode Supplier')
+                    ->searchable(),
+                TextColumn::make('pic')
+                    ->label('PIC')
+                    ->searchable(),
                 TextColumn::make('address')
                     ->label('Alamat')
                     ->searchable()
-                    ->sortable(),
-                TextColumn::make('phone')
-                    ->label('Nomor Telepon')
+                    ->sortable()
+                    ->limit(20),
+                TextColumn::make('status')
+                    ->label('Status')
                     ->searchable()
-                    ->sortable(),
-                TextColumn::make('email')
-                    ->label('Email')
-                    ->searchable()
-                    ->sortable(),
+                    ->badge()
+                    ->formatStateUsing(fn(string $state): string => $state == 'active' ? 'Aktif' : 'Nonaktif')
+                    ->color(fn(string $state): string => match ($state) {
+                        'active' => 'success',
+                        'inactive' => 'danger',
+                    }),
             ])
             ->filters([
                 //
             ])
             ->recordActions([
                 EditAction::make(),
+                ActionGroup::make([
+                    Action::make('Activate')
+                        ->label('Aktifkan')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->action(function (Supplier $record) {
+                            $record->update(['status' => 'active']);
+                        }),
+                    Action::make('Deactivate')
+                        ->label('Nonaktifkan')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->action(function (Supplier $record) {
+                            $record->update(['status' => 'inactive']);
+                        }),
+                ])
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

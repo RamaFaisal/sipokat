@@ -20,4 +20,10 @@ class CreateUnit extends CreateRecord
     {
         return false;
     }
+    
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['alias'] = strtoupper($data['alias']);
+        return $data;
+    }
 }

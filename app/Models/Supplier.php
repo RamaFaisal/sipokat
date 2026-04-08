@@ -14,5 +14,7 @@ class Supplier extends Model
         "address",
         "phone",
         "email",
+        "pic",
+        "status",
     ];
 }

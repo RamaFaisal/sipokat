@@ -13,12 +13,17 @@ class MedicineForm
     {
         return $schema
             ->components([
-                TextInput::make('code')
-                    ->label('Kode Obat')
-                    ->required(),
                 TextInput::make('name')
                     ->label('Nama Obat')
-                    ->required(),
+                    ->required()
+                    ->afterStateUpdated(function (TextInput $component, ?string $state, callable $set) {
+                        $set('code', strtoupper(substr($state, 0, 3)));
+                    })
+                    ->live(debounce: 1000),
+                TextInput::make('code')
+                    ->label('Kode Obat')
+                    ->required()
+                    ->readOnly(),
                 TextInput::make('category_id')
                     ->label('Kategori Obat')
                     ->required()

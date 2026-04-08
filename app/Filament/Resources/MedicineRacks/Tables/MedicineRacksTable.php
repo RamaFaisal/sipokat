@@ -7,6 +7,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class MedicineRacksTable
 {
@@ -20,6 +21,14 @@ class MedicineRacksTable
                     ->sortable(),
                 TextColumn::make('description')
                     ->label('Deskripsi')
+                    ->formatStateUsing(function ($state) {
+                        $clean = trim(strip_tags(html_entity_decode($state)));
+                        if ($clean === '') {
+                            return '-';
+                        }
+                        return Str::limit($state, 75);
+                    })
+                    ->html()
                     ->searchable()
                     ->sortable(),
             ])
