@@ -11,6 +11,7 @@ class Medicine extends Model
     protected $fillable = [
         "code",
         "name",
+        "dosage",
         "category_id",
         "unit_id",
         "rack_id",
