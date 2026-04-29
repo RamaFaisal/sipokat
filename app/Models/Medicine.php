@@ -15,11 +15,25 @@ class Medicine extends Model
         "category_id",
         "unit_id",
         "rack_id",
-        "supplier_id",
         "photo",
         "purchase_price",
         "sale_price",
         "min_stock",
         "description",
     ];
+
+    public function category()
+    {
+        return $this->belongsTo(MedicineCategories::class);
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
+    public function rack()
+    {
+        return $this->belongsTo(MedicineRack::class);
+    }
 }

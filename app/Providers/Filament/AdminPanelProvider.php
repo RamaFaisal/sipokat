@@ -61,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
                     ->navigationGroup('Manajemen Pengguna'),
             ])
             ->spa()
+            ->globalSearch(false)
             ->databaseNotifications()
             ->authMiddleware([
                 Authenticate::class,

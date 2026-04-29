@@ -15,35 +15,36 @@ class MedicinesTable
         return $table
             ->columns([
                 TextColumn::make('code')
-                    ->label('Kode Obat')
+                    ->label('Kode')
                     ->searchable(),
                 TextColumn::make('name')
-                    ->label('Nama Obat')
+                    ->label('Nama')
                     ->searchable(),
-                TextColumn::make('category_id')
-                    ->label('Kategori Obat')
-                    ->numeric()
+                TextColumn::make('category.name')
+                    ->label('Kategori')
                     ->sortable(),
-                TextColumn::make('unit_id')
-                    ->label('Satuan Obat')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('rack_id')
-                    ->label('Rak Obat')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('purchase_price')
-                    ->label('Harga Beli Obat')
-                    ->numeric()
+                TextColumn::make('rack.name')
+                    ->label('Rak')
                     ->sortable(),
                 TextColumn::make('sale_price')
-                    ->label('Harga Jual Obat')
-                    ->numeric()
+                    ->label('Harga Jual')
+                    ->money('IDR')
                     ->sortable(),
-                TextColumn::make('min_stock')
-                    ->label('Stok Minimal Obat')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('stock_status')
+                    ->label('Status Stok')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'available' => 'success',
+                        'almost_empty' => 'warning',
+                        'empty' => 'danger',
+                    }),
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'active' => 'success',
+                        'inactive' => 'danger',
+                    }),
             ])
             ->filters([
                 //
