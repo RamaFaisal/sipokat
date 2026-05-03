@@ -17,4 +17,9 @@ class Supplier extends Model
         "pic",
         "status",
     ];
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
 }
