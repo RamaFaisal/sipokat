@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\Unit;
 use App\Settings\GeneralSettings;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -116,6 +117,9 @@ class MedicineForm
                             ->rows(2),
                     ])
                     ->columnSpanFull(),
+                
+                Hidden::make('status_stock')
+                    ->default('empty')
             ]);
     }
 

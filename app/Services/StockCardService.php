@@ -275,29 +275,24 @@ class StockCardService
 
     public function getAvailableStock(int $medicineId)
     {
-        $query = MedicineStock::where('medicine_id', $medicineId)
+        $baseQuery = MedicineStock::where('medicine_id', $medicineId)
             ->where(function ($q) {
-                $q->whereHas('receiveOrder', fn($r) => $r->whereNull('deleted_at'))
+                $q->whereHas('receiveOrder')
                     ->orWhereNull('receive_order_id');
             })
             ->where(function ($q) {
-                $q->whereHas('medicineStockOpname', fn($r) => $r->whereNull('deleted_at'))
+                $q->whereHas('medicineStockOpname')
                     ->orWhereNull('medicine_stock_opname_id');
             })
             ->where(function ($q) {
-                $q->whereHas('order', fn($r) => $r->whereNull('deleted_at'))
+                $q->whereHas('order')
                     ->orWhereNull('order_id');
             });
 
-        $totalIn = $query->clone()
-            ->where('type_account', 'D')
-            ->sum('qty') ?? 0;
+        $totalIn = (clone $baseQuery)->where('type_account', 'D')->sum('qty') ?? 0;
+        $totalOut = (clone $baseQuery)->where('type_account', 'C')->sum('qty') ?? 0;
 
-        $totalOut = $query->clone()
-            ->where('type_account', 'C')
-            ->sum('qty') ?? 0;
-
-        return $totalIn - $totalOut;
+        return (float) ($totalIn - $totalOut);
     }
 
     public function getAvailableStockLabel(int $medicineId): string
@@ -307,7 +302,7 @@ class StockCardService
         $currentStock = $this->getAvailableStock($medicineId);
         $minimumStock = $medicine->min_stock;
 
-        if ($currentStock < $minimumStock && $currentStock == 0) {
+        if ($currentStock <= 0) {
             return 'empty';
         }
 
@@ -323,6 +318,6 @@ class StockCardService
         $label = $this->getAvailableStockLabel($medicineId);
 
         Medicine::where('id', $medicineId)
-            ->update(['status' => $label]);
+            ->update(['stock_status' => $label]);
     }
 }

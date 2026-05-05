@@ -19,6 +19,8 @@ class Medicine extends Model
         "purchase_price",
         "sale_price",
         "min_stock",
+        "stock_status",
+        "status",
         "description",
     ];
 

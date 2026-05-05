@@ -28,7 +28,12 @@ class MedicineStockOpnameForm
                             ->required()
                             ->readOnly()
                             ->dehydrated()
-                            ->default(self::generateOpnameNumber()),
+                            ->default(function ($record){
+                                if($record){
+                                    return $record->opname_number;
+                                }
+                                return 'OPM' . str_pad(MedicineStockOpname::withTrashed()->count() + 1, 4, '0', STR_PAD_LEFT);
+                            }),
                         DatePicker::make('opname_date')
                             ->label('Tanggal Opname')
                             ->required()
@@ -114,16 +119,6 @@ class MedicineStockOpnameForm
                     ])
                     ->columnSpanFull()
             ]);
-    }
-
-    protected static function generateOpnameNumber(): string
-    {
-        $latest = MedicineStockOpname::latest()->first();
-        if (!$latest) {
-            return 'OPM0001';
-        }
-        $number = (int) substr($latest->opname_number, 3);
-        return 'OPM' . str_pad($number + 1, 4, '0', STR_PAD_LEFT);
     }
 
     public static function amountHpp($medicine_id, $qty): float

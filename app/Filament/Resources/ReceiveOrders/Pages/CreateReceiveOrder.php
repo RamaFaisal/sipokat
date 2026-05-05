@@ -99,6 +99,7 @@ class CreateReceiveOrder extends CreateRecord
                 $receiveOrder->id
             );
 
+            $stockService = app(\App\Services\StockCardService::class);
             foreach ($receiveOrder->items as $item) {
                 MedicineStock::create([
                     'medicine_id' => $item->medicine_id,
@@ -110,6 +111,8 @@ class CreateReceiveOrder extends CreateRecord
                     'description' => 'Penerimaan dari ' . $receiveOrder->purchaseOrder->po_number,
                     'created_by' => auth()->id(),
                 ]);
+
+                $stockService->updateMedicineStockStatus($item->medicine_id);
             }
 
         } catch (\Throwable $e) {
