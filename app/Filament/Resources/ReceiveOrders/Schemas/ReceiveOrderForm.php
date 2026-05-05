@@ -72,7 +72,7 @@ class ReceiveOrderForm
                                 Hidden::make('medicine_id')
                                     ->afterStateHydrated(function (Get $get, Set $set, $state) {
                                         $set('medicine_id', $get('medicine_id'));
-                                    })  
+                                    })
                                     ->required(),
                                 TextInput::make('medicine_name')
                                     ->label('Nama Obat')
@@ -116,7 +116,7 @@ class ReceiveOrderForm
             $receiveOrderQty = ReceiveOrderItem::query()
                 ->whereHas('receiveOrder', function ($query) use ($purchaseOrderId) {
                     $query->where('purchase_order_id', $purchaseOrderId)
-                          ->whereIn('status', ['pending', 'partial']);
+                        ->whereIn('status', ['pending', 'completed']);
                 })
                 ->where('medicine_id', $poItem->medicine_id)
                 ->sum('qty');

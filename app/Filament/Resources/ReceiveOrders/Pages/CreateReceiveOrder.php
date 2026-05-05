@@ -36,7 +36,7 @@ class CreateReceiveOrder extends CreateRecord
 
                     $receivedQty = ReceiveOrderItem::whereHas('receiveOrder', function ($q) use ($data) {
                         $q->where('purchase_order_id', $data['purchase_order_id'])
-                            ->whereIn('status', ['pending', 'partial']);
+                            ->whereIn('status', ['pending', 'completed']);
                     })
                         ->where('medicine_id', $item['medicine_id'])
                         ->sum('qty');
@@ -67,7 +67,8 @@ class CreateReceiveOrder extends CreateRecord
 
         foreach ($poItems as $poItem) {
             $receivedQty = ReceiveOrderItem::whereHas('receiveOrder', function ($q) use ($poId) {
-                $q->where('purchase_order_id', $poId);
+                $q->where('purchase_order_id', $poId)
+                    ->where('status', '!=', 'cancelled');
             })
                 ->where('medicine_id', $poItem->medicine_id)
                 ->sum('qty');

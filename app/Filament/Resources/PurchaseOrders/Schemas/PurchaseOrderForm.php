@@ -32,7 +32,7 @@ class PurchaseOrderForm
                             ->label('Nomor Purchase Order')
                             ->required()
                             ->readOnly()
-                            ->disabled()
+                            ->dehydrated()
                             ->default(self::generatePONumber())
                             ->unique(ignoreRecord: true),
                         Select::make('supplier_id')
