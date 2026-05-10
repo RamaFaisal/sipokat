@@ -25,7 +25,7 @@ class MedicineStockOpnamesTable
                     ->sortable(),
                 TextColumn::make('updated_at')
                     ->label('Di Update')
-                    ->dateTime('d-M-Y H:i')
+                    ->dateTime('d-m-Y H:i')
                     ->sortable()
             ])
             ->filters([
