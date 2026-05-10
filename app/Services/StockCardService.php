@@ -156,7 +156,7 @@ class StockCardService
         }
 
         if ($record->order_id) {
-            return str_pad($record->order->order_number, 6, '0', STR_PAD_LEFT);
+            return str_pad($record->order->order_code, 6, '0', STR_PAD_LEFT);
         }
 
         return '-';

@@ -10,15 +10,14 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'medicine_id',
+        'medicine_name',
         'qty',
         'price',
-        'discount',
         'total',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
-        'discount' => 'decimal:2',
         'total' => 'decimal:2',
     ];
 

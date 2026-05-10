@@ -12,22 +12,17 @@ class Order extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'order_number',
-        'date',
-        'customer_name',
-        'sub_total',
-        'discount',
-        'tax',
+        'order_code',
+        'no_payment',
+        'order_date',
         'grand_total',
         'status',
+        'note',
         'created_by',
     ];
 
     protected $casts = [
-        'date' => 'date',
-        'sub_total' => 'decimal:2',
-        'discount' => 'decimal:2',
-        'tax' => 'decimal:2',
+        'order_date' => 'date',
         'grand_total' => 'decimal:2',
     ];
 

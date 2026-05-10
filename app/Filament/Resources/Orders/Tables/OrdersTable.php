@@ -14,15 +14,15 @@ class OrdersTable
     {
         return $table
             ->columns([
-                TextColumn::make('order_number')
+                TextColumn::make('order_code')
                     ->label('Nomor Order')
                     ->searchable(),
-                TextColumn::make('date')
+                TextColumn::make('order_date')
                     ->label('Tanggal')
                     ->date('d-m-Y')
                     ->sortable(),
-                TextColumn::make('customer_name')
-                    ->label('Pelanggan')
+                TextColumn::make('no_payment')
+                    ->label('Nomor Pembayaran')
                     ->searchable(),
                 TextColumn::make('grand_total')
                     ->label('Total')
