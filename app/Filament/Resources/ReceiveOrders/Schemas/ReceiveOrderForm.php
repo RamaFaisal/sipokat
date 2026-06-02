@@ -77,12 +77,14 @@ class ReceiveOrderForm
                                 TextInput::make('medicine_name')
                                     ->label('Nama Obat')
                                     ->readOnly()
-                                    ->required(),
+                                    ->required()
+                                    ->columnSpan(3),
                                 TextInput::make('medicine_dosage')
                                     ->label('Dosis')
                                     ->readOnly()
                                     ->required()
-                                    ->dehydrated(false),
+                                    ->dehydrated(false)
+                                    ->columnSpan(3),
                                 TextInput::make('qty')
                                     ->label('Jumlah')
                                     ->numeric()
@@ -91,14 +93,31 @@ class ReceiveOrderForm
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function (Get $get, Set $set) {
                                         self::getValidateStock($get, $set);
-                                    }),
+                                    })
+                                    ->columnSpan(3),
                                 TextInput::make('price')
                                     ->label('Harga')
                                     ->readOnly()
                                     ->prefix('Rp')
-                                    ->required(),
+                                    ->required()
+                                    ->columnSpan(3),
+                                TextInput::make('batch_number')
+                                    ->label('No. Batch')
+                                    ->maxLength(100)
+                                    ->columnSpan(4),
+                                DatePicker::make('manufacture_date')
+                                    ->label('Tgl Produksi')
+                                    ->native(false)
+                                    ->columnSpan(4),
+                                DatePicker::make('expired_date')
+                                    ->label('Tgl Kedaluwarsa')
+                                    ->native(false)
+                                    ->required()
+                                    ->after('manufacture_date')
+                                    ->helperText('Wajib diisi untuk perhitungan SPK (kriteria kedaluwarsa)')
+                                    ->columnSpan(4),
                             ])
-                            ->columns(4)
+                            ->columns(12)
                             ->addable(false)
                             ->deletable(false)
                             ->live(onBlur: true),

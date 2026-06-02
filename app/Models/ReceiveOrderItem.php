@@ -13,10 +13,15 @@ class ReceiveOrderItem extends Model
         'medicine_name',
         'qty',
         'price',
+        'batch_number',
+        'manufacture_date',
+        'expired_date',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'manufacture_date' => 'date',
+        'expired_date' => 'date',
     ];
 
     public function receiveOrder(): BelongsTo

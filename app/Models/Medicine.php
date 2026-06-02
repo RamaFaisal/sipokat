@@ -50,14 +50,26 @@ class Medicine extends Model
     }
 
     /**
-     * Hitung stok saat ini (masuk - keluar)
+     * Hitung stok saat ini (masuk - keluar), exclude entry dengan parent (RO/Opname/Order)
+     * yang sudah soft-deleted. Konsisten dengan StockCardService::getAvailableStock().
      */
     public function currentStock(): int
     {
-        $in = $this->stockEntries()->where('type_account', 'D')->sum('qty');
-        $out = $this->stockEntries()->where('type_account', 'C')->sum('qty');
+        $base = $this->stockEntries()
+            ->where(function ($q) {
+                $q->whereHas('receiveOrder')->orWhereNull('receive_order_id');
+            })
+            ->where(function ($q) {
+                $q->whereHas('medicineStockOpname')->orWhereNull('medicine_stock_opname_id');
+            })
+            ->where(function ($q) {
+                $q->whereHas('order')->orWhereNull('order_id');
+            });
 
-        return $in - $out;
+        $in = (clone $base)->where('type_account', 'D')->sum('qty');
+        $out = (clone $base)->where('type_account', 'C')->sum('qty');
+
+        return (int) ($in - $out);
     }
 
     /**
@@ -66,5 +78,30 @@ class Medicine extends Model
     public function isLowStock(): bool
     {
         return $this->currentStock() <= ($this->min_stock ?? 0);
+    }
+
+    public function receiveOrderItems()
+    {
+        return $this->hasMany(ReceiveOrderItem::class);
+    }
+
+    public function nearestExpiryDate(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->currentStock() <= 0) {
+            return null;
+        }
+
+        return $this->receiveOrderItems()
+            ->whereNotNull('expired_date')
+            ->whereDate('expired_date', '>=', now()->toDateString())
+            ->orderBy('expired_date', 'asc')
+            ->value('expired_date');
+    }
+
+    public function nearestExpiryDays(): ?int
+    {
+        $ed = $this->nearestExpiryDate();
+
+        return $ed ? (int) now()->startOfDay()->diffInDays($ed->startOfDay(), false) : null;
     }
 }

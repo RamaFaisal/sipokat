@@ -11,8 +11,12 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use App\Filament\Widgets\ExpiringMedicinesWidget;
+use App\Filament\Widgets\LowStockMedicinesWidget;
+use App\Filament\Widgets\PendingPurchaseOrdersWidget;
+use App\Filament\Widgets\SalesSummaryWidget;
+use App\Filament\Widgets\SawTop10RestockWidget;
 use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -20,6 +24,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Resma\FilamentAwinTheme\FilamentAwinTheme;
+use App\Settings\GeneralSettings;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -42,7 +47,11 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
                 AccountWidget::class,
-                FilamentInfoWidget::class,
+                SawTop10RestockWidget::class,
+                LowStockMedicinesWidget::class,
+                PendingPurchaseOrdersWidget::class,
+                ExpiringMedicinesWidget::class,
+                SalesSummaryWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -67,6 +76,9 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            ->brandName(fn (GeneralSettings $settings) => $settings->app_name ?? 'SIPOKAT')
+            ->brandLogo(asset('assets/medicineLogo(1).png'))
+            ->brandLogoHeight('3rem')
             ->viteTheme('resources/css/filament/admin/theme.css');
     }
 }
