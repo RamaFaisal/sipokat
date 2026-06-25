@@ -7,6 +7,7 @@ use App\Models\SawCalculationResult;
 use App\Models\SawCriteria;
 use App\Services\SawCalculationService;
 use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -125,6 +126,20 @@ class SawCalculation extends Page implements HasTable, HasSchemas
                     ->numeric(decimalPlaces: 4)
                     ->alignEnd()
                     ->weight('bold'),
+            ])
+            ->recordActions([
+                ViewAction::make()
+                    ->label('Detail Hitungan')
+                    ->icon(Heroicon::OutlinedCalculator)
+                    ->modalHeading(fn (SawCalculationResult $record) => 'Detail SAW: ' . ($record->medicine->name ?? '-'))
+                    ->modalDescription('Breakdown perhitungan V_i step-by-step sesuai Bab 3.4.4 proposal.')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalWidth('5xl')
+                    ->modalContent(fn (SawCalculationResult $record) => view(
+                        'filament.pages.partials.saw-result-detail',
+                        ['result' => $record->load('medicine', 'calculation')]
+                    )),
             ])
             ->paginated([10, 25, 50, 100])
             ->defaultPaginationPageOption(25);
