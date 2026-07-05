@@ -6,3 +6,170 @@
 /* @tailwind base;
 @tailwind components;
 @tailwind utilities; */
+
+/* --- Custom Premium SaaS overrides to make Filament look unique --- */
+
+/* 1. Global & Page Background */
+body {
+    background-color: #f6f8fa !important;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11" !important;
+}
+
+/* 2. Floating Glassmorphic Topbar */
+.fi-topbar {
+    background-color: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+/* 3. Sleek Sidebar Customization */
+.fi-sidebar {
+    background-color: #ffffff !important;
+    border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+.fi-sidebar-header {
+    border-bottom: 1px solid rgba(241, 245, 249, 0.8) !important;
+    padding-bottom: 1rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Sidebar navigation groups header */
+.fi-sidebar-group-label {
+    text-transform: uppercase !important;
+    letter-spacing: 0.07em !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    color: #94a3b8 !important;
+    padding-top: 0.75rem !important;
+}
+
+/* Active navigation item with gradient & soft shadow */
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.22) !important;
+    color: #ffffff !important;
+    border-radius: 12px !important;
+}
+
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn .fi-sidebar-item-icon {
+    color: #ffffff !important;
+}
+
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn .fi-sidebar-item-label {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* Non-active navigation items */
+.fi-sidebar-item .fi-sidebar-item-btn {
+    border-radius: 12px !important;
+    transition: all 0.2s ease-in-out !important;
+    margin: 2px 0 !important;
+}
+
+.fi-sidebar-item:not(.fi-active) .fi-sidebar-item-btn:hover {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+
+.fi-sidebar-item .fi-sidebar-item-btn .fi-sidebar-item-icon {
+    transition: transform 0.2s ease !important;
+}
+
+.fi-sidebar-item .fi-sidebar-item-btn:hover .fi-sidebar-item-icon {
+    transform: scale(1.1) !important;
+}
+
+/* 4. Sleek Card & Table Container Styling */
+.fi-card, .fi-ta-ctn, .fi-section, .fi-fo-layout {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.08), 0 2px 8px -1px rgba(148, 163, 184, 0.04) !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    background-color: #ffffff !important;
+    overflow: hidden !important;
+}
+
+/* 5. Modern Table Rows and Headers */
+.fi-ta-header {
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.fi-ta-header-cell {
+    background-color: #f8fafc !important;
+    text-transform: uppercase !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.05em !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.fi-ta-row {
+    transition: background-color 0.2s ease-in-out !important;
+}
+
+.fi-ta-row:hover {
+    background-color: #f8fafc !important;
+}
+
+/* 6. Form Controls & Inputs */
+.fi-fo-text-input input, 
+.fi-fo-select select, 
+.fi-fo-textarea textarea {
+    border-radius: 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #fcfdfe !important;
+    transition: all 0.2s ease-in-out !important;
+    font-size: 0.875rem !important;
+}
+
+.fi-fo-text-input input:focus, 
+.fi-fo-select select:focus, 
+.fi-fo-textarea textarea:focus {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12) !important;
+    background-color: #ffffff !important;
+    outline: none !important;
+}
+
+/* 7. Widgets styling (Dashboard) */
+.fi-wi-stats-overview-stat {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(148, 163, 184, 0.05) !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    background-color: #ffffff !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.fi-wi-stats-overview-stat:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 24px rgba(148, 163, 184, 0.1) !important;
+}
+
+.fi-wi-stats-overview-stat-value {
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    color: #0f172a !important;
+}
+
+/* 8. Buttons Styling */
+.fi-btn {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.015em !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.fi-btn-color-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15) !important;
+    border: none !important;
+}
+
+.fi-btn-color-primary:hover {
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+    transform: translateY(-1px) !important;
+}

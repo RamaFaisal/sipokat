@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\SawCalculation;
 use App\Models\SawCalculationResult;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class SawTop10RestockWidget extends BaseWidget
 {
+    use HasWidgetShield;
+
     protected static ?int $sort = 0;
 
     protected int|string|array $columnSpan = 'full';
@@ -20,7 +23,7 @@ class SawTop10RestockWidget extends BaseWidget
         $latest = SawCalculation::orderByDesc('calculated_at')->first();
 
         $description = $latest
-            ? 'Snapshot SAW terakhir: ' . $latest->calculated_at->format('d M Y H:i')
+            ? 'Hasil SAW terakhir: ' . $latest->calculated_at->format('d M Y H:i')
                 . ' (periode ' . $latest->period_start->format('d M Y')
                 . ' - ' . $latest->period_end->format('d M Y') . ')'
             : 'Belum ada perhitungan SAW. Jalankan via menu SPK Restock → Hitung Prioritas Restock.';
@@ -33,9 +36,8 @@ class SawTop10RestockWidget extends BaseWidget
             ->query(fn (): Builder => SawCalculationResult::query()
                 ->where('saw_calculation_id', $calculationId)
                 ->with('medicine:id,code,name,dosage')
-                ->orderBy('rank')
-                ->limit(10))
-            ->paginated(false)
+                ->orderBy('rank'))
+            ->paginated([5, 10])
             ->columns([
                 TextColumn::make('rank')
                     ->label('#')

@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\ReceiveOrderItem;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ExpiringMedicinesWidget extends BaseWidget
 {
+    use HasWidgetShield;
+
     protected static ?int $sort = 3;
 
     protected int|string|array $columnSpan = 'full';

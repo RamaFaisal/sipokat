@@ -23,12 +23,14 @@ use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class LaporanRekap extends Page implements HasSchemas
 {
     use InteractsWithSchemas;
+    use HasPageShield;
 
     protected string $view = 'filament.pages.laporan-rekap';
 

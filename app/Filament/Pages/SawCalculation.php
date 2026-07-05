@@ -21,12 +21,14 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Illuminate\Support\Carbon;
 
 class SawCalculation extends Page implements HasTable, HasSchemas
 {
     use InteractsWithSchemas;
     use InteractsWithTable;
+    use HasPageShield;
 
     protected string $view = 'filament.pages.saw-calculation';
 

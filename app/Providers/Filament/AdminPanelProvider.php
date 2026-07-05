@@ -25,6 +25,8 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Resma\FilamentAwinTheme\FilamentAwinTheme;
 use App\Settings\GeneralSettings;
+use Filament\Navigation\NavigationGroup;
+use Filament\Support\Icons\Heroicon;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -35,9 +37,11 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->profile(false)
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->darkMode(false)
             ->font('Poppins')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -46,10 +50,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
                 SawTop10RestockWidget::class,
                 LowStockMedicinesWidget::class,
-                PendingPurchaseOrdersWidget::class,
                 ExpiringMedicinesWidget::class,
                 SalesSummaryWidget::class,
             ])
@@ -68,7 +70,33 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make()
                     ->navigationLabel('Role')
                     ->navigationSort(100)
-                    ->navigationGroup('Manajemen Pengguna'),
+                    ->navigationGroup('Manajemen Pengguna')
+                    ->gridColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                        'lg' => 3
+                    ])
+                    ->sectionColumnSpan(1)
+                    ->checkboxListColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                        'lg' => 4,
+                    ])
+                    ->resourceCheckboxListColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                    ]),
+                FilamentAwinTheme::make()
+                    ->primaryColor(Color::Emerald),
+            ])
+            ->navigationGroups([
+                'Inventory',
+                'Penjualan',
+                'Pembelian',
+                'Master Data',
+                'SPK Restock',
+                'Laporan',
+                'Manajemen Pengguna'
             ])
             ->spa()
             ->globalSearch(false)
@@ -76,9 +104,10 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->brandName(fn (GeneralSettings $settings) => $settings->app_name ?? 'SIPOKAT')
-            ->brandLogo(asset('assets/medicineLogo(1).png'))
+            ->brandName(fn(GeneralSettings $settings) => $settings->app_name ?? 'SIPOKAT')
+            ->brandLogo(asset('assets/logo-sipokat.png'))
             ->brandLogoHeight('3rem')
+            ->favicon(asset('assets/favicon-sipokat.png'))
             ->viteTheme('resources/css/filament/admin/theme.css');
     }
 }

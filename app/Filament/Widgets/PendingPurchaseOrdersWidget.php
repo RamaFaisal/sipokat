@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\PurchaseOrder;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class PendingPurchaseOrdersWidget extends BaseWidget
 {
+    use HasWidgetShield;
     protected static ?int $sort = 2;
 
     protected int|string|array $columnSpan = 'full';

@@ -16,11 +16,13 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class MedicineStockDetail extends Page implements HasTable
 {
     use InteractsWithTable;
+    use HasPageShield;
 
     protected string $view = 'filament.pages.medicine-stock-detail';
     protected static bool $shouldRegisterNavigation = false;

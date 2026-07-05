@@ -12,6 +12,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -25,6 +26,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 class LaporanMoving extends Page implements HasSchemas
 {
     use InteractsWithSchemas;
+    use HasPageShield;
 
     protected string $view = 'filament.pages.laporan-moving';
 

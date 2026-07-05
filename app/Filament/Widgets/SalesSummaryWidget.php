@@ -3,12 +3,15 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Order;
+use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SalesSummaryWidget extends ChartWidget
 {
+    use HasWidgetShield;
+
     protected ?string $heading = 'Penjualan 30 Hari Terakhir';
 
     protected ?string $description = 'Total grand_total harian dari Orders (status != cancelled).';
@@ -16,6 +19,8 @@ class SalesSummaryWidget extends ChartWidget
     protected static ?int $sort = 4;
 
     protected int|string|array $columnSpan = 'full';
+
+    protected ?string $maxHeight = '400px';
 
     protected function getData(): array
     {
@@ -25,10 +30,7 @@ class SalesSummaryWidget extends ChartWidget
         $totals = Order::query()
             ->where('status', '!=', 'cancelled')
             ->whereBetween('order_date', [$start->toDateString(), $end->toDateString()])
-            ->select(
-                DB::raw('DATE(order_date) as day'),
-                DB::raw('SUM(grand_total) as total'),
-            )
+            ->select(DB::raw('DATE(order_date) as day'), DB::raw('SUM(grand_total) as total'),)
             ->groupBy('day')
             ->pluck('total', 'day');
 
@@ -47,10 +49,10 @@ class SalesSummaryWidget extends ChartWidget
                 [
                     'label' => 'Total Penjualan (Rp)',
                     'data' => $data,
-                    'borderColor' => '#f59e0b',
-                    'backgroundColor' => 'rgba(245, 158, 11, 0.15)',
+                    'borderColor' => '#0bf52e',
+                    'backgroundColor' => 'rgba(27, 177, 16, 0.15)',
                     'fill' => true,
-                    'tension' => 0.3,
+                    'tension' => 0.5,
                 ],
             ],
             'labels' => $labels,
