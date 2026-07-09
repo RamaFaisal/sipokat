@@ -21,18 +21,17 @@ class MedicineStockOpnamesTable
                     ->searchable(),
                 TextColumn::make('opname_date')
                     ->label('Tanggal Opname')
-                    ->dateTime('d-m-Y')
+                    ->dateTime('d F Y')
                     ->sortable(),
-                TextColumn::make('updated_at')
-                    ->label('Di Update')
-                    ->dateTime('d-m-Y H:i')
-                    ->sortable()
+                TextColumn::make('creator.name')
+                    ->label('Dibuat Oleh')
+                    ->searchable(),
             ])
             ->filters([
                 //
             ])
             ->recordActions([
-                EditAction::make(),
+                //
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

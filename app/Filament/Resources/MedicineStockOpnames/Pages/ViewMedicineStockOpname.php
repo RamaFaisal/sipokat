@@ -47,21 +47,11 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
 
                         TextEntry::make('opname_date')
                             ->label('Tanggal Opname')
-                            ->dateTime('d M Y H:i'),
-
-                        TextEntry::make('status')
-                            ->label('Status')
-                            ->badge()
-                            ->color(fn(string $state): string => match ($state) {
-                                'draft' => 'gray',
-                                'approved' => 'success',
-                                'rejected' => 'danger',
-                                default => 'warning',
-                            }),
+                            ->dateTime('d M Y'),
 
                         TextEntry::make('description')
                             ->label('Keterangan')
-                            ->columnSpanFull(),
+                            ->state(fn($record) => $record->description ?: '-'),
 
                         TextEntry::make('total_items')
                             ->label('Total Item')
@@ -140,12 +130,5 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
         return $this->record->medicineStockOpnameItems()
             ->with(['medicine'])
             ->getQuery();
-    }
-
-    protected function getHeaderActions(): array
-    {
-        return [
-            EditAction::make(),
-        ];
     }
 }

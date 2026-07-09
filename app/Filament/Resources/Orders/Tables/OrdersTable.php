@@ -27,7 +27,8 @@ class OrdersTable
                 TextColumn::make('grand_total')
                     ->label('Total')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn($state) => 'Rp. ' . number_format($state, 0, ',', '.')),
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -35,6 +36,11 @@ class OrdersTable
                         'pending' => 'warning',
                         'paid' => 'success',
                         'cancelled' => 'danger',
+                    })
+                    ->formatStateUsing(fn($state) => match ($state) {
+                        'pending' => 'Pending',
+                        'paid' => 'Lunas',
+                        'cancelled' => 'Dibatalkan',
                     }),
             ])
             ->filters([

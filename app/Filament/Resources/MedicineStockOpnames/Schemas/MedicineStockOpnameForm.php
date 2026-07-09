@@ -10,6 +10,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Support\RawJs;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
@@ -37,7 +38,8 @@ class MedicineStockOpnameForm
                         DatePicker::make('opname_date')
                             ->label('Tanggal Opname')
                             ->required()
-                            ->default(now()),
+                            ->default(now())
+                            ->disabled(),
                         Textarea::make('description')
                             ->label('Keterangan')
                             ->columnSpanFull(),
@@ -102,7 +104,10 @@ class MedicineStockOpnameForm
                                             ->numeric()
                                             ->prefix('Rp')
                                             ->default(0)
-                                            ->required(),
+                                            ->disabled()
+                                            ->required()
+                                            ->mask(RawJs::make('$money($input)'))
+                                            ->stripCharacters(','),
                                     ])
                                     ->columns(3)
                                     ->columnSpanFull()
@@ -111,7 +116,7 @@ class MedicineStockOpnameForm
                                     ->reorderable(false)
                             ])
                             ->columnSpanFull()
-                            ->defaultItems(0)
+                            ->defaultItems(1)
                             ->addActionLabel('Tambah Obat')
                             ->reorderable(false)
                             ->collapsible()

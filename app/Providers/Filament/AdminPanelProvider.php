@@ -105,8 +105,8 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->brandName(fn(GeneralSettings $settings) => $settings->app_name ?? 'SIPOKAT')
-            ->brandLogo(asset('assets/logo-sipokat.png'))
-            ->brandLogoHeight('3rem')
+            ->brandLogo(asset('assets/sipokat-hd.png'))
+            ->brandLogoHeight('4rem')
             ->favicon(asset('assets/favicon-sipokat.png'))
             ->viteTheme('resources/css/filament/admin/theme.css');
     }

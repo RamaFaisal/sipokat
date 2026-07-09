@@ -18,7 +18,7 @@ class CreateOrder extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['created_by'] = auth()->id();
-        $data['status'] = $data['status'] ?? 'paid';
+        $data['status'] = 'paid';
 
         return $data;
     }
