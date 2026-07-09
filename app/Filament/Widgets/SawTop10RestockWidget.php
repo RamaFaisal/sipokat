@@ -23,7 +23,7 @@ class SawTop10RestockWidget extends BaseWidget
         $latest = SawCalculation::orderByDesc('calculated_at')->first();
 
         $description = $latest
-            ? 'Hasil SAW terakhir: ' . $latest->calculated_at->format('d M Y H:i')
+            ? 'Hasil SAW terakhir: ' . $latest->calculated_at->format('d M Y')
                 . ' (periode ' . $latest->period_start->format('d M Y')
                 . ' - ' . $latest->period_end->format('d M Y') . ')'
             : 'Belum ada perhitungan SAW. Jalankan via menu SPK Restock → Hitung Prioritas Restock.';
@@ -31,13 +31,19 @@ class SawTop10RestockWidget extends BaseWidget
         $calculationId = $latest?->id ?? 0;
 
         return $table
-            ->heading('Top 10 Prioritas Restock (SAW)')
+            ->heading('Top 5 Prioritas Restock (SAW)')
             ->description($description)
-            ->query(fn (): Builder => SawCalculationResult::query()
-                ->where('saw_calculation_id', $calculationId)
-                ->with('medicine:id,code,name,dosage')
-                ->orderBy('rank'))
-            ->paginated([5, 10])
+            ->query(function () use ($calculationId): Builder {
+                $query = SawCalculationResult::query()
+                    ->where('saw_calculation_id', $calculationId)
+                    ->with('medicine:id,code,name,dosage')
+                    ->orderBy('rank');
+
+                $query->limit(5);
+
+                return $query;
+            })
+            ->paginated(false)
             ->columns([
                 TextColumn::make('rank')
                     ->label('#')
@@ -46,10 +52,8 @@ class SawTop10RestockWidget extends BaseWidget
                         $state <= 3 => 'danger',
                         $state <= 7 => 'warning',
                         default => 'gray',
-                    }),
-                TextColumn::make('medicine.code')
-                    ->label('Kode')
-                    ->searchable(),
+                    })
+                    ->width(1),
                 TextColumn::make('medicine.name')
                     ->label('Nama Obat')
                     ->wrap(),

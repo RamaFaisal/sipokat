@@ -14,7 +14,7 @@ class SalesSummaryWidget extends ChartWidget
 
     protected ?string $heading = 'Penjualan 30 Hari Terakhir';
 
-    protected ?string $description = 'Total grand_total harian dari Orders (status != cancelled).';
+    protected ?string $description = 'Total Penjualan harian dari Orders';
 
     protected static ?int $sort = 4;
 

@@ -25,23 +25,27 @@ class ExpiringMedicinesWidget extends BaseWidget
         return $table
             ->heading('Obat Mendekati Kedaluwarsa')
             ->description('Batch dengan sisa masa kedaluwarsa ≤ 90 hari (data dari Receive Order).')
-            ->query(fn (): Builder => ReceiveOrderItem::query()
-                ->whereNotNull('expired_date')
-                ->whereBetween('expired_date', [$today->toDateString(), $threshold->toDateString()])
-                ->whereHas('receiveOrder')
-                ->whereHas('medicine', fn (Builder $q) => $q->where('status', 'active'))
-                ->with([
-                    'medicine:id,code,name,dosage,stock_status',
-                    'receiveOrder.supplier:id,name',
-                ])
-                ->orderBy('expired_date'))
+            ->query(function () use ($today, $threshold): Builder {
+                $query = ReceiveOrderItem::query()
+                    ->whereNotNull('expired_date')
+                    ->whereBetween('expired_date', [$today->toDateString(), $threshold->toDateString()])
+                    ->whereHas('receiveOrder')
+                    ->whereHas('medicine', fn (Builder $q) => $q->where('status', 'active'))
+                    ->with([
+                        'medicine:id,code,name,dosage,stock_status',
+                        'receiveOrder.supplier:id,name',
+                    ])
+                    ->orderBy('expired_date');
+
+                $query->limit(5);
+
+                return $query;
+            })
             ->columns([
                 TextColumn::make('medicine.code')
-                    ->label('Kode')
-                    ->searchable(),
+                    ->label('Kode'),
                 TextColumn::make('medicine.name')
                     ->label('Nama Obat')
-                    ->searchable()
                     ->wrap(),
                 TextColumn::make('batch_number')
                     ->label('Batch')
@@ -81,6 +85,6 @@ class ExpiringMedicinesWidget extends BaseWidget
                         default => $state,
                     }),
             ])
-            ->paginated([5, 10, 25]);
+            ->paginated(false);
     }
 }

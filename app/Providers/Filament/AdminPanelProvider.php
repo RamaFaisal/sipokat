@@ -7,15 +7,19 @@ use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use App\Filament\Pages\Dashboard;
 use App\Filament\Widgets\ExpiringMedicinesWidget;
 use App\Filament\Widgets\LowStockMedicinesWidget;
 use App\Filament\Widgets\PendingPurchaseOrdersWidget;
 use App\Filament\Widgets\SalesSummaryWidget;
 use App\Filament\Widgets\SawTop10RestockWidget;
+use App\Filament\Widgets\StatCriticalStockWidget;
+use App\Filament\Widgets\StatExpiringSoonWidget;
+use App\Filament\Widgets\StatMonthlySalesWidget;
+use App\Filament\Widgets\StatTotalMedicinesWidget;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -50,6 +54,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
+                StatTotalMedicinesWidget::class,
+                StatCriticalStockWidget::class,
+                StatExpiringSoonWidget::class,
+                StatMonthlySalesWidget::class,
                 SawTop10RestockWidget::class,
                 LowStockMedicinesWidget::class,
                 ExpiringMedicinesWidget::class,
@@ -91,11 +99,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 'Inventory',
+                'SPK Restock',
+                'Laporan',
                 'Penjualan',
                 'Pembelian',
                 'Master Data',
-                'SPK Restock',
-                'Laporan',
                 'Manajemen Pengguna'
             ])
             ->spa()

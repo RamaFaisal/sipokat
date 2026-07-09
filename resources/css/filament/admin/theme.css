@@ -136,7 +136,31 @@ body {
 }
 
 /* 7. Widgets styling (Dashboard) */
+
+/* Equalize stat card heights across a row regardless of description length */
+.fi-wi-stats-overview {
+    display: flex !important;
+    height: 100% !important;
+}
+
+.fi-wi-stats-overview *:has(.fi-wi-stats-overview-stat):not(.fi-wi-stats-overview-stat) {
+    display: contents !important;
+}
+
+.fi-wi-stats-overview-stat-content {
+    display: flex !important;
+    flex: 1 !important;
+    flex-direction: column !important;
+}
+
+.fi-wi-stats-overview-stat-description {
+    margin-top: auto !important;
+}
+
 .fi-wi-stats-overview-stat {
+    display: flex !important;
+    flex: 1 !important;
+    flex-direction: column !important;
     border-radius: 16px !important;
     box-shadow: 0 4px 12px rgba(148, 163, 184, 0.05) !important;
     border: 1px solid rgba(226, 232, 240, 0.8) !important;

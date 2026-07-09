@@ -21,19 +21,23 @@ class LowStockMedicinesWidget extends BaseWidget
     {
         return $table
             ->heading('Obat Stok Menipis / Habis')
-            ->description('Obat dengan status stok empty atau almost_empty (di bawah min_stock).')
-            ->query(fn (): Builder => Medicine::query()
-                ->whereIn('stock_status', ['empty', 'almost_empty'])
-                ->where('status', 'active')
-                ->orderByRaw("FIELD(stock_status, 'empty', 'almost_empty')")
-                ->orderBy('name'))
+            ->description('Obat dengan status stok habis atau hampir habis (di bawah min stock).')
+            ->query(function (): Builder {
+                $query = Medicine::query()
+                    ->whereIn('stock_status', ['empty', 'almost_empty'])
+                    ->where('status', 'active')
+                    ->orderByRaw("FIELD(stock_status, 'empty', 'almost_empty')")
+                    ->orderBy('name');
+
+                $query->limit(5);
+
+                return $query;
+            })
             ->columns([
                 TextColumn::make('code')
-                    ->label('Kode')
-                    ->searchable(),
+                    ->label('Kode'),
                 TextColumn::make('name')
                     ->label('Nama Obat')
-                    ->searchable()
                     ->wrap(),
                 TextColumn::make('dosage')
                     ->label('Dosis'),
@@ -54,6 +58,6 @@ class LowStockMedicinesWidget extends BaseWidget
                         default => $state,
                     }),
             ])
-            ->paginated([5, 10, 25]);
+            ->paginated(false);
     }
 }
