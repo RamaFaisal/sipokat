@@ -13,6 +13,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
 class UnitResource extends Resource
@@ -51,5 +53,13 @@ class UnitResource extends Resource
             'create' => CreateUnit::route('/create'),
             'edit' => EditUnit::route('/{record}/edit'),
         ];
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 }

@@ -4,6 +4,8 @@ namespace App\Filament\Resources\MedicineCategories\Pages;
 
 use App\Filament\Resources\MedicineCategories\MedicineCategoriesResource;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditMedicineCategories extends EditRecord
@@ -14,6 +16,8 @@ class EditMedicineCategories extends EditRecord
     {
         return [
             DeleteAction::make(),
+            ForceDeleteAction::make(),
+            RestoreAction::make(),
         ];
     }
 

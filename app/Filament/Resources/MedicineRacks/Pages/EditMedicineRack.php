@@ -4,6 +4,8 @@ namespace App\Filament\Resources\MedicineRacks\Pages;
 
 use App\Filament\Resources\MedicineRacks\MedicineRackResource;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditMedicineRack extends EditRecord
@@ -14,6 +16,8 @@ class EditMedicineRack extends EditRecord
     {
         return [
             DeleteAction::make(),
+            ForceDeleteAction::make(),
+            RestoreAction::make(),
         ];
     }
 

@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Units\Pages;
 
 use App\Filament\Resources\Units\UnitResource;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUnit extends EditRecord
@@ -14,6 +16,8 @@ class EditUnit extends EditRecord
     {
         return [
             DeleteAction::make(),
+            ForceDeleteAction::make(),
+            RestoreAction::make(),
         ];
     }
 
