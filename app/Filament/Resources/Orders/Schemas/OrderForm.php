@@ -14,6 +14,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Support\RawJs;
 
 class OrderForm
 {
@@ -78,12 +79,16 @@ class OrderForm
                                     ->label('Harga')
                                     ->numeric()
                                     ->prefix('Rp')
-                                    ->readOnly(),
+                                    ->readOnly()
+                                    ->mask(RawJs::make('$money($input)'))
+                                    ->stripCharacters(','),
                                 TextInput::make('total')
                                     ->label('Total')
                                     ->numeric()
                                     ->prefix('Rp')
                                     ->readOnly()
+                                    ->mask(RawJs::make('$money($input)'))
+                                    ->stripCharacters(',')
                                     ->dehydrated(),
                             ])
                             ->columns(4)
@@ -105,7 +110,9 @@ class OrderForm
                             ->prefix('Rp')
                             ->readOnly()
                             ->dehydrated()
-                            ->default(0),
+                            ->default(0)
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(','),
                     ])->columns(2)
                     ->columnSpanFull(),
             ]);
