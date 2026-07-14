@@ -60,7 +60,6 @@ class SawCriteriaForm
                                             return static function (string $attribute, $value, Closure $fail) use ($record): void {
                                                 $newWeight = (float) $value;
 
-                                                // Skip kalau kriteria ini saat ini tidak aktif
                                                 if ($record && ! $record->is_active) {
                                                     return;
                                                 }

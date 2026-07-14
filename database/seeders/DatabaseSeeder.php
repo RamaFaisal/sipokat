@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             MasterDataSeeder::class,
             SawCriteriaSeeder::class,
+            DemoApotekSeeder::class,
         ]);
     }
 }

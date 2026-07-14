@@ -1,0 +1,850 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Medicine;
+use App\Models\MedicineCategories;
+use App\Models\MedicineRack;
+use App\Models\MedicineStock;
+use App\Models\MedicineStockOpname;
+use App\Models\MedicineStockOpnameItem;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
+use App\Models\ReceiveOrder;
+use App\Models\ReceiveOrderItem;
+use App\Models\Supplier;
+use App\Models\Unit;
+use App\Models\User;
+use App\Services\StockCardService;
+use App\Settings\GeneralSettings;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+
+class DemoApotekSeeder extends Seeder
+{
+    protected const MARKER = '[DEMO_DATA]';
+
+    protected const TOTAL_MEDICINES = 120;
+
+    protected const DAYS_BACK = 364;
+
+    protected const CYCLE_DAYS = 14;      // procurement tiap 2 minggu
+
+    protected const OPNAME_EVERY = 91;    // opname tiap ~3 bulan
+
+    protected ?int $userId = null;
+
+    protected int $poSeq = 1;
+
+    protected int $roSeq = 1;
+
+    protected int $opmSeq = 1;
+
+    /** @var array<string,int> Ymd => sequence order pada hari itu */
+    protected array $orderSeqByDate = [];
+
+    /** @var array<int,int> medicine_id => stok berjalan */
+    protected array $stock = [];
+
+    /** @var array<int,int> medicine_id => bobot popularitas (0 = dead stock) */
+    protected array $pop = [];
+
+    /** @var array<int,int> medicine_id => target stok (reorder-up-to) */
+    protected array $target = [];
+
+    /** @var array<int,int> medicine_id => titik reorder */
+    protected array $reorder = [];
+
+    /** @var array<int,Medicine> */
+    protected array $medById = [];
+
+    /** @var array<int,int> */
+    protected array $medIds = [];
+
+    /** @var array<string,array<int,array>> Ymd penerimaan => daftar spesifikasi RO */
+    protected array $pendingReceipts = [];
+
+    protected int $orderTotal = 0;
+
+    protected int $stockEntryTotal = 0;
+
+    public function run(): void
+    {
+        $this->userId = User::value('id');
+
+        $this->command->info('Membersihkan data demo lama...');
+        $this->cleanup();
+
+        $this->command->info('Menyiapkan master data (kategori/unit/rak/supplier)...');
+        $suppliers = $this->ensureMasterData();
+
+        $this->command->info('Membuat ' . self::TOTAL_MEDICINES . ' data obat...');
+        $this->seedMedicines();
+
+        $this->command->info('Menentukan popularitas & target stok tiap obat...');
+        $this->planMedicines();
+
+        $this->command->info('Menyiapkan penomoran (PO/RO/OPM)...');
+        $this->initCounters();
+
+        $this->command->info('Simulasi transaksi 1 tahun (PO → RO → penjualan → opname)...');
+        $this->simulate($suppliers);
+
+        $this->command->info('Membuat beberapa PO outstanding (belum diterima)...');
+        $this->seedOutstandingPurchaseOrders($suppliers);
+
+        $this->command->info('Memperbarui status stok tiap obat...');
+        $stockService = app(StockCardService::class);
+        foreach ($this->medIds as $id) {
+            $stockService->updateMedicineStockStatus($id);
+        }
+
+        $this->command->info(sprintf(
+            'Selesai. %d order, %d entri kartu stok. Jalankan: php artisan sipokat:recalculate-saw',
+            $this->orderTotal,
+            $this->stockEntryTotal,
+        ));
+    }
+
+    protected function cleanup(): void
+    {
+        $orderIds = Order::withTrashed()->where('note', 'like', self::MARKER . '%')->pluck('id')->all();
+        if ($orderIds) {
+            MedicineStock::withTrashed()->whereIn('order_id', $orderIds)->forceDelete();
+            OrderItem::withTrashed()->whereIn('order_id', $orderIds)->forceDelete();
+            Order::withTrashed()->whereIn('id', $orderIds)->forceDelete();
+        }
+
+        $roIds = ReceiveOrder::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
+        if ($roIds) {
+            MedicineStock::withTrashed()->whereIn('receive_order_id', $roIds)->forceDelete();
+            ReceiveOrderItem::withTrashed()->whereIn('receive_order_id', $roIds)->forceDelete();
+            ReceiveOrder::withTrashed()->whereIn('id', $roIds)->forceDelete();
+        }
+
+        $opIds = MedicineStockOpname::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
+        if ($opIds) {
+            MedicineStock::withTrashed()->whereIn('medicine_stock_opname_id', $opIds)->forceDelete();
+            MedicineStockOpnameItem::withTrashed()->whereIn('medicine_stock_opname_id', $opIds)->forceDelete();
+            MedicineStockOpname::withTrashed()->whereIn('id', $opIds)->forceDelete();
+        }
+
+        $poIds = PurchaseOrder::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
+        if ($poIds) {
+            PurchaseOrderItem::withTrashed()->whereIn('purchase_order_id', $poIds)->forceDelete();
+            PurchaseOrder::withTrashed()->whereIn('id', $poIds)->forceDelete();
+        }
+
+        $medIds = Medicine::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
+        if ($medIds) {
+            MedicineStock::withTrashed()->whereIn('medicine_id', $medIds)->forceDelete();
+            Medicine::withTrashed()->whereIn('id', $medIds)->forceDelete();
+        }
+
+        Supplier::withTrashed()->where('code', 'like', 'DMO-%')->forceDelete();
+    }
+
+    /**
+     * @return array<int,Supplier>
+     */
+    protected function ensureMasterData(): array
+    {
+        // Kategori, unit, rak — buat bila belum ada (mengikuti MasterDataSeeder).
+        if (Unit::count() === 0) {
+            foreach ([['Tablet', 'TAB'], ['Kapsul', 'KAP'], ['Sirup', 'SYR'], ['Botol', 'BTL'], ['Salep', 'SLP']] as [$n, $a]) {
+                Unit::updateOrCreate(['name' => $n], ['name' => $n, 'alias' => $a]);
+            }
+        }
+        if (MedicineCategories::count() === 0) {
+            foreach ([['Analgesik', 'ANA'], ['Antibiotik', 'ANT'], ['Antiseptik', 'ASP'], ['Vitamin', 'VIT']] as [$n, $a]) {
+                MedicineCategories::updateOrCreate(['name' => $n], ['name' => $n, 'alias' => $a, 'description' => $n]);
+            }
+        }
+        if (MedicineRack::count() === 0) {
+            foreach ([['Rak A1', 'Obat Umum'], ['Rak A2', 'Obat Keras'], ['Lemari Es', 'Suhu Dingin']] as [$n, $d]) {
+                MedicineRack::updateOrCreate(['name' => $n], ['name' => $n, 'description' => $d]);
+            }
+        }
+
+        // Supplier demo (distributor farmasi nyata) — dihapus & dibuat ulang tiap seed.
+        $data = [
+            ['DMO-01', 'PT Kimia Farma Trading & Distribution', 'Semarang', 'Andi Pratama'],
+            ['DMO-02', 'PT Enseval Putera Megatrading', 'Semarang', 'Rina Wijaya'],
+            ['DMO-03', 'PT Anugrah Pharmindo Lestari (APL)', 'Demak', 'Bagus Santoso'],
+            ['DMO-04', 'PT Merapi Utama Pharma', 'Semarang', 'Dewi Lestari'],
+        ];
+        $suppliers = [];
+        foreach ($data as $i => [$code, $name, $city, $pic]) {
+            $suppliers[] = Supplier::create([
+                'code' => $code,
+                'name' => $name,
+                'address' => 'Jl. Distributor No. ' . ($i + 1) . ', ' . $city,
+                'phone' => '024-' . mt_rand(3000000, 8999999),
+                'email' => 'sales' . ($i + 1) . '@distributor.co.id',
+                'pic' => $pic,
+                'status' => 'active',
+            ]);
+        }
+
+        return $suppliers;
+    }
+
+    protected function seedMedicines(): void
+    {
+        $categories = MedicineCategories::all()->keyBy('id');
+        $units = Unit::all()->keyBy('id');
+        $rackIds = MedicineRack::pluck('id')->all();
+        $categoryIds = $categories->keys()->all();
+        $unitIds = $units->keys()->all();
+
+        $names = $this->medicineNamePool();
+        $seen = [];
+
+        for ($i = 1; $i <= self::TOTAL_MEDICINES; $i++) {
+            $name = strtoupper($names[$i - 1] ?? ('Generik Obat ' . $i));
+            $dosage = $this->randomDosage();
+
+            $dupKey = $name . '|' . $dosage;
+            while (isset($seen[$dupKey])) {
+                $dosage = $this->randomDosage();
+                $dupKey = $name . '|' . $dosage;
+            }
+            $seen[$dupKey] = true;
+
+            $categoryId = $categoryIds[array_rand($categoryIds)];
+            $unitId = $unitIds[array_rand($unitIds)];
+            $rackId = $rackIds[array_rand($rackIds)];
+
+            $purchase = $this->randomPurchasePrice();
+            $sale = (int) (round(($purchase * mt_rand(115, 150) / 100) / 100) * 100);
+
+            $medicine = Medicine::create([
+                'code' => $this->generateMedicineCode($name, $dosage, $categories[$categoryId], $units[$unitId]),
+                'name' => $name,
+                'dosage' => $dosage,
+                'category_id' => $categoryId,
+                'unit_id' => $unitId,
+                'rack_id' => $rackId,
+                'purchase_price' => $purchase,
+                'sale_price' => $sale,
+                'min_stock' => mt_rand(5, 20),
+                'stock_status' => 'empty',
+                'status' => 'active',
+                'description' => self::MARKER . ' Data demo apotek.',
+            ]);
+
+            $this->medById[$medicine->id] = $medicine;
+            $this->medIds[] = $medicine->id;
+            $this->stock[$medicine->id] = 0;
+        }
+    }
+
+    protected function planMedicines(): void
+    {
+        foreach ($this->medIds as $id) {
+            $roll = mt_rand(1, 100);
+            $pop = match (true) {
+                $roll <= 8 => 0,                // dead stock (~8%)
+                $roll <= 38 => mt_rand(3, 15),  // slow moving
+                $roll <= 78 => mt_rand(16, 45), // medium
+                default => mt_rand(46, 100),    // fast moving
+            };
+            $this->pop[$id] = $pop;
+
+            $target = $pop === 0
+                ? mt_rand(15, 45)
+                : max(12, (int) round($pop * mt_rand(120, 220) / 100));
+            $this->target[$id] = $target;
+            $this->reorder[$id] = max(5, (int) round($target * 0.4));
+        }
+    }
+
+    protected function initCounters(): void
+    {
+        $this->poSeq = $this->maxNumber(PurchaseOrder::withTrashed()->pluck('po_number')->all()) + 1;
+        $this->roSeq = $this->maxNumber(ReceiveOrder::withTrashed()->pluck('receive_order_number')->all()) + 1;
+        $this->opmSeq = $this->maxNumber(MedicineStockOpname::withTrashed()->pluck('opname_number')->all()) + 1;
+    }
+
+    /**
+     * @param  array<int,Supplier>  $suppliers
+     */
+    protected function simulate(array $suppliers): void
+    {
+        $start = Carbon::today()->subDays(self::DAYS_BACK);
+
+        for ($d = 0; $d <= self::DAYS_BACK; $d++) {
+            $date = (clone $start)->addDays($d);
+            $key = $date->format('Y-m-d');
+
+            // 1. Barang datang (RO) untuk penerimaan yang jatuh hari ini.
+            if (! empty($this->pendingReceipts[$key])) {
+                foreach ($this->pendingReceipts[$key] as $spec) {
+                    $this->createReceiveOrder($spec, $date);
+                }
+                unset($this->pendingReceipts[$key]);
+            }
+
+            // 2. Procurement (PO) — hari pertama & tiap CYCLE_DAYS.
+            if ($d === 0 || $d % self::CYCLE_DAYS === 0) {
+                $this->createProcurementCycle($date, $suppliers, $d === 0);
+            }
+
+            // 3. Opname berkala.
+            if ($d > 0 && $d % self::OPNAME_EVERY === 0) {
+                $this->createOpname($date);
+            }
+
+            // 4. Penjualan harian (tutup hari Minggu).
+            if ($date->dayOfWeek !== Carbon::SUNDAY) {
+                $this->createDailySales($date);
+            }
+        }
+    }
+
+    /**
+     * Buat PO untuk obat di bawah titik reorder (hari pertama: semua obat).
+     *
+     * @param  array<int,Supplier>  $suppliers
+     */
+    protected function createProcurementCycle(Carbon $date, array $suppliers, bool $isInitial): void
+    {
+        $needing = [];
+        foreach ($this->medIds as $id) {
+            $qtyNeeded = $isInitial
+                ? $this->target[$id]
+                : ($this->stock[$id] < $this->reorder[$id] ? $this->target[$id] - $this->stock[$id] : 0);
+
+            if ($qtyNeeded > 0) {
+                $needing[$id] = $qtyNeeded;
+            }
+        }
+
+        if (empty($needing)) {
+            return;
+        }
+
+        // Kelompokkan ke 1-3 PO (per supplier) supaya realistis.
+        $ids = array_keys($needing);
+        shuffle($ids);
+        $poCount = $isInitial ? 3 : mt_rand(1, 2);
+        $chunks = array_chunk($ids, (int) ceil(count($ids) / $poCount));
+
+        foreach ($chunks as $chunk) {
+            $supplier = $suppliers[array_rand($suppliers)];
+            $lines = [];
+            $subTotal = 0;
+
+            foreach ($chunk as $id) {
+                $m = $this->medById[$id];
+                $qty = $needing[$id];
+                $price = (int) $m->purchase_price;
+                $total = $qty * $price;
+                $subTotal += $total;
+                $lines[] = [
+                    'medicine_id' => $id,
+                    'qty' => $qty,
+                    'price' => $price,
+                    'total' => $total,
+                    'name' => $m->name,
+                ];
+            }
+
+            $shipping = mt_rand(0, 3) === 0 ? mt_rand(15000, 75000) : 0;
+            $grandTotal = $subTotal + $shipping;
+
+            $po = PurchaseOrder::create([
+                'po_number' => $this->nextPoNumber(),
+                'supplier_id' => $supplier->id,
+                'po_date' => $date->toDateString(),
+                'sub_total' => $subTotal,
+                'discount' => 0,
+                'tax' => 0,
+                'total_tax' => 0,
+                'shipping_cost' => $shipping,
+                'other_cost' => 0,
+                'grand_total' => $grandTotal,
+                'status' => 'approved',
+                'description' => self::MARKER . ' Pengadaan rutin.',
+                'estimated_arrival' => $date->copy()->addDays(mt_rand(2, 6))->toDateString(),
+                'status_payment' => 'unpaid',
+                'status_receive_order' => 'pending',
+                'created_by' => $this->userId,
+            ]);
+
+            foreach ($lines as $line) {
+                PurchaseOrderItem::create([
+                    'purchase_order_id' => $po->id,
+                    'medicine_id' => $line['medicine_id'],
+                    'description' => null,
+                    'qty' => $line['qty'],
+                    'price' => $line['price'],
+                    'discount' => 0,
+                    'total' => $line['total'],
+                ]);
+            }
+
+            // Jadwalkan penerimaan (RO) beberapa hari kemudian.
+            $receiveDate = $date->copy()->addDays(mt_rand(1, 5));
+            if ($receiveDate->gt(Carbon::today())) {
+                // Melewati hari ini → biarkan jadi PO outstanding (tidak diterima).
+                continue;
+            }
+
+            // 12% penerimaan sebagian.
+            $partial = mt_rand(1, 100) <= 12;
+            $this->pendingReceipts[$receiveDate->format('Y-m-d')][] = [
+                'po' => $po,
+                'lines' => $lines,
+                'partial' => $partial,
+            ];
+        }
+    }
+
+    protected function createReceiveOrder(array $spec, Carbon $date): void
+    {
+        /** @var PurchaseOrder $po */
+        $po = $spec['po'];
+        $partial = $spec['partial'];
+
+        $ro = ReceiveOrder::create([
+            'receive_order_number' => $this->nextRoNumber(),
+            'purchase_order_id' => $po->id,
+            'supplier_id' => $po->supplier_id,
+            'receive_date' => $date->toDateString(),
+            'description' => self::MARKER . ' Penerimaan dari ' . $po->po_number,
+            'status' => 'completed',
+            'late_arrival' => $po->estimated_arrival && $date->gt($po->estimated_arrival),
+            'received_by' => $this->userId,
+        ]);
+
+        $fullyReceived = true;
+
+        foreach ($spec['lines'] as $line) {
+            $qty = $line['qty'];
+            if ($partial) {
+                $qty = max(1, (int) floor($qty * mt_rand(60, 90) / 100));
+                if ($qty < $line['qty']) {
+                    $fullyReceived = false;
+                }
+            }
+
+            $m = $this->medById[$line['medicine_id']];
+
+            ReceiveOrderItem::create([
+                'receive_order_id' => $ro->id,
+                'medicine_id' => $line['medicine_id'],
+                'medicine_name' => $m->name,
+                'qty' => $qty,
+                'price' => $line['price'],
+                'batch_number' => 'BN' . $date->format('ym') . '-' . strtoupper(Str::random(5)),
+                'manufacture_date' => $date->copy()->subDays(mt_rand(30, 300))->toDateString(),
+                'expired_date' => $this->randomExpiryDate($date)->toDateString(),
+            ]);
+
+            MedicineStock::create([
+                'medicine_id' => $line['medicine_id'],
+                'qty' => $qty,
+                'type_account' => 'D',
+                'date' => $date->toDateString(),
+                'hpp' => $line['price'],
+                'receive_order_id' => $ro->id,
+                'description' => self::MARKER . ' Penerimaan dari ' . $po->po_number,
+                'created_by' => $this->userId,
+            ]);
+            $this->stockEntryTotal++;
+
+            $this->stock[$line['medicine_id']] += $qty;
+        }
+
+        // Update status PO sesuai penerimaan.
+        $paymentRoll = mt_rand(1, 100);
+        $po->update([
+            'status' => $fullyReceived ? 'completed' : 'approved',
+            'status_receive_order' => $fullyReceived ? 'received' : 'partial',
+            'status_payment' => $paymentRoll <= 78 ? 'paid' : ($paymentRoll <= 92 ? 'unpaid' : 'partial'),
+        ]);
+    }
+
+    protected function createDailySales(Carbon $date): void
+    {
+        $ordersToday = mt_rand(1, 5);
+
+        for ($o = 0; $o < $ordersToday; $o++) {
+            $lineCount = mt_rand(1, 4);
+            $picks = $this->pickMeds($lineCount);
+            if (empty($picks)) {
+                continue;
+            }
+
+            $items = [];
+            $grandTotal = 0;
+
+            foreach ($picks as $id) {
+                $maxQty = max(1, (int) round($this->pop[$id] / 15));
+                $qty = min($this->stock[$id], mt_rand(1, $maxQty));
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $m = $this->medById[$id];
+                $price = (int) $m->sale_price;
+                $total = $qty * $price;
+                $grandTotal += $total;
+
+                $items[] = [
+                    'medicine_id' => $id,
+                    'medicine_name' => trim($m->name . ' ' . $m->dosage),
+                    'qty' => $qty,
+                    'price' => $price,
+                    'total' => $total,
+                ];
+            }
+
+            if (empty($items)) {
+                continue;
+            }
+
+            $roll = mt_rand(1, 100);
+            $status = $roll <= 85 ? 'paid' : ($roll <= 97 ? 'pending' : 'cancelled');
+
+            [$orderCode, $payNumber] = $this->nextOrderNumbers($date);
+
+            $order = Order::create([
+                'order_code' => $orderCode,
+                'no_payment' => $payNumber,
+                'order_date' => $date->toDateString(),
+                'grand_total' => $grandTotal,
+                'status' => $status,
+                'note' => self::MARKER . ' Penjualan demo.',
+                'created_by' => $this->userId,
+            ]);
+            $this->orderTotal++;
+
+            foreach ($items as $item) {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'medicine_id' => $item['medicine_id'],
+                    'medicine_name' => $item['medicine_name'],
+                    'qty' => $item['qty'],
+                    'price' => $item['price'],
+                    'total' => $item['total'],
+                ]);
+
+                // Order batal = barang tidak keluar (stok tidak berkurang, tidak dihitung permintaan).
+                if ($status === 'cancelled') {
+                    continue;
+                }
+
+                MedicineStock::create([
+                    'medicine_id' => $item['medicine_id'],
+                    'qty' => $item['qty'],
+                    'type_account' => 'C',
+                    'date' => $date->toDateString(),
+                    'hpp' => $item['price'],
+                    'order_id' => $order->id,
+                    'description' => self::MARKER . ' Penjualan ' . $orderCode,
+                    'created_by' => $this->userId,
+                ]);
+                $this->stockEntryTotal++;
+
+                $this->stock[$item['medicine_id']] -= $item['qty'];
+            }
+        }
+    }
+
+    protected function createOpname(Carbon $date): void
+    {
+        $candidates = array_values(array_filter($this->medIds, fn ($id) => $this->stock[$id] > 0));
+        if (empty($candidates)) {
+            return;
+        }
+        shuffle($candidates);
+        $picks = array_slice($candidates, 0, mt_rand(12, 25));
+
+        $opname = MedicineStockOpname::create([
+            'opname_number' => $this->nextOpmNumber(),
+            'opname_date' => $date->toDateString(),
+            'status' => 'in_stock',
+            'description' => self::MARKER . ' Stok opname berkala.',
+            'created_by' => $this->userId,
+        ]);
+
+        foreach ($picks as $id) {
+            $m = $this->medById[$id];
+
+            if (mt_rand(1, 100) <= 70) {
+                // Selisih kurang (susut) → Credit.
+                $type = 'C';
+                $qty = min($this->stock[$id], mt_rand(1, 3));
+                if ($qty <= 0) {
+                    continue;
+                }
+                $this->stock[$id] -= $qty;
+            } else {
+                // Selisih lebih (temuan) → Debit.
+                $type = 'D';
+                $qty = mt_rand(1, 3);
+                $this->stock[$id] += $qty;
+            }
+
+            $hpp = (int) $m->purchase_price * $qty;
+
+            MedicineStockOpnameItem::create([
+                'medicine_stock_opname_id' => $opname->id,
+                'medicine_id' => $id,
+                'qty' => $qty,
+                'type_account' => $type,
+                'hpp' => $hpp,
+            ]);
+
+            MedicineStock::create([
+                'medicine_id' => $id,
+                'qty' => $qty,
+                'type_account' => $type,
+                'date' => $date->toDateString(),
+                'hpp' => $hpp,
+                'medicine_stock_opname_id' => $opname->id,
+                'description' => self::MARKER . ' Opname ' . $opname->opname_number,
+                'created_by' => $this->userId,
+            ]);
+            $this->stockEntryTotal++;
+        }
+    }
+
+    /**
+     * PO yang belum diterima (status approved, receive pending) — untuk widget Pending PO.
+     *
+     * @param  array<int,Supplier>  $suppliers
+     */
+    protected function seedOutstandingPurchaseOrders(array $suppliers): void
+    {
+        for ($i = 0; $i < mt_rand(2, 3); $i++) {
+            $date = Carbon::today()->subDays(mt_rand(1, 8));
+            $ids = $this->medIds;
+            shuffle($ids);
+            $chunk = array_slice($ids, 0, mt_rand(4, 10));
+
+            $supplier = $suppliers[array_rand($suppliers)];
+            $lines = [];
+            $subTotal = 0;
+            foreach ($chunk as $id) {
+                $m = $this->medById[$id];
+                $qty = mt_rand(20, 80);
+                $price = (int) $m->purchase_price;
+                $total = $qty * $price;
+                $subTotal += $total;
+                $lines[] = compact('id', 'qty', 'price', 'total');
+            }
+
+            $po = PurchaseOrder::create([
+                'po_number' => $this->nextPoNumber(),
+                'supplier_id' => $supplier->id,
+                'po_date' => $date->toDateString(),
+                'sub_total' => $subTotal,
+                'discount' => 0,
+                'tax' => 0,
+                'total_tax' => 0,
+                'shipping_cost' => 0,
+                'other_cost' => 0,
+                'grand_total' => $subTotal,
+                'status' => 'approved',
+                'description' => self::MARKER . ' PO menunggu penerimaan.',
+                'estimated_arrival' => Carbon::today()->addDays(mt_rand(1, 5))->toDateString(),
+                'status_payment' => 'unpaid',
+                'status_receive_order' => 'pending',
+                'created_by' => $this->userId,
+            ]);
+
+            foreach ($lines as $line) {
+                PurchaseOrderItem::create([
+                    'purchase_order_id' => $po->id,
+                    'medicine_id' => $line['id'],
+                    'description' => null,
+                    'qty' => $line['qty'],
+                    'price' => $line['price'],
+                    'discount' => 0,
+                    'total' => $line['total'],
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Pilih obat secara acak berbobot popularitas (tanpa pengulangan), hanya yang stoknya > 0.
+     *
+     * @return array<int,int>
+     */
+    protected function pickMeds(int $count): array
+    {
+        $candidates = [];
+        foreach ($this->medIds as $id) {
+            if ($this->stock[$id] > 0 && $this->pop[$id] > 0) {
+                $candidates[$id] = $this->pop[$id];
+            }
+        }
+
+        $picked = [];
+        for ($i = 0; $i < $count && ! empty($candidates); $i++) {
+            $sum = array_sum($candidates);
+            $r = mt_rand(1, $sum);
+            $acc = 0;
+            foreach ($candidates as $id => $w) {
+                $acc += $w;
+                if ($r <= $acc) {
+                    $picked[] = $id;
+                    unset($candidates[$id]);
+                    break;
+                }
+            }
+        }
+
+        return $picked;
+    }
+
+    protected function nextPoNumber(): string
+    {
+        return 'PO' . str_pad((string) $this->poSeq++, 4, '0', STR_PAD_LEFT);
+    }
+
+    protected function nextRoNumber(): string
+    {
+        return 'RO' . str_pad((string) $this->roSeq++, 4, '0', STR_PAD_LEFT);
+    }
+
+    protected function nextOpmNumber(): string
+    {
+        return 'OPM' . str_pad((string) $this->opmSeq++, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * @return array{0:string,1:string} [order_code, no_payment]
+     */
+    protected function nextOrderNumbers(Carbon $date): array
+    {
+        $ymd = $date->format('Ymd');
+        if (! isset($this->orderSeqByDate[$ymd])) {
+            $this->orderSeqByDate[$ymd] = Order::withTrashed()->whereDate('order_date', $date->toDateString())->count();
+        }
+        $seq = ++$this->orderSeqByDate[$ymd];
+        $suffix = str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+
+        return ['ORD-' . $ymd . $suffix, 'PAY-' . $ymd . $suffix];
+    }
+
+    /**
+     * @param  array<int,string>  $numbers
+     */
+    protected function maxNumber(array $numbers): int
+    {
+        $max = 0;
+        foreach ($numbers as $num) {
+            $n = (int) preg_replace('/\D/', '', (string) $num);
+            $max = max($max, $n);
+        }
+
+        return $max;
+    }
+
+    /**
+     * Mirror dari MedicineForm::generateCode().
+     */
+    protected function generateMedicineCode(string $name, ?string $dosage, MedicineCategories $category, Unit $unit): string
+    {
+        $appName = strtoupper(substr(app(GeneralSettings::class)->app_name ?? 'SIP', 0, 3));
+
+        $namePrefix = strtoupper(substr($name, 0, 4));
+        $conflict = Medicine::whereRaw('UPPER(SUBSTRING(name, 1, 4)) = ?', [$namePrefix])
+            ->where('name', '!=', $name)
+            ->exists();
+        if ($conflict) {
+            $namePrefix = strtoupper(substr($name, 0, 5));
+        }
+
+        $dosageNumber = $dosage ? preg_replace('/[^0-9]/', '', $dosage) : 'GEN';
+        if ($dosageNumber === '') {
+            $dosageNumber = 'GEN';
+        }
+
+        $categoryCode = strtoupper(substr($category->name, 0, 3));
+        $unitAlias = strtoupper($unit->alias ?? substr($unit->name, 0, 3));
+
+        $baseCode = $appName . '/' . $namePrefix . $dosageNumber . '/' . $categoryCode . '/' . $unitAlias;
+
+        $lastRecord = Medicine::where('code', 'like', $baseCode . '/%')
+            ->orderBy('code', 'desc')
+            ->first();
+        if ($lastRecord) {
+            $lastNumber = (int) substr($lastRecord->code, strrpos($lastRecord->code, '/') + 1);
+            $newNumber = str_pad((string) ($lastNumber + 1), 3, '0', STR_PAD_LEFT);
+        } else {
+            $newNumber = '001';
+        }
+
+        return $baseCode . '/' . $newNumber;
+    }
+
+    protected function randomExpiryDate(Carbon $from): Carbon
+    {
+        // 15% batch ber-ED pendek (bisa jadi hampir/sudah kedaluwarsa hari ini).
+        $daysAhead = mt_rand(1, 100) <= 15 ? mt_rand(120, 300) : mt_rand(420, 1095);
+
+        return $from->copy()->addDays($daysAhead);
+    }
+
+    protected function randomPurchasePrice(): int
+    {
+        $bucket = mt_rand(1, 100);
+
+        return match (true) {
+            $bucket <= 30 => mt_rand(2000, 9500),
+            $bucket <= 58 => mt_rand(10000, 24000),
+            $bucket <= 78 => mt_rand(25000, 49000),
+            $bucket <= 91 => mt_rand(50000, 98000),
+            default => mt_rand(100000, 240000),
+        };
+    }
+
+    protected function randomDosage(): string
+    {
+        $options = ['250 mg', '500 mg', '650 mg', '1000 mg', '5 mg', '10 mg', '20 mg', '40 mg', '50 mg', '100 mg', '125 mg/5ml', '60 ml', '100 ml', '30 g', '15 g', '5 mg/ml'];
+
+        return $options[array_rand($options)];
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    protected function medicineNamePool(): array
+    {
+        return [
+            'Paracetamol', 'Sanmol', 'Panadol', 'Tempra', 'Bodrex',
+            'Amoxicillin', 'Amoxsan', 'Cefadroxil', 'Cefixime', 'Ciprofloxacin',
+            'Erythromycin', 'Azithromycin', 'Clindamycin', 'Tetracycline', 'Levofloxacin',
+            'Ibuprofen', 'Proris', 'Naproxen', 'Mefenamic Acid', 'Asam Mefenamat',
+            'Diclofenac', 'Voltaren', 'Cataflam', 'Counterpain', 'Hot In Cream',
+            'Aspirin', 'Aspilet', 'Cardio Aspirin', 'Bayer Aspirin', 'Miniaspi',
+            'Cetirizine', 'Loratadine', 'Claritin', 'Incidal', 'Telfast',
+            'Chlorpheniramine', 'CTM', 'Allerin', 'Tremenza', 'Lapifed',
+            'Pseudoephedrine', 'Dextromethorphan', 'Bisolvon', 'Mucos', 'Mucopect',
+            'Ambroxol', 'Bromhexine', 'Guaifenesin', 'OBH Combi', 'Vicks Formula',
+            'Konidin', 'Komix', 'Procold', 'Decolgen', 'Mixagrip',
+            'Sanaflu', 'Ultraflu', 'Neozep', 'Inza', 'Anakonidin',
+            'Metformin', 'Glucophage', 'Glibenclamide', 'Glimepiride', 'Acarbose',
+            'Pioglitazone', 'Sitagliptin', 'Gliclazide', 'Novorapid', 'Lantus',
+            'Simvastatin', 'Atorvastatin', 'Lipitor', 'Rosuvastatin', 'Crestor',
+            'Lisinopril', 'Captopril', 'Amlodipine', 'Norvasc', 'Tensivask',
+            'Bisoprolol', 'Concor', 'Propranolol', 'Atenolol', 'Furosemide',
+            'HCT', 'Hydrochlorothiazide', 'Spironolactone', 'Aldactone', 'Valsartan',
+            'Losartan', 'Olmesartan', 'Telmisartan', 'Candesartan', 'Irbesartan',
+            'Omeprazole', 'Lansoprazole', 'Pantoprazole', 'Esomeprazole', 'Nexium',
+            'Ranitidine', 'Cimetidine', 'Famotidine', 'Antasida', 'Mylanta',
+            'Promag', 'Polysilane', 'Sucralfate', 'Inpepsa', 'Magasida',
+            'Domperidone', 'Vometa', 'Metoclopramide', 'Primperan', 'Ondansetron',
+            'Loperamide', 'Diapet', 'Entrostop', 'New Diatab', 'Norit',
+        ];
+    }
+}

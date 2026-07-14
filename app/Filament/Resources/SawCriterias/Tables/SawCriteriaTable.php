@@ -42,9 +42,8 @@ class SawCriteriaTable
                     ->alignEnd(),
                 ToggleColumn::make('is_active')
                     ->label('Aktif')
-                    ->tooltip('Toggle untuk aktif/non-aktif kriteria. Pastikan total bobot kriteria aktif = 1.000.')
+                    ->tooltip('Toggle untuk aktif/non-aktif kriteria. Pastikan total bobot kriteria aktif = 1,000.')
                     ->beforeStateUpdated(function (SawCriteria $record, $state) {
-                        // Hanya validasi saat AKTIVASI (off → on). Off-aktifkan selalu boleh.
                         if (! $state) {
                             return;
                         }
@@ -61,7 +60,7 @@ class SawCriteriaTable
                                 ->danger()
                                 ->title('Tidak bisa aktifkan kriteria')
                                 ->body(sprintf(
-                                    'Total bobot kriteria aktif akan jadi %.3f (maks 1.000). Bobot kriteria aktif lain: %.3f. Turunkan bobot kriteria.',
+                                    'Total bobot kriteria aktif akan jadi %.3f (maks 1,000). Bobot kriteria aktif lain: %.3f. Turunkan bobot kriteria.',
                                     $projected,
                                     $othersTotal,
                                 ))

@@ -181,17 +181,6 @@ class SawCalculationService
         return $matrix;
     }
 
-    /**
-     * Normalisasi matriks skor: R = score / max_score (X/max) untuk semua kriteria.
-     *
-     * Catatan teori: Tabel 3.5-3.8 proposal sudah mengonversi arah prioritas
-     * (low stok → score 5, high demand → score 5, dst.) sehingga "skor" pasca
-     * konversi sudah ber-arah benefit-like. Karena itu rumus cost (min/X) tidak
-     * dipakai — kalau dipakai justru menghasilkan ranking terbalik. Tipe cost/benefit
-     * tetap disimpan di SawCriteria sebagai dokumentasi arah RAW input.
-     *
-     * Score=0 (missing data) → norm=0 supaya tidak ikut menyumbang preferensi.
-     */
     public function normalize(array $matrix, Collection $criteria): array
     {
         $normalized = [];
@@ -202,11 +191,24 @@ class SawCalculationService
 
         foreach ($criteria as $code => $criterion) {
             $columnScores = array_map(fn ($row) => $row['score'][$code] ?? 0, $matrix);
+            $isCost = $criterion->isCost();
+
             $max = max($columnScores);
+            $positiveScores = array_filter($columnScores, fn ($s) => $s > 0);
+            $min = ! empty($positiveScores) ? min($positiveScores) : 0;
 
             foreach ($matrix as $medicineId => $row) {
                 $score = $row['score'][$code] ?? 0;
-                $normalized[$medicineId][$code] = $max > 0 ? $score / $max : 0;
+
+                if ($score <= 0) {
+                    $normalized[$medicineId][$code] = 0;
+
+                    continue;
+                }
+
+                $normalized[$medicineId][$code] = $isCost
+                    ? $min / $score
+                    : ($max > 0 ? $score / $max : 0);
             }
         }
 

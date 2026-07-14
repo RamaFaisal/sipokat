@@ -331,7 +331,7 @@
         </div>
 
         <div class="print-info">
-            Dicetak pada {{ now()->format('d/m/Y H:i') }} — SIPOKAT
+            Dicetak pada {{ now()->format('d/m/Y H:i') }} - SIPOKAT
         </div>
     </div>
 </body>
