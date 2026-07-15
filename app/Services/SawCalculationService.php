@@ -10,23 +10,11 @@ use App\Models\SawCriteria;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-
-/**
- * Implementasi metode Simple Additive Weighting (SAW) untuk prioritas restock obat.
- *
- * Pipeline: getRawValue → convertToScore (via SawCriteria) → normalize → calculatePreference → rank.
- *
- * Mapping kolom result table: c1..c4 = SawCriteria.code "C1".."C4" (konvensi seeder).
- * Kalau admin menambah kriteria di luar C1..C4, butuh migration kolom baru.
- */
+ 
 class SawCalculationService
 {
-    /** Kode kriteria yang dipersist sebagai kolom c1..c4 di saw_calculation_results. */
     public const CRITERIA_CODES = ['C1', 'C2', 'C3', 'C4'];
 
-    /**
-     * Orchestrator: hitung SAW untuk semua medicine aktif dan simpan snapshot.
-     */
     public function execute(
         Carbon $periodStart,
         Carbon $periodEnd,
@@ -113,10 +101,6 @@ class SawCalculationService
         });
     }
 
-    /**
-     * Ambil nilai mentah per kriteria per obat.
-     * C2 (permintaan) di-normalisasi ke ekuivalen bulanan agar scale_rules tetap konsisten saat periode != 30 hari.
-     */
     public function getRawValue(
         Medicine $medicine,
         string $code,
@@ -132,10 +116,6 @@ class SawCalculationService
         };
     }
 
-    /**
-     * Total qty terjual dalam periode, diproyeksikan ke ekuivalen bulanan (30 hari).
-     * Order dengan status 'cancelled' di-exclude.
-     */
     private function getMonthlyDemand(Medicine $medicine, Carbon $start, Carbon $end): int
     {
         $totalQty = (int) OrderItem::where('medicine_id', $medicine->id)
@@ -150,10 +130,6 @@ class SawCalculationService
         return (int) round(($totalQty / $days) * 30);
     }
 
-    /**
-     * Bangun matriks keputusan: untuk setiap obat × kriteria, simpan nilai raw + score 1-5.
-     * Return: [medicine_id => ['raw' => [code => value], 'score' => [code => int]]]
-     */
     public function buildDecisionMatrix(
         Collection $medicines,
         Collection $criteria,
@@ -215,10 +191,6 @@ class SawCalculationService
         return $normalized;
     }
 
-    /**
-     * Hitung nilai preferensi Vi = Σ (Wj × Rij) per alternatif.
-     * Return: [medicine_id => preference_value]
-     */
     public function calculatePreference(array $normalized, Collection $criteria): array
     {
         $preferences = [];
