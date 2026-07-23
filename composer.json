@@ -6,6 +6,7 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
+        "ext-pdo_pgsql": "*",
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "*",
         "bezhansalleh/filament-shield": "^4.1",
