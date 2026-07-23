@@ -5,5 +5,6 @@ nixPkgs = [
   "php84Extensions.zip",
   "php84Extensions.gd",
   "php84Packages.composer",
-  "nodejs_20"
+  "nodejs_20",
+  "nginx"
 ]
