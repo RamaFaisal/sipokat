@@ -28,19 +28,48 @@
 3. Bagaimana alur obat masuk dari PBF/supplier sampai tersimpan di rak?
 4. Bagaimana pencatatan saat obat terjual?
 5. Apakah stok fisik dan catatan sering cocok? Kalau tidak, seberapa sering selisih?
+    - Seberapa sering ditemukan selisih? (tiap minggu / tiap stock opname bulanan / jarang): ______
+    - Rata-rata besaran selisih (unit atau %): ______
+    - Contoh kasus konkret terakhir kali terjadi: ______
+    - Dugaan penyebab:
+      ☐ lupa catat · ☐ salah tulis · ☐ obat rusak/hilang tak tercatat · ☐ penjualan tak real-time · ☐ lainnya: ______
+    - Cara ketahuan selisihnya:
+      ☐ stock opname rutin · ☐ baru ketahuan saat mau jual/terima obat · ☐ lainnya: ______
+    - Dampak kalau stok fisik **lebih sedikit** dari catatan: ______
+    - Dampak kalau stok fisik **lebih banyak** dari catatan: ______
 
 ### B.2 Masalah yang dialami [dipakai untuk: Latar Belakang 1.1, Tabel 3.1 Identifikasi Masalah]
 6. Pernah kehabisan stok obat yang sering dicari (stock out)? Seberapa sering & dampaknya?
+    - Seberapa sering stock out terjadi (per bulan)? ______
+    - Obat apa yang paling sering stock out (top 3-5)? ______
+    - Dampak ke pelanggan:
+      ☐ pelanggan pergi ke apotek lain · ☐ pelanggan menunggu/pesan dulu · ☐ kehilangan penjualan · ☐ lainnya: ______
+    - Perkiraan kehilangan omzet akibat stock out (per bulan, kalau bisa diperkirakan): ______
+    - Lead time reorder — berapa lama biasanya sampai obat tersedia lagi: ______ hari
 7. Pernah ada obat kedaluwarsa yang harus dimusnahkan? Kira-kira berapa banyak/nilainya per periode?
+    - Frekuensi pemusnahan (per bulan/tahun): ______
+    - Perkiraan jumlah item/unit yang dimusnahkan per periode: ______
+    - Perkiraan nilai kerugian (Rp) per periode: ______
+    - Obat/kategori yang paling sering kedaluwarsa sebelum terjual: ______
+    - Ada usaha mengurangi (diskon menjelang ED, retur ke PBF, dll)? ______
 8. Bagaimana Bapak/Ibu tahu suatu obat stoknya mulai menipis? Ada peringatannya?
 9. Bagaimana cara memantau obat yang mendekati kedaluwarsa saat ini?
 10. Saat ini, bagaimana memutuskan obat mana yang harus dipesan ulang duluan? (perkiraan / pengalaman / catatan?)
+    - Faktor apa yang paling sering jadi pertimbangan saat ini, urutkan kalau bisa: ______
+    - Siapa yang membuat keputusan ini? ______
+    - Berapa lama waktu yang dihabiskan untuk menentukan urutan restock per periode (mis. per minggu)? ______
+    - Pernah keputusan reorder-nya keliru prioritas — obat yang dianggap belum urgent ternyata stock out duluan, atau sebaliknya? Contoh kasus konkret: ______
 
 ### B.3 Kriteria & Bobot SAW — INTI SKRIPSI [dipakai untuk: Bab 3.4.2 Tabel 3.4–3.8]
 > Bagian ini yang membuat bobot & ambang skala Anda **berdasar data nyata**, bukan asumsi. Tanyakan pelan & catat persis.
 
 11. Saat memutuskan restock, faktor apa saja yang Bapak/Ibu pertimbangkan? (biarkan menjawab bebas dulu)
 12. Kami mengusulkan 4 kriteria: **(a) sisa stok, (b) tingkat permintaan/laku-tidaknya, (c) sisa masa kedaluwarsa, (d) harga beli.** Apakah keempatnya relevan? Ada yang kurang/lebih?
+    - Sisa stok relevan? ☐ ya ☐ tidak — alasan: ______
+    - Tingkat permintaan/laku-tidaknya relevan? ☐ ya ☐ tidak — alasan: ______
+    - Sisa masa kedaluwarsa relevan? ☐ ya ☐ tidak — alasan: ______
+    - Harga beli relevan? ☐ ya ☐ tidak — alasan: ______
+    - Ada kriteria lain yang menurut Bapak/Ibu perlu ditambahkan (mis. supplier tertentu, lokasi rak, dll)? ______
 13. **Urutkan** keempat kriteria dari yang PALING penting sampai paling tidak penting saat memutuskan restock:
     - Peringkat 1 (paling penting): ______
     - Peringkat 2: ______
@@ -57,9 +86,42 @@
 
 ### B.4 Kebutuhan & harapan terhadap sistem [dipakai untuk: Tabel 3.2, 3.3, Manfaat 1.5]
 16. Kalau ada sistem berbasis web, fitur apa yang paling Bapak/Ibu harapkan?
+    - Sebutkan 3 fitur paling prioritas (urutkan): 1) ______ 2) ______ 3) ______
+    - Ada fitur dari sistem/apotek lain yang ingin ditiru? ______
 17. Siapa saja nanti yang akan memakai sistem, dan sebatas apa aksesnya? (admin/petugas/pemilik)
+
+    | Peran | Kelola master data (obat/supplier) | Input transaksi masuk/keluar | Lihat & hitung SPK SAW | Lihat laporan | Kelola user & hak akses |
+    |---|---|---|---|---|---|
+    | Admin | ☐ | ☐ | ☐ | ☐ | ☐ |
+    | Petugas | ☐ | ☐ | ☐ | ☐ | ☐ |
+    | Pemilik | ☐ | ☐ | ☐ | ☐ | ☐ |
+
 18. Apakah notifikasi otomatis stok menipis & obat mau kedaluwarsa akan membantu? Bagaimana idealnya?
+    - Media notifikasi yang diinginkan: ☐ dalam sistem (bel notifikasi) ☐ WhatsApp ☐ email ☐ lainnya: ______
+    - Idealnya notifikasi stok menipis muncul di batas berapa unit sebelum benar-benar habis? ______
+    - Idealnya notifikasi kedaluwarsa muncul berapa hari sebelum tanggal ED? ______
 19. Laporan apa yang selama ini sulit dibuat manual tapi dibutuhkan? (rekap penjualan, obat cepat/lambat laku, dll.)
+    - Jenis laporan yang dibutuhkan (boleh lebih dari satu):
+      ☐ rekap penjualan · ☐ rekap pembelian · ☐ obat cepat laku (fast moving) · ☐ obat lambat laku (slow moving) · ☐ obat mati (dead stock) · ☐ lainnya: ______
+    - Format yang diinginkan: ☐ lihat di layar · ☐ export Excel · ☐ export PDF · ☐ cetak
+    - Frekuensi laporan dibutuhkan: ☐ harian · ☐ mingguan · ☐ bulanan · ☐ sesuai kebutuhan (custom periode)
+
+### B.5 Batch & masa kedaluwarsa — pendalaman C3 [dipakai untuk: Bab 3.4.2 kriteria C3, batasan masalah 1.4, saran 5.2]
+> Jawaban di bagian ini menentukan bagaimana sistem menetapkan nilai kriteria **C3 (sisa kedaluwarsa)** ketika satu obat punya lebih dari satu tanggal kedaluwarsa. Pertanyaan No. 21 juga menjadi dasar pembenaran asumsi **FEFO** (*first expired, first out*) yang dipakai sistem — supaya asumsi itu berdasar praktik nyata, bukan karangan.
+
+20. Kalau obat dipesan ulang, apakah biasanya menunggu stok lama habis dulu, atau dipesan sebelum habis sehingga batch lama dan batch baru bercampur di rak?
+    - ☐ Menunggu habis dulu → dalam satu waktu praktis hanya ada satu tanggal kedaluwarsa per obat
+    - ☐ Dipesan sebelum habis → batch bercampur, satu obat bisa punya beberapa tanggal kedaluwarsa
+    - ☐ Tergantung jenis obat: ______________________________
+21. Kalau batch bercampur, saat melayani pembeli petugas mengambil dari batch yang mana?
+    - ☐ Yang kedaluwarsanya paling dekat (FEFO)
+    - ☐ Yang paling dulu masuk (FIFO)
+    - ☐ Yang paling gampang dijangkau di rak / tidak ada aturan khusus
+22. Kalau ada batch yang kedaluwarsa, bagaimana pencatatannya sekarang?
+    - ☐ Dicatat sebagai penyesuaian/opname stok
+    - ☐ Diretur ke PBF (batas retur berapa hari sebelum kedaluwarsa? ______)
+    - ☐ Dimusnahkan dan dicatat di luar sistem
+    - ☐ Tidak dicatat khusus
 
 ---
 
@@ -74,6 +136,7 @@
 | Penataan rak & pengelompokan/kategori obat | | ☐ |
 | Contoh selisih stok fisik vs catatan (bila terlihat) | | ☐ |
 | Proses saat melayani penjualan | | ☐ |
+| Apakah satu obat terlihat punya **lebih dari satu tanggal kedaluwarsa** di rak (batch bercampur) | | ☐ |
 
 ---
 
@@ -83,7 +146,8 @@ Minta salinan/foto seadanya — tidak harus lengkap sempurna, yang penting **nya
 
 1. **Daftar obat** — nama, satuan (strip/botol), kategori, **harga beli**, harga jual, (kalau ada) batas stok minimum & lokasi rak. → jadi master data obat.
 2. **Data penjualan ± 1 bulan terakhir** — obat apa saja & jumlah terjual. → sumber kriteria **C2 (permintaan)**.
-3. **Data pembelian/penerimaan terakhir dari PBF** — termasuk **tanggal kedaluwarsa & nomor batch** bila tercantum. → sumber kriteria **C3 (kedaluwarsa)** & stok masuk.
+3. **Data pembelian/penerimaan dari PBF** — termasuk **tanggal kedaluwarsa & nomor batch** bila tercantum. → sumber kriteria **C3 (kedaluwarsa)** & stok masuk.
+   > Minta **beberapa penerimaan terakhir per obat**, bukan hanya yang paling akhir. Dari situ bisa dihitung sendiri berapa banyak obat yang punya lebih dari satu batch berlaku pada saat bersamaan — jawaban berbasis data untuk pertanyaan No. 20, tidak bergantung pada ingatan narasumber.
 4. **Snapshot stok saat ini** untuk beberapa/seluruh obat. → sumber kriteria **C1 (stok)**.
 5. **Daftar supplier/PBF** yang biasa dipakai.
 6. **Foto** buku catatan / screenshot Excel yang dipakai sekarang. → bukti masalah + lampiran.
