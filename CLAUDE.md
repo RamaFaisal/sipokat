@@ -2,7 +2,7 @@
 
 > Dokumen ini merangkum **kondisi proyek saat ini** dibanding **requirement di draft proposal TA "Rancang Bangun Sistem Inventory Obat Berbasis Web dengan SPK Metode SAW pada Apotek Anugrah Husada"** (Bab I-III).
 > Tujuan: bahan review/mentoring untuk dosen pembimbing.
-> Last updated: 2026-06-03
+> Last updated: 2026-09-07
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Aspek | Status | Catatan |
 |-------|--------|---------|
-| Master Data (obat, supplier, unit, kategori, rak) | ✅ Selesai | CRUD lengkap di Filament |
+| Master Data (obat, supplier, unit) | ✅ Selesai | CRUD lengkap di Filament. Rak Obat dihapus; Kategori dikunci 2 golongan (Obat Bebas/Obat Keras), tanpa CRUD — lihat Section 12 |
 | Procurement (PO + RO partial + ED tracking) | ✅ Selesai | Auto-numbering, status tracking, export Excel; field ED/batch/manufacture_date sudah di-input per item RO |
 | Inventory (Kartu Stok via `MedicineStock` D/C) | ✅ Selesai | `StockCardService` solid; status auto-update; `Medicine::currentStock()` konsisten dengan filter soft-delete |
 | Stock Opname | ✅ Selesai | Bisa adjustment D/C |
@@ -274,6 +274,8 @@ Step 5 (P2.1)  → ✅ Tutup Phase 2: Order ↔ MedicineStock integration + fix 
 Step 6 (P2.2)  → ✅ Dashboard widgets (LowStock, Expiring, PendingPO, SalesSummary, SawTopRestock)
 Step 7 (P2.4)  → ✅ Scheduled commands: sipokat:recalculate-saw 06:00 + sipokat:check-stock-and-expiry 08:00
 Step 8 (P3)    → ✅ Laporan rekap + fast/slow moving + history snapshot SAW + detail breakdown V_i
+Step 9         → ✅ Perampingan master data: hapus Rak Obat, kunci Kategori jadi Obat Bebas/Obat Keras
+                    + resync segmen kategori pada kode obat (Section 12)
 — (P2.3 di-skip, user handle sendiri pakai Filament Shield)
 ```
 
@@ -351,6 +353,9 @@ Step 8 (P3)    → ✅ Laporan rekap + fast/slow moving + history snapshot SAW +
 | Blade partial | `resources/views/filament/pages/partials/saw-result-detail.blade.php` (modal breakdown V_i step-by-step) |
 | Modified | `app/Filament/Pages/SawCalculation.php` (tambah ViewAction "Detail Hitungan" di table) |
 
+### Step 9 — Perampingan Master Data (2026-09-07)
+Daftar file lengkap ada di **Section 12.1** (Rak Obat) dan **Section 12.3** (migration). Ringkasnya: 2 migration baru, 15 file dihapus, 8 file kode dimodifikasi.
+
 ---
 
 ## 9. Cara Test Manual (untuk Demo Sidang)
@@ -367,7 +372,7 @@ Step 8 (P3)    → ✅ Laporan rekap + fast/slow moving + history snapshot SAW +
 php artisan db:seed --class=SpkTestDataSeeder
 php artisan sipokat:recalculate-saw
 ```
-- 150 obat ter-generate dengan code format match Filament form (mis. `SIP/PARAC100/ANT/SLP/001`)
+- 150 obat ter-generate dengan code format match Filament form (mis. `SIP/PARAC100/OBB/SLP/001`)
 - 5 ReceiveOrder + 250 Orders dalam 30 hari, distribusi atribut cover semua bracket Tabel 3.5-3.8
 - SAW snapshot ter-create, dashboard widget langsung berisi data
 
@@ -429,7 +434,7 @@ Output:
 - **Output**: 150 obat + 1 supplier dummy + 5 ReceiveOrder + 250 Orders (30 hari)
 - **Algoritma plan-then-execute**: tentukan dulu `target_stock` & `target_demand` per obat → `ro_qty = stok + demand` → stok akhir TIDAK PERNAH negatif
 - **Distribusi merata** semua bracket Tabel 3.5-3.8: stok 0-200+, demand 0-130/bln, ED 30-1000 hari, harga 2k-250k
-- **Code obat match Filament form** — `generateMedicineCode()` mirror dari `MedicineForm::generateCode()` (uppercase, format `SIP/NAMA4/CAT3/UNIT3/SEQ`, fallback 5-char prefix kalau konflik)
+- **Code obat match Filament form** — `generateMedicineCode()` mirror dari `MedicineForm::generateCode()` (uppercase, format `SIP/NAMA4/ALIAS_KAT/UNIT3/SEQ`, fallback 5-char prefix kalau konflik). Sejak 2026-09-07 segmen kategori pakai `alias` (OBB/OBK), bukan 3 huruf pertama nama — lihat Section 12.2
 - **Idempotent**: cleanup via marker `[SPK_TEST_DATA]` di description + prefix code `ORD-SPK-` / `RO-SPK-` (pakai `withTrashed()` supaya soft-deleted juga ke-purge)
 - **Run**: `php artisan db:seed --class=SpkTestDataSeeder`
 
@@ -455,5 +460,80 @@ Output:
 
 ---
 
-**Status dokumen**: ✅ Mencerminkan kondisi aktual per 2026-05-30.
-**Tahap berikutnya**: Smoke test browser end-to-end (lihat [NEXT_STEPS.md](NEXT_STEPS.md) opsi C1), presentasi ke dosen pembimbing, dan eksekusi item Open Items di Section 10.
+## 12. Perampingan Master Data 2026-09-07
+
+Master data disederhanakan agar sesuai praktik apotek: **Rak Obat dihapus**, dan **Kategori tidak lagi dikelola lewat CRUD** melainkan dikunci pada dua golongan resmi — **Obat Bebas** dan **Obat Keras**.
+
+### 12.1 Rak Obat dihapus tuntas
+
+Kolom `medicines.rack_id` dan tabel `medicine_racks` di-drop, bukan sekadar disembunyikan dari sidebar — menyisakan kolom `NOT NULL` yang tak terpakai justru jadi utang teknis yang bisa ditanyakan penguji.
+
+| Aksi | Path |
+|------|------|
+| Dihapus | `app/Models/MedicineRack.php` |
+| Dihapus | `app/Filament/Resources/MedicineRacks/` (6 file) |
+| Dihapus | `app/Policies/MedicineRackPolicy.php` |
+| Modified | `app/Models/Medicine.php` (buang relasi `rack()` + `rack_id` dari `$fillable`) |
+| Modified | `app/Filament/Resources/Medicines/Schemas/MedicineForm.php` (buang Select Rak, grid jadi 2 kolom) |
+| Modified | `app/Filament/Resources/Medicines/Tables/MedicinesTable.php` (buang kolom `rack.name`) |
+| Modified | `app/Filament/Imports/MedicineImporter.php` (buang kolom & resolusi `rack_name`) |
+| Modified | `database/seeders/MasterDataSeeder.php`, `DemoApotekSeeder.php`, `SpkTestDataSeeder.php` |
+
+### 12.2 Kategori dikunci 2 golongan
+
+Tabel `medicine_categories` dan FK `medicines.category_id` **tetap dipertahankan** — laporan, importer, dan generator kode sudah bergantung padanya, jadi mengubahnya jadi kolom enum akan menyentuh jauh lebih banyak file tanpa manfaat setara. Yang dihapus hanya CRUD-nya (`app/Filament/Resources/MedicineCategories/` 6 file + `MedicineCategoriesPolicy.php`), sehingga isinya tidak bisa ditambah lewat UI.
+
+| Kategori | Alias | Keterangan |
+|----------|-------|------------|
+| Obat Bebas | `OBB` | Dapat dibeli bebas tanpa resep dokter |
+| Obat Keras | `OBK` | Penyerahannya harus dengan resep dokter |
+
+Alias ditambahkan ke `MedicineCategories::$fillable` — sebelumnya tidak ada di sana, sehingga seeder yang mengirim `alias` diam-diam mengabaikannya.
+
+**Kenapa alias wajib dipakai di kode obat**: `generateCode()` dulu memakai `substr($category->name, 0, 3)`. Dengan dua kategori baru, "Obat Bebas" dan "Obat Keras" sama-sama menghasilkan `OBA` — segmen kategori jadi tidak membedakan apa pun. Ketiga tempat yang menduplikasi algoritma ini (`MedicineForm`, `DemoApotekSeeder`, `SpkTestDataSeeder`) kini memakai `$category->alias`, sejalan dengan cara `Unit` diperlakukan di baris sebelahnya.
+
+> **Catatan untuk sidang**: skema lama sebenarnya sudah punya cacat serupa — "Antibiotik" dan "Antiseptik" sama-sama terpotong jadi `ANT`, sehingga 139 obat berbagi segmen yang sama padahal kategorinya berbeda. Perpindahan ke alias sekaligus menutup cacat lama itu.
+
+### 12.3 Migrasi data
+
+| Migration | Isi |
+|-----------|-----|
+| `2026_09_07_000001_remove_rack_and_lock_medicine_categories.php` | Remap obat ke 2 kategori final → hapus kategori lama → drop `rack_id` + tabel `medicine_racks` |
+| `2026_09_07_000002_resync_medicine_codes_with_category_alias.php` | Tulis ulang segmen kategori pada `medicines.code` jadi OBB/OBK |
+
+**Jebakan cascade**: `medicines.category_id` memakai `ON DELETE CASCADE`. Menghapus kategori lama tanpa me-remap obatnya lebih dulu akan **ikut menghapus obatnya**. Urutan di `up()` sengaja dibuat remap-dulu-baru-hapus.
+
+Aturan remap yang dipakai (eksplisit sebagai konstanta di migration, mudah diubah):
+
+| Kategori lama | → | Kategori baru | Jumlah obat |
+|---------------|---|---------------|-------------|
+| Antibiotik | → | Obat Keras | 69 |
+| Analisik, Antiseptik, Vitamin, dan lainnya | → | Obat Bebas | 204 |
+
+**Penomoran ulang kode**: penggabungan kategori bisa membuat dua obat bertemu di kode identik. Pada data aktual terjadi satu kasus — dua CIPROFLOXACIN 1000 mg (dulu Analisik dan Antiseptik) sama-sama jadi Obat Bebas — diselesaikan jadi `.../OBB/KAP/001` dan `.../OBB/KAP/002`. Penulisan dilakukan dua fase (parkir di nilai sementara dulu) supaya unique index `code` tidak terlanggar di tengah proses.
+
+`down()` migration kedua sengaja kosong: singkatan kategori lama tidak tersimpan di mana pun setelah kategorinya dihapus, jadi pemulihan hanya bisa lewat backup database.
+
+### 12.4 Hasil verifikasi
+
+| Cek | Hasil |
+|-----|-------|
+| Total obat sebelum → sesudah | 273 → **273** (nol kehilangan akibat cascade) |
+| Kategori | 4 → **2** (OBB 204 obat, OBK 69 obat) |
+| Tabel `medicine_racks` & kolom `rack_id` | hilang |
+| Obat dengan kategori yatim | 0 |
+| Kode obat unik | 273 dari 273 |
+| Kode dengan segmen kategori lama (ANA/ANT/VIT) | 0 |
+| Kode yang tidak cocok dengan kategori obatnya | 0 |
+| Permission Shield basi (2 resource terhapus) | 22 dibersihkan beserta pivotnya |
+
+### 12.5 Yang perlu diperhatikan
+
+1. **Ketepatan golongan obat belum ditinjau satu per satu.** Remap dilakukan per kategori lama, bukan per obat. Contoh nyata: dua CIPROFLOXACIN kini bergolongan Obat Bebas padahal secara farmasi termasuk obat keras — akibat asalnya berkategori Analisik/Antiseptik. Perlu dirapikan lewat UI sebelum demo sidang.
+2. **Data duplikat**: dua CIPROFLOXACIN 1000 mg dengan satuan sama adalah duplikat bawaan seeder demo (dulu lolos karena kategorinya berbeda). Pertimbangkan menghapus salah satunya.
+3. Kalau `SpkTestDataSeeder` atau `DemoApotekSeeder` dijalankan ulang, kode obat otomatis memakai OBB/OBK — tidak perlu menjalankan migration kedua lagi.
+
+---
+
+**Status dokumen**: ✅ Mencerminkan kondisi aktual per 2026-09-07.
+**Tahap berikutnya**: Rapikan golongan obat per item (Section 12.5), smoke test browser end-to-end (lihat [NEXT_STEPS.md](NEXT_STEPS.md) opsi C1), presentasi ke dosen pembimbing, dan eksekusi item Open Items di Section 10.
