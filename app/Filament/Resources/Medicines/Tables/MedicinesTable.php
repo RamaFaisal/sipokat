@@ -23,9 +23,6 @@ class MedicinesTable
                 TextColumn::make('category.name')
                     ->label('Kategori')
                     ->sortable(),
-                TextColumn::make('rack.name')
-                    ->label('Rak')
-                    ->sortable(),
                 TextColumn::make('sale_price')
                     ->label('Harga Jual')
                     ->money('IDR')

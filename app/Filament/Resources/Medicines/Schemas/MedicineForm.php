@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Medicines\Schemas;
 
 use App\Models\Medicine;
 use App\Models\MedicineCategories;
-use App\Models\MedicineRack;
 use App\Models\Supplier;
 use App\Models\Unit;
 use App\Settings\GeneralSettings;
@@ -56,7 +55,7 @@ class MedicineForm
                 ])
                 ->columnSpanFull(),
 
-                Grid::make(3)
+                Grid::make(2)
                     ->schema([
                         Select::make('category_id')
                             ->label('Kategori Obat')
@@ -74,10 +73,6 @@ class MedicineForm
                             })
                             ->live(onBlur: true)
                             ->options(Unit::all()->pluck('name', 'id')),
-                        Select::make('rack_id')
-                            ->label('Rak Obat')
-                            ->required()
-                            ->options(MedicineRack::all()->pluck('name', 'id')),
                     ])
                     ->columnSpanFull(),
                 
@@ -147,7 +142,7 @@ class MedicineForm
             $dosageNumber = 'GEN';
         }
         $category = MedicineCategories::find($categoryId);
-        $categoryCode = strtoupper(substr($category->name, 0, 3));
+        $categoryCode = strtoupper($category->alias ?? substr($category->name, 0, 3));
         $unit = Unit::find($unitId);
         $unitAlias = strtoupper($unit->alias ?? substr($unit->name, 0, 3));
         $baseCode = $appName . '/' . $namePrefix . $dosageNumber . '/' . $categoryCode . '/' . $unitAlias;

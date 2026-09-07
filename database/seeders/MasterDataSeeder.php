@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Unit;
 use App\Models\MedicineCategories;
-use App\Models\MedicineRack;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 
@@ -24,25 +23,13 @@ class MasterDataSeeder extends Seeder
             Unit::updateOrCreate(['name' => $unit['name']], $unit);
         }
 
-        // Seed Categories
+        // Seed Categories - dikunci dua golongan, tidak lagi dikelola lewat CRUD
         $categories = [
-            ['name' => 'Analisik', 'alias' => 'ANA', 'description' => 'Pereda nyeri'],
-            ['name' => 'Antibiotik', 'alias' => 'ANT', 'description' => 'Melawan bakteri'],
-            ['name' => 'Antiseptik', 'alias' => 'ASP', 'description' => 'Pembersih luka'],
-            ['name' => 'Vitamin', 'alias' => 'VIT', 'description' => 'Suplemen tubuh'],
+            ['name' => 'Obat Bebas', 'alias' => 'OBB', 'description' => 'Obat yang dapat dibeli bebas tanpa resep dokter'],
+            ['name' => 'Obat Keras', 'alias' => 'OBK', 'description' => 'Obat yang penyerahannya harus dengan resep dokter'],
         ];
         foreach ($categories as $cat) {
             MedicineCategories::updateOrCreate(['name' => $cat['name']], $cat);
-        }
-
-        // Seed Racks
-        $racks = [
-            ['name' => 'Rak A1', 'description' => 'Obat Umum'],
-            ['name' => 'Rak A2', 'description' => 'Obat Keras'],
-            ['name' => 'Lemari Es', 'description' => 'Suhu Dingin'],
-        ];
-        foreach ($racks as $rack) {
-            MedicineRack::updateOrCreate(['name' => $rack['name']], $rack);
         }
 
         // Seed Suppliers

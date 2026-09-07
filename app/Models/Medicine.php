@@ -17,7 +17,6 @@ class Medicine extends Model
         "dosage",
         "category_id",
         "unit_id",
-        "rack_id",
         "photo",
         "purchase_price",
         "sale_price",
@@ -35,11 +34,6 @@ class Medicine extends Model
     public function unit()
     {
         return $this->belongsTo(Unit::class);
-    }
-
-    public function rack()
-    {
-        return $this->belongsTo(MedicineRack::class);
     }
 
     public function purchaseOrderItems()
