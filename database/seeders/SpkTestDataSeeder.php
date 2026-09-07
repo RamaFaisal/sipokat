@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Medicine;
 use App\Models\MedicineCategories;
-use App\Models\MedicineRack;
 use App\Models\MedicineStock;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -135,7 +134,6 @@ class SpkTestDataSeeder extends Seeder
     {
         $categories = MedicineCategories::all()->keyBy('id');
         $units = Unit::all()->keyBy('id');
-        $rackIds = MedicineRack::pluck('id')->all();
 
         $names = $this->medicineNamePool();
         $medicines = [];
@@ -155,7 +153,6 @@ class SpkTestDataSeeder extends Seeder
 
             $categoryId = array_rand($categories->toArray());
             $unitId = array_rand($units->toArray());
-            $rackId = $rackIds[array_rand($rackIds)];
 
             $code = $this->generateMedicineCode($name, $dosage, $categories[$categoryId], $units[$unitId]);
             $purchase = $this->randomPurchasePrice();
@@ -166,7 +163,6 @@ class SpkTestDataSeeder extends Seeder
                 'dosage' => $dosage,
                 'category_id' => $categoryId,
                 'unit_id' => $unitId,
-                'rack_id' => $rackId,
                 'purchase_price' => $purchase,
                 'sale_price' => $purchase + mt_rand(1000, 10000),
                 'min_stock' => mt_rand(5, 20),
@@ -201,7 +197,7 @@ class SpkTestDataSeeder extends Seeder
             $dosageNumber = 'GEN';
         }
 
-        $categoryCode = strtoupper(substr($category->name, 0, 3));
+        $categoryCode = strtoupper($category->alias ?? substr($category->name, 0, 3));
         $unitAlias = strtoupper($unit->alias ?? substr($unit->name, 0, 3));
 
         $baseCode = $appName . '/' . $namePrefix . $dosageNumber . '/' . $categoryCode . '/' . $unitAlias;

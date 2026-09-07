@@ -13,6 +13,7 @@ class MedicineCategories extends Model
 
     protected $fillable = [
         "name",
+        "alias",
         "description",
     ];
 }

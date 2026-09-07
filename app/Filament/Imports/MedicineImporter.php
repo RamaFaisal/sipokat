@@ -4,7 +4,6 @@ namespace App\Filament\Imports;
 
 use App\Models\Medicine;
 use App\Models\MedicineCategories;
-use App\Models\MedicineRack;
 use App\Models\Unit;
 use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
@@ -22,7 +21,7 @@ class MedicineImporter extends Importer
                 ->label('Kode Obat')
                 ->exampleHeader('Kode Obat')
                 ->guess(['Kode Obat', 'Kode', 'code'])
-                ->example('SIP/NAMADOSIS/KAT/SAT/001')
+                ->example('SIP/PARAC500/OBB/TAB/001')
                 ->requiredMapping()
                 ->rules(['required', 'string', 'max:255']),
             ImportColumn::make('name')
@@ -42,7 +41,7 @@ class MedicineImporter extends Importer
                 ->label('Nama Kategori')
                 ->exampleHeader('Nama Kategori')
                 ->guess(['Nama Kategori', 'Kategori', 'category_name', 'category'])
-                ->example('Analgesik')
+                ->example('Obat Bebas')
                 ->requiredMapping()
                 ->rules(['required', 'string']),
             ImportColumn::make('unit_name')
@@ -52,12 +51,6 @@ class MedicineImporter extends Importer
                 ->example('Tablet')
                 ->requiredMapping()
                 ->rules(['required', 'string']),
-            ImportColumn::make('rack_name')
-                ->label('Nama Rak')
-                ->exampleHeader('Nama Rak')
-                ->guess(['Nama Rak', 'Rak', 'rack_name', 'rack'])
-                ->example('Rak A1')
-                ->rules(['nullable', 'string']),
             ImportColumn::make('purchase_price')
                 ->label('Harga Beli')
                 ->exampleHeader('Harga Beli')
@@ -99,7 +92,6 @@ class MedicineImporter extends Importer
     {
         $categoryName = trim((string) ($this->data['category_name'] ?? ''));
         $unitName = trim((string) ($this->data['unit_name'] ?? ''));
-        $rackName = trim((string) ($this->data['rack_name'] ?? ''));
 
         $category = MedicineCategories::whereRaw('LOWER(name) = ?', [strtolower($categoryName)])->first();
         if (! $category) {
@@ -115,30 +107,18 @@ class MedicineImporter extends Importer
             ]);
         }
 
-        $rackId = null;
-        if ($rackName !== '') {
-            $rack = MedicineRack::whereRaw('LOWER(name) = ?', [strtolower($rackName)])->first();
-            if (! $rack) {
-                throw ValidationException::withMessages([
-                    'rack_name' => "Rak \"{$rackName}\" tidak ditemukan di master Rak Obat.",
-                ]);
-            }
-            $rackId = $rack->id;
-        }
-
         $medicine = Medicine::firstOrNew([
             'code' => $this->data['code'],
         ]);
 
         $medicine->category_id = $category->id;
         $medicine->unit_id = $unit->id;
-        $medicine->rack_id = $rackId;
 
         if (! $medicine->exists) {
             $medicine->stock_status = $medicine->stock_status ?? 'empty';
         }
 
-        unset($this->data['category_name'], $this->data['unit_name'], $this->data['rack_name']);
+        unset($this->data['category_name'], $this->data['unit_name']);
 
         return $medicine;
     }

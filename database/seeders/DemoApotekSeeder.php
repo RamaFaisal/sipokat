@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Medicine;
 use App\Models\MedicineCategories;
-use App\Models\MedicineRack;
 use App\Models\MedicineStock;
 use App\Models\MedicineStockOpname;
 use App\Models\MedicineStockOpnameItem;
@@ -152,20 +151,18 @@ class DemoApotekSeeder extends Seeder
      */
     protected function ensureMasterData(): array
     {
-        // Kategori, unit, rak — buat bila belum ada (mengikuti MasterDataSeeder).
+        // Kategori & unit — buat bila belum ada (mengikuti MasterDataSeeder).
         if (Unit::count() === 0) {
             foreach ([['Tablet', 'TAB'], ['Kapsul', 'KAP'], ['Sirup', 'SYR'], ['Botol', 'BTL'], ['Salep', 'SLP']] as [$n, $a]) {
                 Unit::updateOrCreate(['name' => $n], ['name' => $n, 'alias' => $a]);
             }
         }
         if (MedicineCategories::count() === 0) {
-            foreach ([['Analgesik', 'ANA'], ['Antibiotik', 'ANT'], ['Antiseptik', 'ASP'], ['Vitamin', 'VIT']] as [$n, $a]) {
-                MedicineCategories::updateOrCreate(['name' => $n], ['name' => $n, 'alias' => $a, 'description' => $n]);
-            }
-        }
-        if (MedicineRack::count() === 0) {
-            foreach ([['Rak A1', 'Obat Umum'], ['Rak A2', 'Obat Keras'], ['Lemari Es', 'Suhu Dingin']] as [$n, $d]) {
-                MedicineRack::updateOrCreate(['name' => $n], ['name' => $n, 'description' => $d]);
+            foreach ([
+                ['Obat Bebas', 'OBB', 'Obat yang dapat dibeli bebas tanpa resep dokter'],
+                ['Obat Keras', 'OBK', 'Obat yang penyerahannya harus dengan resep dokter'],
+            ] as [$n, $a, $d]) {
+                MedicineCategories::updateOrCreate(['name' => $n], ['name' => $n, 'alias' => $a, 'description' => $d]);
             }
         }
 
@@ -196,7 +193,6 @@ class DemoApotekSeeder extends Seeder
     {
         $categories = MedicineCategories::all()->keyBy('id');
         $units = Unit::all()->keyBy('id');
-        $rackIds = MedicineRack::pluck('id')->all();
         $categoryIds = $categories->keys()->all();
         $unitIds = $units->keys()->all();
 
@@ -216,7 +212,6 @@ class DemoApotekSeeder extends Seeder
 
             $categoryId = $categoryIds[array_rand($categoryIds)];
             $unitId = $unitIds[array_rand($unitIds)];
-            $rackId = $rackIds[array_rand($rackIds)];
 
             $purchase = $this->randomPurchasePrice();
             $sale = (int) (round(($purchase * mt_rand(115, 150) / 100) / 100) * 100);
@@ -227,7 +222,6 @@ class DemoApotekSeeder extends Seeder
                 'dosage' => $dosage,
                 'category_id' => $categoryId,
                 'unit_id' => $unitId,
-                'rack_id' => $rackId,
                 'purchase_price' => $purchase,
                 'sale_price' => $sale,
                 'min_stock' => mt_rand(5, 20),
@@ -769,7 +763,7 @@ class DemoApotekSeeder extends Seeder
             $dosageNumber = 'GEN';
         }
 
-        $categoryCode = strtoupper(substr($category->name, 0, 3));
+        $categoryCode = strtoupper($category->alias ?? substr($category->name, 0, 3));
         $unitAlias = strtoupper($unit->alias ?? substr($unit->name, 0, 3));
 
         $baseCode = $appName . '/' . $namePrefix . $dosageNumber . '/' . $categoryCode . '/' . $unitAlias;
