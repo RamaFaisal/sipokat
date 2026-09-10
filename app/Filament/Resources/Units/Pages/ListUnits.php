@@ -16,7 +16,13 @@ class ListUnits extends ListRecords
     {
         return [
             CreateAction::make()
-                ->label('Tambah Satuan Obat'),
+                ->label('Tambah Satuan Obat')
+                ->createAnother(false)
+                ->mutateFormDataUsing(function (array $data): array {
+                    $data['alias'] = strtoupper($data['alias']);
+
+                    return $data;
+                }),
         ];
     }
 }

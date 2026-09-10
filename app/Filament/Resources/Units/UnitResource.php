@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\Units;
 
-use App\Filament\Resources\Units\Pages\CreateUnit;
-use App\Filament\Resources\Units\Pages\EditUnit;
 use App\Filament\Resources\Units\Pages\ListUnits;
 use App\Filament\Resources\Units\Schemas\UnitForm;
 use App\Filament\Resources\Units\Tables\UnitsTable;
@@ -50,8 +48,6 @@ class UnitResource extends Resource
     {
         return [
             'index' => ListUnits::route('/'),
-            'create' => CreateUnit::route('/create'),
-            'edit' => EditUnit::route('/{record}/edit'),
         ];
     }
 
