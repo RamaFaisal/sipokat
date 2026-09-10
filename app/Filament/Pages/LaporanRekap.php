@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -108,6 +109,12 @@ class LaporanRekap extends Page implements HasSchemas
                 ->color('success')
                 ->action('exportExcel')
                 ->visible(fn () => $this->rows->isNotEmpty()),
+            Action::make('exportPdf')
+                ->label('Export PDF')
+                ->icon(Heroicon::OutlinedDocumentText)
+                ->color('danger')
+                ->action('exportPdf')
+                ->visible(fn () => $this->rows->isNotEmpty()),
         ];
     }
 
@@ -196,6 +203,31 @@ class LaporanRekap extends Page implements HasSchemas
             'periode' => $start->format('d M Y') . ' s/d ' . $end->format('d M Y'),
             'tipe' => $tipe,
         ]);
+    }
+
+    public function exportPdf()
+    {
+        if ($this->rows->isEmpty()) {
+            return;
+        }
+
+        $tipeLabel = match ($this->summary['tipe']) {
+            'penjualan' => 'Penjualan Saja',
+            'pembelian' => 'Pembelian Saja',
+            default => 'Penjualan + Pembelian',
+        };
+
+        $pdf = Pdf::loadView('pdf.laporan-rekap', [
+            'rows' => $this->rows,
+            'summary' => $this->summary,
+            'tipeLabel' => $tipeLabel,
+            'printedAt' => now()->format('d M Y H:i'),
+        ])->setPaper('a4', 'landscape');
+
+        return response()->streamDownload(
+            fn () => print ($pdf->output()),
+            'rekap_penjualan_pembelian_' . now()->format('Ymd_His') . '.pdf',
+        );
     }
 
     public function exportExcel()

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Medicine;
 use App\Models\OrderItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
@@ -109,6 +110,12 @@ class LaporanMoving extends Page implements HasSchemas
                 ->color('success')
                 ->action('exportExcel')
                 ->visible(fn () => $this->fastMoving->isNotEmpty() || $this->slowMoving->isNotEmpty()),
+            Action::make('exportPdf')
+                ->label('Export PDF')
+                ->icon(Heroicon::OutlinedDocumentText)
+                ->color('danger')
+                ->action('exportPdf')
+                ->visible(fn () => $this->fastMoving->isNotEmpty() || $this->slowMoving->isNotEmpty()),
         ];
     }
 
@@ -189,6 +196,41 @@ class LaporanMoving extends Page implements HasSchemas
             'obat_dengan_transaksi' => $rows->where('total_qty', '>', 0)->count(),
             'obat_tanpa_transaksi' => $rows->where('total_qty', 0)->count(),
         ];
+    }
+
+    public function exportPdf()
+    {
+        if ($this->fastMoving->isEmpty() && $this->slowMoving->isEmpty() && $this->deadStock->isEmpty()) {
+            return;
+        }
+
+        $pdf = Pdf::loadView('pdf.laporan-moving', [
+            'meta' => $this->meta,
+            'topN' => (int) ($this->data['top_n'] ?? 20),
+            'printedAt' => now()->format('d M Y H:i'),
+            'sections' => [
+                [
+                    'title' => 'FAST MOVING',
+                    'hint' => 'permintaan bulanan tertinggi',
+                    'rows' => $this->fastMoving,
+                ],
+                [
+                    'title' => 'SLOW MOVING',
+                    'hint' => 'ada transaksi, permintaan di bawah 20 per bulan',
+                    'rows' => $this->slowMoving,
+                ],
+                [
+                    'title' => 'DEAD STOCK',
+                    'hint' => 'tanpa transaksi sepanjang periode',
+                    'rows' => $this->deadStock,
+                ],
+            ],
+        ])->setPaper('a4', 'landscape');
+
+        return response()->streamDownload(
+            fn () => print ($pdf->output()),
+            'fast_slow_moving_' . now()->format('Ymd_His') . '.pdf',
+        );
     }
 
     public function exportExcel()
