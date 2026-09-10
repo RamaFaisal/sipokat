@@ -3,9 +3,7 @@
 namespace App\Filament\Resources\Orders\Pages;
 
 use App\Filament\Resources\Orders\OrderResource;
-use App\Models\Medicine;
-use App\Models\MedicineStock;
-use App\Services\StockCardService;
+use App\Services\StockMovementService;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
@@ -33,46 +31,25 @@ class EditOrder extends EditRecord
     {
         try {
             return DB::transaction(function () use ($record, $data) {
-                $stockService = app(StockCardService::class);
+                $movement = app(StockMovementService::class);
                 $items = $this->data['items'] ?? [];
 
                 if (empty($items)) {
                     throw new \Exception('Order harus memiliki minimal 1 item.');
                 }
 
-                $affectedMedicineIds = MedicineStock::where('order_id', $record->id)
-                    ->pluck('medicine_id')
-                    ->all();
+                // Entri lama dibalik lebih dulu supaya validasi ketersediaan
+                // melihat stok seolah order ini belum pernah ada.
+                $affectedMedicineIds = $movement->reverseSale($record);
 
-                MedicineStock::where('order_id', $record->id)->delete();
-
-                foreach ($items as $item) {
-                    $medicine = Medicine::findOrFail($item['medicine_id']);
-                    $available = $stockService->getAvailableStock($medicine->id);
-
-                    if ((float) $item['qty'] > $available) {
-                        throw new \Exception(
-                            "Stok {$medicine->name} {$medicine->dosage} tidak mencukupi (tersedia: {$available}, diminta: {$item['qty']})"
-                        );
-                    }
-                }
+                $movement->assertAvailable($items);
 
                 $record = parent::handleRecordUpdate($record, $data);
 
-                foreach ($record->fresh()->items as $item) {
-                    MedicineStock::create([
-                        'medicine_id' => $item->medicine_id,
-                        'qty' => $item->qty,
-                        'type_account' => 'C',
-                        'date' => $record->order_date,
-                        'hpp' => $item->price,
-                        'order_id' => $record->id,
-                        'description' => 'Penjualan '.$record->order_code,
-                        'created_by' => auth()->id(),
-                    ]);
-
-                    $affectedMedicineIds[] = $item->medicine_id;
-                }
+                $affectedMedicineIds = array_merge(
+                    $affectedMedicineIds,
+                    $movement->recordSale($record),
+                );
 
                 $record->_affected_medicine_ids = array_values(array_unique($affectedMedicineIds));
 
@@ -91,13 +68,9 @@ class EditOrder extends EditRecord
 
     protected function afterSave(): void
     {
-        $stockService = app(StockCardService::class);
-
-        $medicineIds = $this->record->_affected_medicine_ids ?? [];
-
-        foreach ($medicineIds as $medicineId) {
-            $stockService->updateMedicineStockStatus($medicineId);
-        }
+        app(StockMovementService::class)->refreshStockStatus(
+            $this->record->_affected_medicine_ids ?? []
+        );
     }
 
     protected function getRedirectUrl(): string

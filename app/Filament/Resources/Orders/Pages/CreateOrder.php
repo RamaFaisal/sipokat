@@ -3,9 +3,7 @@
 namespace App\Filament\Resources\Orders\Pages;
 
 use App\Filament\Resources\Orders\OrderResource;
-use App\Models\Medicine;
-use App\Models\MedicineStock;
-use App\Services\StockCardService;
+use App\Services\StockMovementService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -27,38 +25,18 @@ class CreateOrder extends CreateRecord
     {
         try {
             return DB::transaction(function () use ($data) {
-                $stockService = app(StockCardService::class);
+                $movement = app(StockMovementService::class);
                 $items = $this->data['items'] ?? [];
 
                 if (empty($items)) {
                     throw new \Exception('Order harus memiliki minimal 1 item.');
                 }
 
-                foreach ($items as $item) {
-                    $medicine = Medicine::findOrFail($item['medicine_id']);
-                    $available = $stockService->getAvailableStock($medicine->id);
-
-                    if ((float) $item['qty'] > $available) {
-                        throw new \Exception(
-                            "Stok {$medicine->name} {$medicine->dosage} tidak mencukupi (tersedia: {$available}, diminta: {$item['qty']})"
-                        );
-                    }
-                }
+                $movement->assertAvailable($items);
 
                 $order = parent::handleRecordCreation($data);
 
-                foreach ($order->items as $item) {
-                    MedicineStock::create([
-                        'medicine_id' => $item->medicine_id,
-                        'qty' => $item->qty,
-                        'type_account' => 'C',
-                        'date' => $order->order_date,
-                        'hpp' => $item->price,
-                        'order_id' => $order->id,
-                        'description' => 'Penjualan '.$order->order_code,
-                        'created_by' => auth()->id(),
-                    ]);
-                }
+                $movement->recordSale($order);
 
                 return $order;
             });
@@ -75,11 +53,9 @@ class CreateOrder extends CreateRecord
 
     protected function afterCreate(): void
     {
-        $stockService = app(StockCardService::class);
-
-        foreach ($this->record->items as $item) {
-            $stockService->updateMedicineStockStatus($item->medicine_id);
-        }
+        app(StockMovementService::class)->refreshStockStatus(
+            $this->record->items()->pluck('medicine_id')->all()
+        );
     }
 
     protected function getRedirectUrl(): string

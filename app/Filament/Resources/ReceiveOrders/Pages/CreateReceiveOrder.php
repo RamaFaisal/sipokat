@@ -3,11 +3,11 @@
 namespace App\Filament\Resources\ReceiveOrders\Pages;
 
 use App\Filament\Resources\ReceiveOrders\ReceiveOrderResource;
-use App\Models\MedicineStock;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
+use App\Services\StockMovementService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -95,26 +95,15 @@ class CreateReceiveOrder extends CreateRecord
         try {
             $receiveOrder = $this->record;
 
-            self::updatePurchaseOrderStatus(
-                $receiveOrder->purchase_order_id,
-                $receiveOrder->id
-            );
-
-            $stockService = app(\App\Services\StockCardService::class);
-            foreach ($receiveOrder->items as $item) {
-                MedicineStock::create([
-                    'medicine_id' => $item->medicine_id,
-                    'qty' => $item->qty,
-                    'type_account' => 'D',
-                    'date' => $receiveOrder->receive_date,
-                    'hpp' => $item->price,
-                    'receive_order_id' => $receiveOrder->id,
-                    'description' => 'Penerimaan dari ' . $receiveOrder->purchaseOrder->po_number,
-                    'created_by' => auth()->id(),
-                ]);
-
-                $stockService->updateMedicineStockStatus($item->medicine_id);
+            if ($receiveOrder->purchase_order_id) {
+                self::updatePurchaseOrderStatus(
+                    $receiveOrder->purchase_order_id,
+                    $receiveOrder->id
+                );
             }
+
+            $movement = app(StockMovementService::class);
+            $movement->refreshStockStatus($movement->recordReceipt($receiveOrder));
 
         } catch (\Throwable $e) {
             Notification::make()
