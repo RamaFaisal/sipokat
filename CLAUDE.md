@@ -535,5 +535,131 @@ Aturan remap yang dipakai (eksplisit sebagai konstanta di migration, mudah diuba
 
 ---
 
-**Status dokumen**: ✅ Mencerminkan kondisi aktual per 2026-09-07.
-**Tahap berikutnya**: Rapikan golongan obat per item (Section 12.5), smoke test browser end-to-end (lihat [NEXT_STEPS.md](NEXT_STEPS.md) opsi C1), presentasi ke dosen pembimbing, dan eksekusi item Open Items di Section 10.
+## 13. Rencana Implementasi Stok per Batch & FEFO (disusun 2026-09-10)
+
+> **Status: rencana, belum dieksekusi.** Disusun setelah wawancara lapangan (lihat
+> [docs/update-dari-wawancara.md](docs/update-dari-wawancara.md)). Rencana ini **memperluas cakupan**
+> yang sebelumnya dinyatakan di luar skripsi pada Section 5.4 — konsekuensinya dijelaskan di 13.7.
+
+### 13.1 Kenapa dikerjakan
+
+Wawancara mengonfirmasi bahwa **batch memang bercampur di rak**: saat konsumsi tinggi obat dipesan
+sebelum stok lama habis, sehingga satu obat bisa punya dua tanggal kedaluwarsa atau lebih. Apotek
+juga menegaskan obat yang kedaluwarsanya lebih dulu harus keluar lebih dulu.
+
+Sementara itu `medicine_stocks` hanya mencatat D/C global — punya `receive_order_id` tetapi **tidak
+punya `receive_order_item_id`**, padahal `batch_number` dan `expired_date` tinggal di
+`receive_order_items`. Begitu obat keluar, sistem tidak tahu batch mana yang berkurang.
+
+Akibatnya terlihat di `Medicine::nearestExpiryDate()`: method itu mengambil tanggal kedaluwarsa
+terdekat yang belum lewat **tanpa memeriksa apakah batch itu masih bersisa**. Batch yang sudah lama
+habis terjual tetap menyetir nilai C3 sampai tanggalnya lewat sendiri. Inilah lubang metodologis
+terakhir pada SAW.
+
+### 13.2 Tiga aturan mati
+
+1. **Kartu stok selalu dalam satu satuan dasar.** Konversi kemasan hanya terjadi di titik input,
+   tidak pernah tersimpan campur. Ledger berisi campuran box dan kaplet = seluruh perhitungan stok,
+   HPP, dan SAW rusak dan sulit ditelusuri.
+2. **Isi kemasan milik obat, bukan milik satuan.** Satu box Obat A berisi 100 kaplet, Obat B bisa
+   30. Kolomnya di `medicines`, **bukan** di `units`.
+3. **FEFO satu kebijakan, berlaku menyeluruh.** Wawancara sempat menyebut FEFO di gudang dan FIFO di
+   apotek, tetapi apotek meyakini yang kedaluwarsa duluan harus keluar duluan. Jadi cukup satu aturan
+   pengurutan, dan C3 langsung sejalan dengan praktik.
+
+### 13.3 Perubahan skema
+
+| Tabel | Kolom baru | Guna |
+|---|---|---|
+| `medicines` | `pack_size` (int, nullable) | Isi per kemasan, mis. 100 |
+| `medicines` | `pack_label` (string, nullable) | Nama kemasan, mis. "Box" / "Strip" |
+| `receive_order_items` | `pack_qty` (int, nullable) | Jumlah kemasan yang diinput saat penerimaan |
+| `receive_order_items` | `pack_size` (int, nullable) | Snapshot isi kemasan saat itu |
+| `medicine_stocks` | `receive_order_item_id` (FK nullable, index) | Atribusi lapisan batch |
+| `medicine_stock_opname_items` | `receive_order_item_id` (FK nullable) | Penyesuaian menyebut batch |
+
+**Kenapa menambah kolom, bukan membuat tabel `medicine_batches` baru**: ledger yang ada sudah
+bekerja, sudah sadar soft-delete, dan seluruh modul membacanya. Sisa per batch cukup dihitung
+`SUM(D) - SUM(C)` yang dikelompokkan per `receive_order_item_id`. Bonusnya, kolom `hpp` yang sudah
+ada jadi akurat dengan sendirinya karena tiap lapisan membawa harga belinya masing-masing — margin
+di laporan rekap ikut benar tanpa pekerjaan tambahan.
+
+**Kenapa `receive_order_items` menyimpan jejak konversi**: isi kemasan dari PBF bisa berubah
+sewaktu-waktu, dan faktur harus tetap bisa direkonsiliasi dengan angka yang tersimpan.
+
+### 13.4 Tahapan eksekusi
+
+| Tahap | Isi | Verifikasi |
+|---|---|---|
+| 0 | Isi `pack_size` & `pack_label` per obat; tetapkan `min_stock` nyata | Tidak ada obat aktif dengan `pack_size` kosong |
+| 1 | Master obat: 2 kolom baru + nilai bawaan `min_stock` = `pack_size` | Form obat menampilkan "1 Box = 100 Kapsul" |
+| 2 | PO & RO: input kemasan → konversi ke satuan dasar, **harga ikut dikonversi** | RO 2 Box tersimpan qty 200; `price` per satuan dasar; sisa PO tetap benar |
+| 3 | Ledger per batch: RO menulis satu baris D per item batch | `SUM(D)` per obat sama persis dengan sebelum perubahan |
+| 4 | Penjualan: alokasi FEFO, satu penjualan bisa memecah jadi beberapa baris C | Penjualan 30 unit yang melintasi 2 batch menghasilkan 2 baris C; total stok tidak berubah |
+| 5 | Stok opname sadar batch — termasuk jalur retur PBF & pemusnahan | Pemusnahan batch X menghabiskan lapisan X, bukan lapisan lain |
+| 6 | Kartu stok: tampilan per batch (turunan, bukan pekerjaan baru) | Sisa per batch = `SUM(D) - SUM(C)` per `receive_order_item_id` |
+| 7 | SAW: tulis ulang `nearestExpiryDate()` agar membaca sisa per lapisan | Obat yang batch terdekatnya sudah habis memakai batch berikutnya |
+
+Kalau lapisan batch benar, **modul SAW nyaris tidak tersentuh** — hanya satu method. Itu sebabnya
+SAW dikerjakan paling akhir.
+
+### 13.5 Dampak ke modul yang hari ini berstatus selesai
+
+| Modul | Dampak |
+|---|---|
+| Master Data | Ringan — 2 kolom + penyesuaian form |
+| Procurement (PO/RO) | **Berat** — konversi kemasan + harga, penulisan lapisan batch |
+| Orders (penjualan) | **Berat** — alokasi FEFO, pemecahan baris C, termasuk jalur edit/reverse |
+| Stock Opname | Sedang — penyesuaian per batch |
+| Kartu Stok | Ringan — turunan |
+| SPK SAW | Ringan — satu method |
+| Laporan & Widget | Perlu diperiksa ulang; `hpp` per lapisan mengubah angka margin |
+
+### 13.6 Jebakan yang harus dihindari
+
+1. **Harga per kemasan vs per satuan dasar.** Faktur PBF mencantumkan harga per box. Kalau qty
+   dikonversi tetapi harga tidak, HPP dan `purchase_price` meleset seratus kali lipat — dan
+   `purchase_price` adalah sumber C4. Tidak akan terlihat sampai laporan margin dibuka.
+2. **PO dan RO harus memakai aturan konversi yang sama.** `ReceiveOrderForm.php` (bagian validasi
+   sisa penerimaan) membandingkan qty RO langsung dengan qty PO. Kalau RO dalam box sementara PO
+   dalam kaplet, validasi sisa PO salah **tanpa memunculkan error apa pun**.
+3. **Baris C lama tidak punya atribusi batch.** Perlu backfill, atau diperlakukan sebagai lapisan
+   warisan yang dikonsumsi lebih dulu.
+4. **Stok opname wajib ikut sadar batch.** Kalau tidak, obat kedaluwarsa yang dimusnahkan mengurangi
+   stok tanpa menghapus lapisannya, dan C3 terus membaca batch yang fisiknya sudah tidak ada.
+5. **`Medicine::isLowStock()` adalah dead code** — tidak pernah dipanggil, dan ambangnya
+   (`<= min_stock`) berbeda dari yang benar-benar dipakai sistem (`< min_stock` di
+   `StockCardService::getAvailableStockLabel()`). Hapus atau samakan agar tidak menyesatkan.
+
+### 13.7 Konsekuensi ke naskah TA
+
+- **Section 5.4 dokumen ini dicabut** setelah Tahap 7 selesai — FEFO tidak lagi konvensi pendekatan,
+  melainkan perhitungan sungguhan.
+- **Batasan masalah Bab 1.4**: hapus batasan "stok tidak dilacak per batch"; pertahankan batasan
+  skala konversi C2 yang masih satu set untuk semua satuan.
+- **Bab III**: definisi operasional C4 ditulis sebagai *harga beli acuan, yaitu harga dari PBF
+  termurah pada penerimaan terakhir* (lihat `docs/update-dari-wawancara.md` §4.1).
+- **Bab 5.2 saran**: skala konversi per satuan obat, dan pemetaan obat–PBF beserta harga per PBF.
+
+### 13.8 Keputusan yang sudah diambil (wawancara 2026-09)
+
+| # | Hal | Keputusan |
+|---|-----|-----------|
+| 1 | Konversi kemasan | Ya — input RO boleh dalam kemasan, disimpan dalam satuan dasar |
+| 2 | Nilai bawaan `min_stock` | Isi satu kemasan (`pack_size`), dapat ditimpa per obat |
+| 3 | Urutan konsumsi batch | FEFO menyeluruh |
+| 4 | Modul retur & pemusnahan | Tidak dibangun — dijalankan lewat Stok Opname |
+| 5 | Bobot SAW | Tetap 0,30 / 0,30 / 0,20 / 0,20 |
+
+**Belum diputuskan**: apakah `min_stock` nantinya diturunkan dari permintaan × lead time (lead time
+lapangan hampir 1 bulan). Kalau dikerjakan, jadikan **aksi massal manual**, bukan perhitungan
+otomatis berkelanjutan — angka yang berubah sendiri membuat notifikasi bergoyang dan sulit
+dijelaskan saat sidang. Catatan: `min_stock` tidak masuk perhitungan SAW (C1 memakai
+`currentStock()`), jadi tidak ada kekhawatiran sirkularitas.
+
+---
+
+**Status dokumen**: ✅ Mencerminkan kondisi aktual per 2026-09-10.
+**Tahap berikutnya**: Eksekusi Section 13 mulai Tahap 0. Selain itu masih terbuka: rapikan golongan
+obat per item (Section 12.5), smoke test browser end-to-end (lihat [NEXT_STEPS.md](NEXT_STEPS.md)
+opsi C1), dan Open Items di Section 10.
