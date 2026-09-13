@@ -24,7 +24,7 @@
 | Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat lewat jalur service) + template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
 | Pengujian | ✅ | 84 tes Pest / 826 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament |
 | Roles & Permissions | ⏸️ | Ditangani peneliti via Filament Shield (D7). Permission di DB sudah bersih dari halaman yang dihapus |
-| Deploy VPS (MySQL) + cron | 🔜 | E9 — lihat §8 |
+| Deploy VPS (MySQL) + cron | 🔜 | E9 — jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |
 
 ---
 
@@ -151,7 +151,7 @@ sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → ta
 
 ---
 
-## 8. Deploy (E9) & yang ditangani peneliti
+## 8. Deploy (E9) & yang ditangani peneliti — rincian di `docs/deploy-vps.md`
 
 - VPS + MySQL 8: `.env` `DB_CONNECTION=mysql`, `APP_ENV=production`, `APP_TIMEZONE` sudah
   `Asia/Jakarta` di `config/app.php`. `php artisan migrate --force`, `php artisan db:seed --class=SawCriteriaSeeder`,
