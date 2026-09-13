@@ -80,6 +80,12 @@
                         <th
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
                             Stok</th>
+                        <th
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                            Batch / ED</th>
+                        <th
+                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                            HPP</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
@@ -90,6 +96,8 @@
                         <td></td>
                         <td></td>
                         <td class="px-6 py-4 whitespace-nowrap dark:text-gray-300 font-bold">{{ number_format($firstStock, 0, ',', '.') }}</td>
+                        <td></td>
+                        <td></td>
                     </tr>
 
                     @forelse ($stocks as $index => $stock)
@@ -102,10 +110,12 @@
                             <td class="px-6 py-4 whitespace-nowrap text-success-600 dark:text-success-400">{{ $stock['debit'] > 0 ? number_format($stock['debit'], 0, ',', '.') : '-' }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-danger-600 dark:text-danger-400">{{ $stock['credit'] > 0 ? number_format($stock['credit'], 0, ',', '.') : '-' }}</td>
                             <td class="px-6 py-4 whitespace-nowrap font-bold">{{ number_format($stock['current_stock'], 0, ',', '.') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">{{ $stock['batch_number'] ? $stock['batch_number'] . ' / ' . ($stock['expired_date'] ?? '-') : '-' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right" title="HPP rata-rata bergerak sesudah baris ini">{{ $stock['hpp_avg'] !== null ? 'Rp ' . number_format($stock['hpp_avg'], 0, ',', '.') : '-' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-400">
+                            <td colspan="10" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-400">
                                 No data available.
                             </td>
                         </tr>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StockMovementService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,6 +27,16 @@ class ReceiveOrder extends Model
         'receive_date' => 'date',
         'late_arrival' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        // B5: menghapus dokumen menghapus baris kartu stoknya sungguhan, lalu HPP di-replay
+        // dan status stok disegarkan. Gagal (R8) → dokumen tidak jadi dihapus.
+        static::deleting(function (ReceiveOrder $doc) {
+            $movement = app(StockMovementService::class);
+            $movement->refreshStockStatus($movement->reverseReceipt($doc));
+        });
+    }
 
     public function purchaseOrder(): BelongsTo
     {

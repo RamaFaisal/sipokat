@@ -92,7 +92,7 @@ class SpkTestDataSeeder extends Seeder
         // 1. Orders dengan prefix ORD-SPK- (termasuk yang soft-deleted)
         $orderIds = Order::withTrashed()->where('order_code', 'like', 'ORD-SPK-%')->pluck('id')->all();
         if (! empty($orderIds)) {
-            MedicineStock::whereIn('order_id', $orderIds)->forceDelete();
+            MedicineStock::whereIn('order_id', $orderIds)->delete();
             OrderItem::whereIn('order_id', $orderIds)->delete();
             Order::withTrashed()->whereIn('id', $orderIds)->forceDelete();
         }
@@ -100,7 +100,7 @@ class SpkTestDataSeeder extends Seeder
         // 2. Receive Orders dengan prefix RO-SPK- (termasuk yang soft-deleted)
         $roIds = ReceiveOrder::withTrashed()->where('receive_order_number', 'like', 'RO-SPK-%')->pluck('id')->all();
         if (! empty($roIds)) {
-            MedicineStock::whereIn('receive_order_id', $roIds)->forceDelete();
+            MedicineStock::whereIn('receive_order_id', $roIds)->delete();
             ReceiveOrderItem::whereIn('receive_order_id', $roIds)->delete();
             ReceiveOrder::withTrashed()->whereIn('id', $roIds)->forceDelete();
         }
@@ -109,7 +109,7 @@ class SpkTestDataSeeder extends Seeder
         $oldMedicineIds = $this->readSeededMedicineIds();
         if (! empty($oldMedicineIds)) {
             // sweep sisa MedicineStock yang nyangkut (mis. dari opname manual)
-            MedicineStock::whereIn('medicine_id', $oldMedicineIds)->forceDelete();
+            MedicineStock::whereIn('medicine_id', $oldMedicineIds)->delete();
             Medicine::whereIn('id', $oldMedicineIds)->delete();
         }
 

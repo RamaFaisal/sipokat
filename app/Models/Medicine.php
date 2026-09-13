@@ -146,26 +146,23 @@ class Medicine extends Model
     }
 
     /**
-     * Hitung stok saat ini (masuk - keluar), exclude entry dengan parent (RO/Opname/Order)
-     * yang sudah soft-deleted. Konsisten dengan StockCardService::getAvailableStock().
+     * Stok fisik saat ini (Σ D − Σ C). Tidak perlu menyaring dokumen induk: baris ledger
+     * dihapus sungguhan saat dokumennya dihapus (B5). Sama dengan StockCardService::physicalStock().
      */
     public function currentStock(): int
     {
-        $base = $this->stockEntries()
-            ->where(function ($q) {
-                $q->whereHas('receiveOrder')->orWhereNull('receive_order_id');
-            })
-            ->where(function ($q) {
-                $q->whereHas('medicineStockOpname')->orWhereNull('medicine_stock_opname_id');
-            })
-            ->where(function ($q) {
-                $q->whereHas('order')->orWhereNull('order_id');
-            });
-
-        $in = (clone $base)->where('type_account', 'D')->sum('qty');
-        $out = (clone $base)->where('type_account', 'C')->sum('qty');
+        $in = $this->stockEntries()->where('type_account', 'D')->sum('qty');
+        $out = $this->stockEntries()->where('type_account', 'C')->sum('qty');
 
         return (int) ($in - $out);
+    }
+
+    /** HPP rata-rata bergerak saat ini (rencana §4.3); null bila belum ada baris kartu stok. */
+    public function currentHpp(): ?int
+    {
+        $avg = $this->stockEntries()->orderByDesc('date')->orderByDesc('id')->value('hpp_avg');
+
+        return $avg === null ? null : (int) $avg;
     }
 
     public function nearestExpiryDate(): ?\Illuminate\Support\Carbon

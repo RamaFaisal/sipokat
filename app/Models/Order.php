@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StockMovementService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,6 +26,16 @@ class Order extends Model
         'order_date' => 'date',
         'grand_total' => 'decimal:2',
     ];
+
+    protected static function booted(): void
+    {
+        // B5: menghapus dokumen menghapus baris kartu stoknya sungguhan, lalu HPP di-replay
+        // dan status stok disegarkan. Gagal (R8) → dokumen tidak jadi dihapus.
+        static::deleting(function (Order $doc) {
+            $movement = app(StockMovementService::class);
+            $movement->refreshStockStatus($movement->reverseSale($doc));
+        });
+    }
 
     public function items(): HasMany
     {

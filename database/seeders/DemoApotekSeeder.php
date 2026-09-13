@@ -119,21 +119,21 @@ class DemoApotekSeeder extends Seeder
     {
         $orderIds = Order::withTrashed()->where('note', 'like', self::MARKER . '%')->pluck('id')->all();
         if ($orderIds) {
-            MedicineStock::withTrashed()->whereIn('order_id', $orderIds)->forceDelete();
+            MedicineStock::whereIn('order_id', $orderIds)->delete();
             OrderItem::withTrashed()->whereIn('order_id', $orderIds)->forceDelete();
             Order::withTrashed()->whereIn('id', $orderIds)->forceDelete();
         }
 
         $roIds = ReceiveOrder::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
         if ($roIds) {
-            MedicineStock::withTrashed()->whereIn('receive_order_id', $roIds)->forceDelete();
+            MedicineStock::whereIn('receive_order_id', $roIds)->delete();
             ReceiveOrderItem::withTrashed()->whereIn('receive_order_id', $roIds)->forceDelete();
             ReceiveOrder::withTrashed()->whereIn('id', $roIds)->forceDelete();
         }
 
         $opIds = MedicineStockOpname::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
         if ($opIds) {
-            MedicineStock::withTrashed()->whereIn('medicine_stock_opname_id', $opIds)->forceDelete();
+            MedicineStock::whereIn('medicine_stock_opname_id', $opIds)->delete();
             MedicineStockOpnameItem::withTrashed()->whereIn('medicine_stock_opname_id', $opIds)->forceDelete();
             MedicineStockOpname::withTrashed()->whereIn('id', $opIds)->forceDelete();
         }
@@ -146,7 +146,7 @@ class DemoApotekSeeder extends Seeder
 
         $medIds = $this->readSeededMedicineIds();
         if ($medIds) {
-            MedicineStock::withTrashed()->whereIn('medicine_id', $medIds)->forceDelete();
+            MedicineStock::whereIn('medicine_id', $medIds)->delete();
             Medicine::withTrashed()->whereIn('id', $medIds)->forceDelete();
         }
 

@@ -28,30 +28,18 @@ class StockCardService
                 'total_debit' => $detailData->sum('debit'),
                 'total_credit' => $detailData->sum('credit'),
                 'net_movement' => $closingStock - $openingStock,
-            ]
+            ],
         ];
     }
 
     public function calculateOpeningStock(int $medicineId, ?Carbon $startDate = null): float
     {
-        if (!$startDate) {
+        if (! $startDate) {
             return 0;
         }
 
         $query = MedicineStock::where('medicine_id', $medicineId)
-            ->where('date', '<', $startDate)
-            ->where(function ($q) {
-                $q->whereHas('receiveOrder', fn($r) => $r->whereNull('deleted_at'))
-                    ->orWhereNull('receive_order_id');
-            })
-            ->where(function ($q) {
-                $q->whereHas('medicineStockOpname', fn($r) => $r->whereNull('deleted_at'))
-                    ->orWhereNull('medicine_stock_opname_id');
-            })
-            ->where(function ($q) {
-                $q->whereHas('order', fn($r) => $r->whereNull('deleted_at'))
-                    ->orWhereNull('order_id');
-            });
+            ->where('date', '<', $startDate);
 
         $totalIn = $query->clone()
             ->where('type_account', 'D')
@@ -71,26 +59,10 @@ class StockCardService
         ?int $supplierId = null
     ): Collection {
         $query = MedicineStock::where('medicine_id', $medicineId)
-            ->where(function ($q) {
-                $q->where(function ($sub) {
-                    $sub->whereHas('receiveOrder')
-                        ->orWhereNull('receive_order_id');
-                });
-
-                $q->where(function ($sub) {
-                    $sub->whereHas('medicineStockOpname')
-                        ->orWhereNull('medicine_stock_opname_id');
-                });
-
-                $q->where(function ($sub) {
-                    $sub->whereHas('order')
-                        ->orWhereNull('order_id');
-                });
-            })
             ->with([
-                'receiveOrder' => fn($q) => $q->whereNull('deleted_at')->with('supplier'),
+                'receiveOrder.supplier',
                 'medicineStockOpname',
-                'order'
+                'order',
             ]);
 
         if ($startDate) {
@@ -131,6 +103,10 @@ class StockCardService
                 'debit' => $debit,
                 'credit' => $credit,
                 'current_stock' => $runningStock,
+                'hpp' => $transaction->hpp,
+                'hpp_avg' => $transaction->hpp_avg,
+                'batch_number' => $transaction->batch_number,
+                'expired_date' => $transaction->expired_date?->format('m-Y'),
                 'record' => $transaction,
             ];
         });
@@ -199,19 +175,7 @@ class StockCardService
     public function calculateStockUpToDate(int $medicineId, Carbon $endDate): float
     {
         $query = MedicineStock::where('medicine_id', $medicineId)
-            ->where('date', '<=', $endDate)
-            ->where(function ($q) {
-                $q->whereHas('receiveOrder', fn($r) => $r->whereNull('deleted_at'))
-                    ->orWhereNull('receive_order_id');
-            })
-            ->where(function ($q) {
-                $q->whereHas('medicineStockOpname', fn($r) => $r->whereNull('deleted_at'))
-                    ->orWhereNull('medicine_stock_opname_id');
-            })
-            ->where(function ($q) {
-                $q->whereHas('order', fn($r) => $r->whereNull('deleted_at'))
-                    ->orWhereNull('order_id');
-            });
+            ->where('date', '<=', $endDate);
 
         $totalIn = (clone $query)
             ->where('type_account', 'D')
@@ -227,12 +191,14 @@ class StockCardService
     public function getInitStockForPeriod(int $medicineId, int $year, int $month): float
     {
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+
         return $this->calculateOpeningStock($medicineId, $startDate);
     }
 
     public function getCurrentStockForPeriod(int $medicineId, int $year, int $month): float
     {
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
+
         return $this->calculateStockUpToDate($medicineId, $endDate);
     }
 
@@ -273,26 +239,35 @@ class StockCardService
         ];
     }
 
-    public function getAvailableStock(int $medicineId)
+    /**
+     * Stok fisik = Σ D − Σ C seluruh lapisan (termasuk yang kedaluwarsa dan belum dimusnahkan).
+     * Tidak ada saringan ke dokumen induk: baris ledger dihapus sungguhan saat dokumennya dihapus (B5).
+     */
+    public function physicalStock(int $medicineId): int
     {
-        $baseQuery = MedicineStock::where('medicine_id', $medicineId)
-            ->where(function ($q) {
-                $q->whereHas('receiveOrder')
-                    ->orWhereNull('receive_order_id');
-            })
-            ->where(function ($q) {
-                $q->whereHas('medicineStockOpname')
-                    ->orWhereNull('medicine_stock_opname_id');
-            })
-            ->where(function ($q) {
-                $q->whereHas('order')
-                    ->orWhereNull('order_id');
-            });
+        $base = MedicineStock::where('medicine_id', $medicineId);
 
-        $totalIn = (clone $baseQuery)->where('type_account', 'D')->sum('qty') ?? 0;
-        $totalOut = (clone $baseQuery)->where('type_account', 'C')->sum('qty') ?? 0;
+        $totalIn = (clone $base)->where('type_account', 'D')->sum('qty');
+        $totalOut = (clone $base)->where('type_account', 'C')->sum('qty');
 
-        return (float) ($totalIn - $totalOut);
+        return (int) ($totalIn - $totalOut);
+    }
+
+    /** Stok tersedia untuk jual. Sampai alokasi FEFO (E4) sama dengan stok fisik. */
+    public function getAvailableStock(int $medicineId): float
+    {
+        return (float) $this->physicalStock($medicineId);
+    }
+
+    /** HPP rata-rata bergerak saat ini = hpp_avg baris kartu stok terakhir (urut tanggal, id). */
+    public function currentHpp(int $medicineId): ?int
+    {
+        $avg = MedicineStock::where('medicine_id', $medicineId)
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->value('hpp_avg');
+
+        return $avg === null ? null : (int) $avg;
     }
 
     public function getAvailableStockLabel(int $medicineId): string

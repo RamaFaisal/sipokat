@@ -3,9 +3,8 @@
 namespace App\Filament\Resources\MedicineStockOpnames\Pages;
 
 use App\Filament\Resources\MedicineStockOpnames\MedicineStockOpnameResource;
-use App\Models\MedicineStock;
 use App\Models\MedicineStockOpnameItem;
-use App\Services\StockCardService;
+use App\Services\StockMovementService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -16,46 +15,29 @@ class CreateMedicineStockOpname extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['created_by'] = auth()->id();
+
         return $data;
     }
 
     protected function afterCreate(): void
     {
         try {
-
-            $medicineIds = [];
-
             foreach ($this->form->getState()['medicineStockOpnameItems'] as $medicineData) {
                 foreach ($medicineData['medicine_items'] as $detailData) {
-
                     MedicineStockOpnameItem::create([
                         'medicine_stock_opname_id' => $this->record->id,
-                        'medicine_id'              => $medicineData['medicine_id'],
-                        'qty'                       => $detailData['qty'],
-                        'type_account'              => $detailData['type_account'],
-                        'hpp'                       => $detailData['hpp'],
+                        'medicine_id' => $medicineData['medicine_id'],
+                        'qty' => $detailData['qty'],
+                        'type_account' => $detailData['type_account'],
+                        'hpp' => $detailData['hpp'],
                     ]);
-
-                    MedicineStock::create([
-                        'medicine_id'                  => $medicineData['medicine_id'],
-                        'qty'                           => $detailData['qty'],
-                        'type_account'                  => $detailData['type_account'],
-                        'date'                          => $this->record->opname_date,
-                        'hpp'                           => $detailData['hpp'],
-                        'medicine_stock_opname_id'     => $this->record->id,
-                        'description'                   => 'opname dari ' . $this->record->opname_number,
-                    ]);
-
-                    $medicineIds[] = $medicineData['medicine_id'];
-                    // dd($medicineIds);
                 }
             }
 
-            $stockService = app(StockCardService::class);
-
-            foreach (array_unique($medicineIds) as $medicineId) {
-                $stockService->updateMedicineStockStatus($medicineId);
-            }
+            // Kartu stok ditulis lewat service: HPP baris mengikuti rata-rata bergerak (S4),
+            // bukan angka dari form.
+            $movement = app(StockMovementService::class);
+            $movement->refreshStockStatus($movement->recordOpname($this->record));
         } catch (\Throwable $e) {
             Notification::make()
                 ->danger()
@@ -66,10 +48,5 @@ class CreateMedicineStockOpname extends CreateRecord
 
             throw $e;
         }
-    }
-
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('index');
     }
 }

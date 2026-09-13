@@ -186,17 +186,8 @@ class MedicineStockDetail extends Page implements HasTable
 
         $this->recordId = MedicineStock::query()
             ->whereBetween('date', [$startDate, $endDate])
-            ->where(function ($q) {
-                $q->whereHas('receiveOrder', function ($r) {
-                    $r->whereNull('deleted_at');
-                })
-                    ->orWhereNull('receive_order_id');
-            })
             ->when($this->selectedSupplier && $this->selectedSupplier !== 'all', function ($q) {
-                $q->whereHas('receiveOrder', function ($r) {
-                    $r->where('supplier_id', $this->selectedSupplier)
-                        ->whereNull('deleted_at');
-                });
+                $q->whereHas('receiveOrder', fn ($r) => $r->where('supplier_id', $this->selectedSupplier));
             })
             ->pluck('medicine_id')
             ->unique();
