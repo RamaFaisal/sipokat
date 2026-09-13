@@ -39,8 +39,6 @@ class LowStockMedicinesWidget extends BaseWidget
                 TextColumn::make('name')
                     ->label('Nama Obat')
                     ->wrap(),
-                TextColumn::make('dosage')
-                    ->label('Dosis'),
                 TextColumn::make('min_stock')
                     ->label('Min Stok')
                     ->numeric()

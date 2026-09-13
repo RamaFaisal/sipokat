@@ -4,157 +4,133 @@ namespace App\Filament\Resources\Medicines\Schemas;
 
 use App\Models\Medicine;
 use App\Models\MedicineCategories;
-use App\Models\Supplier;
 use App\Models\Unit;
-use App\Settings\GeneralSettings;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Support\RawJs;
 
+/**
+ * Master obat versi ramping (rencana-revisi-2026-09 §1.3): lima field diketik,
+ * tidak ada rupiah. Kode dibuat model saat simpan; harga hidup di transaksi.
+ */
 class MedicineForm
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
-                Grid::make(3)->schema([
-                    TextInput::make('name')
-                        ->label('Nama Obat')
-                        ->required()
-                        ->autocapitalize('words')
-                        ->placeholder('Contoh: PARACETAMOL')
-                        ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                        ->dehydrateStateUsing(fn ($state) => strtoupper($state))
-                        ->afterStateUpdated(function (TextInput $component, ?string $state, callable $set, $get) {
-                            self::generateCode($set, $get);
-                        })
-                        ->unique(ignoreRecord: true, modifyRuleUsing: function ($rule, $get) {
-                            return $rule->where('dosage', $get('dosage'));
-                        })
-                        ->validationMessages([
-                            'unique' => 'Obat dengan nama dan dosis ini sudah terdaftar di sistem.',
-                        ])
-                        ->live(onBlur: true),
-                    TextInput::make('code')
-                        ->label('Kode Obat')
-                        ->required()
-                        ->readOnly()
-                        ->placeholder('Kode Obat akan otomatis tergenerate.'),
-                    TextInput::make('dosage')
-                        ->label('Dosis Obat')
-                        ->afterStateUpdated(function (callable $set, $get) {
-                            self::generateCode($set, $get);
-                        })
-                        ->live(onBlur: true)
-                        ->placeholder('Contoh: 500mg, 10ml, dll'),
-                ])
-                ->columnSpanFull(),
-
-                Grid::make(2)
+                Section::make('Identitas Obat')
                     ->schema([
-                        Select::make('category_id')
-                            ->label('Kategori Obat')
-                            ->required()
-                            ->afterStateUpdated(function (callable $set, $get) {
-                                self::generateCode($set, $get);
-                                })
-                            ->live(onBlur: true)
-                            ->options(MedicineCategories::all()->pluck('name', 'id')),
-                        Select::make('unit_id')
-                            ->label('Satuan Obat')
-                            ->required()
-                            ->afterStateUpdated(function (callable $set, $get) {
-                                self::generateCode($set, $get);
-                            })
-                            ->live(onBlur: true)
-                            ->options(Unit::all()->pluck('name', 'id')),
-                    ])
-                    ->columnSpanFull(),
-                
-                Grid::make(3)
-                    ->schema([
-                        TextInput::make('purchase_price')
-                            ->label('Harga Beli Obat')
-                            ->required()
-                            ->prefix('Rp')
-                            ->numeric()
-                            ->mask(RawJs::make('$money($input)'))
-                            ->stripCharacters(','),
-                        TextInput::make('sale_price')
-                            ->label('Harga Jual Obat')
-                            ->required()
-                            ->prefix('Rp')
-                            ->numeric()
-                            ->mask(RawJs::make('$money($input)'))
-                            ->stripCharacters(','),
-                        TextInput::make('min_stock')
-                            ->label('Stok Minimal Obat')
-                            ->required()
-                            ->numeric()
-                            ->default(0),
+                        Grid::make(3)->schema([
+                            TextInput::make('name')
+                                ->label('Nama Obat')
+                                ->required()
+                                ->maxLength(255)
+                                ->placeholder('Contoh: ALLOPURINOL 100MG IFI')
+                                ->helperText('Tulis persis seperti tercetak di faktur PBF, termasuk kekuatan dan merek.')
+                                ->extraInputAttributes(['style' => 'text-transform: uppercase'])
+                                ->dehydrateStateUsing(fn ($state) => Medicine::normalizeName($state))
+                                ->unique(
+                                    ignoreRecord: true,
+                                    modifyRuleUsing: fn ($rule) => $rule->whereNull('deleted_at'),
+                                )
+                                ->validationMessages([
+                                    'unique' => 'Obat dengan nama ini sudah terdaftar.',
+                                ])
+                                ->columnSpan(2),
+                            Select::make('category_id')
+                                ->label('Kategori')
+                                ->required()
+                                ->options(MedicineCategories::query()->orderBy('name')->pluck('name', 'id')),
+                        ]),
                     ])
                     ->columnSpanFull(),
 
-                Grid::make(2)
+                Section::make('Satuan dan Kemasan')
+                    ->description('Satuan jual dipakai saat menjual dan menghitung stok. Kemasan pembelian adalah satuan yang tertulis di faktur PBF; sistem mengonversinya ke satuan jual saat penerimaan.')
                     ->schema([
-                        FileUpload::make('photo')
-                            ->label('Foto Obat')
-                            ->directory('medicines')
-                            ->image(),
-                        Textarea::make('description')
-                            ->label('Deskripsi Obat')
-                            ->placeholder('Deskripsi tentang obat')
-                            ->rows(2),
+                        Grid::make(3)->schema([
+                            Select::make('unit_id')
+                                ->label('Satuan jual')
+                                ->required()
+                                ->live()
+                                ->options(Unit::query()->orderBy('name')->pluck('name', 'id'))
+                                ->afterStateUpdated(function (callable $set, callable $get) {
+                                    self::refreshDefaultMinStock($set, $get);
+                                }),
+                            Select::make('pack_unit_id')
+                                ->label('Kemasan pembelian')
+                                ->required()
+                                ->options(Unit::query()->orderBy('name')->pluck('name', 'id'))
+                                ->helperText('Mis. Box, Karton, Kaleng'),
+                            TextInput::make('pack_size')
+                                ->label('Isi per kemasan')
+                                ->required()
+                                ->numeric()
+                                ->integer()
+                                ->minValue(1)
+                                ->default(1)
+                                ->live(onBlur: true)
+                                ->suffix(fn (callable $get) => self::unitName($get('unit_id')))
+                                ->helperText('1 kemasan pembelian = berapa satuan jual. Isi 1 bila kemasan sama dengan satuan jual.')
+                                ->afterStateUpdated(function (callable $set, callable $get) {
+                                    self::refreshDefaultMinStock($set, $get);
+                                }),
+                        ]),
                     ])
                     ->columnSpanFull(),
-                
-                Hidden::make('status_stock')
-                    ->default('empty')
+
+                Section::make('Pengendalian Stok')
+                    ->schema([
+                        Grid::make(3)->schema([
+                            TextInput::make('min_stock')
+                                ->label('Stok minimum (batas waspada)')
+                                ->required()
+                                ->numeric()
+                                ->integer()
+                                ->minValue(1)
+                                ->suffix(fn (callable $get) => self::unitName($get('unit_id')))
+                                ->helperText('Bawaan: Strip 20, satuan lain = isi satu kemasan. Dipakai notifikasi dan sebagai pembanding stok pada perhitungan prioritas.'),
+                            Select::make('status')
+                                ->label('Status')
+                                ->required()
+                                ->options([
+                                    'active' => 'Aktif',
+                                    'inactive' => 'Tidak Aktif',
+                                ])
+                                ->default('active'),
+                            TextInput::make('code')
+                                ->label('Kode')
+                                ->disabled()
+                                ->dehydrated(false)
+                                ->placeholder('Otomatis saat disimpan'),
+                        ]),
+                    ])
+                    ->columnSpanFull(),
             ]);
     }
 
-    public static function generateCode(callable $set, $get)
+    protected static function unitName($unitId): string
     {
-        $name = $get('name');
-        $dosage = $get('dosage');
-        $categoryId = $get('category_id') ?: null;
-        $unitId = $get('unit_id') ?: null;
-        if (! ($name && $categoryId && $unitId)) {
-            return;
+        return $unitId ? (string) Unit::query()->whereKey($unitId)->value('name') : '';
+    }
+
+    /**
+     * Isi min_stock dengan bawaan per satuan hanya bila user belum mengetiknya sendiri
+     * (masih kosong, atau masih sama dengan bawaan sebelumnya).
+     */
+    protected static function refreshDefaultMinStock(callable $set, callable $get): void
+    {
+        $unitId = $get('unit_id') ? (int) $get('unit_id') : null;
+        $packSize = (int) ($get('pack_size') ?: 1);
+        $current = $get('min_stock');
+
+        $default = Medicine::defaultMinStock($unitId, $packSize);
+
+        if (blank($current) || (int) $current === Medicine::DEFAULT_MIN_STOCK_STRIP || (int) $current === max(1, $packSize)) {
+            $set('min_stock', $default);
         }
-        $appName = strtoupper(substr(app(GeneralSettings::class)->app_name, 0, 3));
-        $namePrefix = strtoupper(substr($name, 0, 4));
-        $conflict = Medicine::where('id', '!=', $get('id'))
-            ->whereRaw('UPPER(SUBSTRING(name, 1, 4)) = ?', [$namePrefix])
-            ->where('name', '!=', $name)
-            ->exists();
-        if ($conflict) {
-            $namePrefix = strtoupper(substr($name, 0, 5));
-        }
-        if ($dosage) {
-            $dosageNumber = preg_replace('/[^0-9]/', '', $dosage);
-        } else {
-            $dosageNumber = 'GEN';
-        }
-        $category = MedicineCategories::find($categoryId);
-        $categoryCode = strtoupper($category->alias ?? substr($category->name, 0, 3));
-        $unit = Unit::find($unitId);
-        $unitAlias = strtoupper($unit->alias ?? substr($unit->name, 0, 3));
-        $baseCode = $appName . '/' . $namePrefix . $dosageNumber . '/' . $categoryCode . '/' . $unitAlias;
-        $lastRecord = Medicine::where('code', 'like', $baseCode . '/%')
-            ->orderBy('code', 'desc')
-            ->first();
-        if ($lastRecord) {
-            $lastNumber = (int) substr($lastRecord->code, strrpos($lastRecord->code, '/') + 1);
-            $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
-        } else {
-            $newNumber = '001';
-        }
-        $set('code', $baseCode . '/' . $newNumber);
     }
 }

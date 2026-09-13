@@ -111,7 +111,8 @@ class SawCalculationService
             'C1' => $medicine->currentStock(),
             'C2' => $this->getMonthlyDemand($medicine, $periodStart, $periodEnd),
             'C3' => $medicine->nearestExpiryDays(),
-            'C4' => $medicine->purchase_price !== null ? (float) $medicine->purchase_price : null,
+            // Sementara harga item RO terakhir; E5 mengganti ke HPP rata-rata bergerak (rencana K4).
+            'C4' => $medicine->latestPurchasePrice(),
             default => null,
         };
     }

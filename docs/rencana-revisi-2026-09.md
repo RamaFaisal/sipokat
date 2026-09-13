@@ -234,7 +234,7 @@ Contoh pemilihan satuan dasar dari faktur:
 
 - **M10 menunggu foto kartu stok**: strip atau tablet untuk sediaan padat. Menentukan `pack_size` seluruh obat tablet dan interpretasi ambang C1. Sampai data datang, seeder demo memakai **strip** (T2).
 - Penomoran ulang kode pada data yang ada: urut `id` (urutan pembuatan) — paling mudah dipertanggungjawabkan.
-- Implementasi: indeks unik `name` menyertakan `deleted_at` (C4); generator kode dibungkus retry sekali untuk tabrakan simultan (C6).
+- Implementasi: keunikan `name` di aplikasi (rule form + importer), bukan indeks unik DB — lihat C4 di Bagian 8; generator kode memakai transaksi + `lockForUpdate` pada pencarian nomor terbesar (C6).
 
 ---
 
@@ -832,7 +832,7 @@ bersangkutan; tabel ini rekap.
 | C1 | Sheet *Stok* template | Saldo **awal periode** (hari ini − 30) per obat, dialokasikan ke batch faktur terakhir sebelum tanggal itu; urutan muat: saldo awal → faktur periode → penjualan periode = saldo hari ini | D5 |
 | C2 | Harga saldo awal | Sheet *Stok* punya kolom harga; importer menulisnya sebagai RO "saldo awal" (supplier & faktur khusus) → HPP ada | D5, §7.3 |
 | C3 | Harga jual di sheet *Penjualan* | Opsional; kosong → = HPP saat itu (margin nol, tidak bermakna untuk laporan margin — diterima) | D5 |
-| C4 | Unik + soft delete | Indeks unik `medicines(name, deleted_at)` dan `receive_orders(supplier_id, invoice_number, deleted_at)` | §1.10 |
+| C4 | Unik + soft delete | **Dikoreksi saat E1**: indeks unik yang menyertakan `deleted_at` tidak menegakkan apa pun di MySQL (NULL dianggap selalu berbeda). Keunikan `name` dan `[supplier_id, invoice_number]` ditegakkan di **aplikasi** (rule form mengabaikan baris soft-deleted, importer/seeder dedup); DB hanya indeks biasa | §1.10 |
 | C5 | Batch/ED pada lapisan | Disalin ke **semua** baris D (RO dan opname) — query FEFO/C3 tanpa join | §2.3, §5.4 |
 | C6 | Generator kode | Retry sekali bila tabrakan unik | §1.10 |
 | T1 | Tanggal sidang / batas data | **Tidak dijadikan pengendali** — fokus membangun sistem |

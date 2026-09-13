@@ -54,10 +54,8 @@ class MedicineStockOpnameForm
                             ->label('Item Obat')
                             ->schema([
                                 Select::make('medicine_id')
-                                    ->label('Nama Obat & Dosis')
-                                    ->options(Medicine::all()->mapWithKeys(fn($m) => [
-                                        $m->id => $m->dosage ? "{$m->name} - {$m->dosage}" : $m->name
-                                    ]))
+                                    ->label('Nama Obat')
+                                    ->options(Medicine::query()->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->required()
                                     ->reactive()
@@ -133,7 +131,8 @@ class MedicineStockOpnameForm
         }
 
         $medicine = \App\Models\Medicine::find($medicine_id);
-        $purchasePrice = $medicine->purchase_price ?? 0;
+        // Sementara harga item RO terakhir; E2 mengganti ke HPP rata-rata bergerak (rencana §4.3).
+        $purchasePrice = $medicine?->latestPurchasePrice() ?? 0;
 
         return $purchasePrice * floatval($qty);
     }

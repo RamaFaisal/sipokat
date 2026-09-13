@@ -32,7 +32,7 @@ class ExpiringMedicinesWidget extends BaseWidget
                     ->whereHas('receiveOrder')
                     ->whereHas('medicine', fn (Builder $q) => $q->where('status', 'active'))
                     ->with([
-                        'medicine:id,code,name,dosage,stock_status',
+                        'medicine:id,code,name,stock_status',
                         'receiveOrder.supplier:id,name',
                     ])
                     ->orderBy('expired_date');

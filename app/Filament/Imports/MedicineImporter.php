@@ -10,6 +10,10 @@ use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Import master obat. Obat dikenali dari nama (dedup), kode dibuat otomatis.
+ * Tidak ada kolom harga: harga hidup di penerimaan (RO), bukan di master.
+ */
 class MedicineImporter extends Importer
 {
     protected static ?string $model = Medicine::class;
@@ -17,61 +21,49 @@ class MedicineImporter extends Importer
     public static function getColumns(): array
     {
         return [
-            ImportColumn::make('code')
-                ->label('Kode Obat')
-                ->exampleHeader('Kode Obat')
-                ->guess(['Kode Obat', 'Kode', 'code'])
-                ->example('SIP/PARAC500/OBB/TAB/001')
-                ->requiredMapping()
-                ->rules(['required', 'string', 'max:255']),
             ImportColumn::make('name')
                 ->label('Nama Obat')
                 ->exampleHeader('Nama Obat')
                 ->guess(['Nama Obat', 'Nama', 'name'])
-                ->example('Paracetamol')
+                ->example('ALLOPURINOL 100MG IFI')
                 ->requiredMapping()
                 ->rules(['required', 'string', 'max:255']),
-            ImportColumn::make('dosage')
-                ->label('Dosis')
-                ->exampleHeader('Dosis')
-                ->guess(['Dosis', 'dosage'])
-                ->example('500mg')
-                ->rules(['nullable', 'string', 'max:255']),
             ImportColumn::make('category_name')
-                ->label('Nama Kategori')
-                ->exampleHeader('Nama Kategori')
+                ->label('Kategori')
+                ->exampleHeader('Kategori')
                 ->guess(['Nama Kategori', 'Kategori', 'category_name', 'category'])
-                ->example('Obat Bebas')
+                ->example('Obat Keras')
                 ->requiredMapping()
                 ->rules(['required', 'string']),
             ImportColumn::make('unit_name')
-                ->label('Nama Unit')
-                ->exampleHeader('Nama Unit')
-                ->guess(['Nama Unit', 'Unit', 'Satuan', 'unit_name', 'unit'])
+                ->label('Satuan Jual')
+                ->exampleHeader('Satuan Jual')
+                ->guess(['Satuan Jual', 'Satuan', 'Unit', 'unit_name', 'unit'])
                 ->example('Strip')
                 ->requiredMapping()
                 ->rules(['required', 'string']),
-            ImportColumn::make('purchase_price')
-                ->label('Harga Beli')
-                ->exampleHeader('Harga Beli')
-                ->guess(['Harga Beli', 'purchase_price'])
-                ->example('5000')
+            ImportColumn::make('pack_unit_name')
+                ->label('Kemasan Pembelian')
+                ->exampleHeader('Kemasan Pembelian')
+                ->guess(['Kemasan Pembelian', 'Kemasan', 'pack_unit_name', 'pack_unit'])
+                ->example('Box')
+                ->requiredMapping()
+                ->rules(['required', 'string']),
+            ImportColumn::make('pack_size')
+                ->label('Isi per Kemasan')
+                ->exampleHeader('Isi per Kemasan')
+                ->guess(['Isi per Kemasan', 'Isi Kemasan', 'Isi', 'pack_size'])
+                ->example('10')
                 ->numeric()
-                ->rules(['nullable', 'numeric', 'min:0']),
-            ImportColumn::make('sale_price')
-                ->label('Harga Jual')
-                ->exampleHeader('Harga Jual')
-                ->guess(['Harga Jual', 'sale_price'])
-                ->example('7500')
-                ->numeric()
-                ->rules(['nullable', 'numeric', 'min:0']),
+                ->requiredMapping()
+                ->rules(['required', 'integer', 'min:1']),
             ImportColumn::make('min_stock')
                 ->label('Stok Minimum')
                 ->exampleHeader('Stok Minimum')
-                ->guess(['Stok Minimum', 'Min Stok', 'min_stock'])
-                ->example('10')
+                ->guess(['Stok Minimum', 'Min Stok', 'Batas Waspada', 'min_stock'])
+                ->example('20')
                 ->numeric()
-                ->rules(['nullable', 'integer', 'min:0']),
+                ->rules(['nullable', 'integer', 'min:1']),
             ImportColumn::make('status')
                 ->label('Status (active/inactive)')
                 ->exampleHeader('Status')
@@ -79,46 +71,55 @@ class MedicineImporter extends Importer
                 ->example('active')
                 ->castStateUsing(fn ($state) => in_array($state, ['active', 'inactive'], true) ? $state : 'active')
                 ->rules(['nullable', 'in:active,inactive']),
-            ImportColumn::make('description')
-                ->label('Keterangan')
-                ->exampleHeader('Keterangan')
-                ->guess(['Keterangan', 'Deskripsi', 'description'])
-                ->example('Obat penurun panas dan pereda nyeri')
-                ->rules(['nullable', 'string']),
         ];
     }
 
     public function resolveRecord(): ?Medicine
     {
+        $name = Medicine::normalizeName((string) ($this->data['name'] ?? ''));
         $categoryName = trim((string) ($this->data['category_name'] ?? ''));
         $unitName = trim((string) ($this->data['unit_name'] ?? ''));
+        $packUnitName = trim((string) ($this->data['pack_unit_name'] ?? ''));
 
         $category = MedicineCategories::whereRaw('LOWER(name) = ?', [strtolower($categoryName)])->first();
         if (! $category) {
             throw ValidationException::withMessages([
-                'category_name' => "Kategori \"{$categoryName}\" tidak ditemukan di master Kategori Obat.",
+                'category_name' => "Kategori \"{$categoryName}\" tidak ditemukan.",
             ]);
         }
 
         $unit = Unit::whereRaw('LOWER(name) = ?', [strtolower($unitName)])->first();
         if (! $unit) {
             throw ValidationException::withMessages([
-                'unit_name' => "Unit \"{$unitName}\" tidak ditemukan di master Unit.",
+                'unit_name' => "Satuan \"{$unitName}\" tidak ditemukan di master Satuan.",
             ]);
         }
 
-        $medicine = Medicine::firstOrNew([
-            'code' => $this->data['code'],
-        ]);
-
-        $medicine->category_id = $category->id;
-        $medicine->unit_id = $unit->id;
-
-        if (! $medicine->exists) {
-            $medicine->stock_status = $medicine->stock_status ?? 'empty';
+        $packUnit = Unit::whereRaw('LOWER(name) = ?', [strtolower($packUnitName)])->first();
+        if (! $packUnit) {
+            throw ValidationException::withMessages([
+                'pack_unit_name' => "Kemasan \"{$packUnitName}\" tidak ditemukan di master Satuan.",
+            ]);
         }
 
-        unset($this->data['category_name'], $this->data['unit_name']);
+        // Dedup berdasarkan nama — satu obat fisik hanya boleh punya satu baris.
+        $medicine = Medicine::firstOrNew(['name' => $name]);
+
+        $medicine->name = $name;
+        $medicine->category_id = $category->id;
+        $medicine->unit_id = $unit->id;
+        $medicine->pack_unit_id = $packUnit->id;
+
+        if (! $medicine->exists) {
+            $medicine->stock_status = 'empty';
+        }
+
+        // min_stock kosong → biarkan model mengisi bawaan per satuan saat creating.
+        if (blank($this->data['min_stock'] ?? null)) {
+            unset($this->data['min_stock']);
+        }
+
+        unset($this->data['name'], $this->data['category_name'], $this->data['unit_name'], $this->data['pack_unit_name']);
 
         return $medicine;
     }

@@ -25,9 +25,6 @@ class MedicineStocksTable
                     ->label('Nama Obat')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('dosage')
-                    ->label('Dosis')
-                    ->searchable(),
                 TextColumn::make('code')
                     ->label('Kode Obat')
                     ->searchable()

@@ -79,12 +79,6 @@ class ReceiveOrderForm
                                     ->readOnly()
                                     ->required()
                                     ->columnSpan(3),
-                                TextInput::make('medicine_dosage')
-                                    ->label('Dosis')
-                                    ->readOnly()
-                                    ->required()
-                                    ->dehydrated(false)
-                                    ->columnSpan(3),
                                 TextInput::make('qty')
                                     ->label('Jumlah')
                                     ->numeric()
@@ -146,9 +140,8 @@ class ReceiveOrderForm
                 $filteredItems[] = [
                     'medicine_id' => $poItem->medicine_id,
                     'medicine_name' => $poItem->medicine->name ?? null,
-                    'medicine_dosage' => $poItem->medicine->dosage ?? null,
                     'qty' => $remainingQty,
-                    'price' => $poItem->price ?? ($poItem->medicine->purchase_price ?? 0),
+                    'price' => $poItem->price ?? ($poItem->medicine?->latestPurchasePrice() ?? 0),
                 ];
             }
         }

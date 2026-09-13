@@ -13,16 +13,16 @@ use App\Models\Supplier;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\StockCardService;
-use App\Settings\GeneralSettings;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
  * Seeder data SPK SAW.
  *
- * Idempotent: data SPK lama dihapus dulu, generate ulang. Identifikasi via marker
- * di description ("[SPK_TEST_DATA]") karena code-nya mengikuti format Filament form
+ * Idempotent: data SPK lama dihapus dulu, generate ulang. Obat demo dikenali lewat
+ * daftar id di storage/app/spk-test-data.json (kolom description sudah dihapus, M12)
  * (mis. SIP/PARA500/ANA/TAB/001), bukan prefix custom.
  *
  * Format yang DI-MIRRORKAN dari MedicineForm::generateCode():
@@ -51,6 +51,12 @@ class SpkTestDataSeeder extends Seeder
     /** @var array<int, array{medicine: Medicine, target_stock: int, target_demand: int, ro_qty: int, expired_date: Carbon, consumed: int}> */
     protected array $plans = [];
 
+    /** @var array<int,int> harga beli per obat (dipakai RO & hpp) */
+    protected array $purchasePrice = [];
+
+    /** @var array<int,int> harga jual per obat (dipakai order) */
+    protected array $salePrice = [];
+
     public function run(): void
     {
         $this->command->info('Cleaning up previous SPK test data...');
@@ -61,6 +67,7 @@ class SpkTestDataSeeder extends Seeder
 
         $this->command->info('Seeding ' . self::TOTAL_MEDICINES . ' medicines (sesuai format Filament form)...');
         $medicines = $this->seedMedicines();
+        $this->writeSeededMedicineIds($medicines);
 
         $this->command->info('Planning distribution (target stok + demand)...');
         $this->planDistribution($medicines);
@@ -98,11 +105,8 @@ class SpkTestDataSeeder extends Seeder
             ReceiveOrder::withTrashed()->whereIn('id', $roIds)->forceDelete();
         }
 
-        // 3. Medicines — match by description marker baru ATAU prefix code lama (backward compat)
-        $oldMedicineIds = Medicine::query()
-            ->where('description', 'like', self::TEST_MARKER . '%')
-            ->orWhere('code', 'like', 'SPK-MED-%')
-            ->pluck('id')->all();
+        // 3. Medicines — dikenali lewat daftar id yang disimpan seeder (rencana §1.4, M12)
+        $oldMedicineIds = $this->readSeededMedicineIds();
         if (! empty($oldMedicineIds)) {
             // sweep sisa MedicineStock yang nyangkut (mis. dari opname manual)
             MedicineStock::whereIn('medicine_id', $oldMedicineIds)->forceDelete();
@@ -137,82 +141,85 @@ class SpkTestDataSeeder extends Seeder
 
         $names = $this->medicineNamePool();
         $medicines = [];
-        $seen = []; // track name+dosage uniqueness (mirror form unique rule)
+        $seen = []; // nama harus unik (M6): dosis ikut di nama seperti di faktur
 
         for ($i = 1; $i <= self::TOTAL_MEDICINES; $i++) {
-            $name = strtoupper($names[$i - 1] ?? ('Generic Obat ' . $i));
-            $dosage = $this->randomDosage();
-
-            // Skip duplicate name+dosage (mirror form's unique rule)
-            $dupKey = $name . '|' . $dosage;
-            while (isset($seen[$dupKey])) {
-                $dosage = $this->randomDosage();
-                $dupKey = $name . '|' . $dosage;
+            $baseName = strtoupper($names[$i - 1] ?? ('Generic Obat ' . $i));
+            $name = $baseName . ' ' . strtoupper($this->randomDosage());
+            while (isset($seen[$name])) {
+                $name = $baseName . ' ' . strtoupper($this->randomDosage());
             }
-            $seen[$dupKey] = true;
+            $seen[$name] = true;
 
             $categoryId = array_rand($categories->toArray());
             $unitId = array_rand($units->toArray());
 
-            $code = $this->generateMedicineCode($name, $dosage, $categories[$categoryId], $units[$unitId]);
             $purchase = $this->randomPurchasePrice();
+            [$packUnitId, $packSize] = $this->packFor($units[$unitId], $units);
 
-            $medicines[] = Medicine::create([
-                'code' => $code,
+            $medicine = Medicine::create([
                 'name' => $name,
-                'dosage' => $dosage,
                 'category_id' => $categoryId,
                 'unit_id' => $unitId,
-                'purchase_price' => $purchase,
-                'sale_price' => $purchase + mt_rand(1000, 10000),
+                'pack_unit_id' => $packUnitId,
+                'pack_size' => $packSize,
                 'min_stock' => mt_rand(5, 20),
                 'stock_status' => 'empty',
                 'status' => 'active',
-                'description' => self::TEST_MARKER . ' Test data SPK auto-generated.',
             ]);
+
+            // Harga hidup di transaksi (M4, M5); seeder menyimpannya sementara di memori.
+            $this->purchasePrice[$medicine->id] = $purchase;
+            $this->salePrice[$medicine->id] = $purchase + mt_rand(1000, 10000);
+            $medicines[] = $medicine;
         }
 
         return $medicines;
     }
 
-    /**
-     * Mirror dari MedicineForm::generateCode() — format kode obat yang sama
-     * dengan saat user input via Filament form.
-     */
-    protected function generateMedicineCode(string $name, ?string $dosage, MedicineCategories $category, Unit $unit): string
+    /** Berkas penanda obat demo — pengganti penanda di kolom description (M12). */
+    protected function seededIdsPath(): string
     {
-        $appName = strtoupper(substr(app(GeneralSettings::class)->app_name ?? 'SIP', 0, 3));
+        return storage_path('app/spk-test-data.json');
+    }
 
-        // 4-char prefix; expand ke 5-char kalau ada konflik dengan medicine lain
-        $namePrefix = strtoupper(substr($name, 0, 4));
-        $conflict = Medicine::whereRaw('UPPER(SUBSTRING(name, 1, 4)) = ?', [$namePrefix])
-            ->where('name', '!=', $name)
-            ->exists();
-        if ($conflict) {
-            $namePrefix = strtoupper(substr($name, 0, 5));
+    /** @return array<int,int> */
+    protected function readSeededMedicineIds(): array
+    {
+        $path = $this->seededIdsPath();
+        if (! is_file($path)) {
+            return [];
+        }
+        $ids = json_decode((string) file_get_contents($path), true);
+
+        return is_array($ids) ? array_map('intval', $ids) : [];
+    }
+
+    /** @param array<int, Medicine> $medicines */
+    protected function writeSeededMedicineIds(array $medicines): void
+    {
+        file_put_contents($this->seededIdsPath(), json_encode(array_map(fn (Medicine $m) => $m->id, $medicines)));
+    }
+
+    /**
+     * Kemasan pembelian bawaan per satuan jual: Strip → Box isi 10, Pcs → Box isi 100,
+     * lainnya dibeli dalam satuan jualnya sendiri (isi 1).
+     *
+     * @return array{0:int,1:int} [pack_unit_id, pack_size]
+     */
+    protected function packFor(Unit $unit, Collection $units): array
+    {
+        $box = $units->first(fn (Unit $u) => strtolower($u->name) === 'box');
+        $name = strtolower($unit->name);
+
+        if ($box && $name === 'strip') {
+            return [$box->id, 10];
+        }
+        if ($box && $name === 'pcs') {
+            return [$box->id, 100];
         }
 
-        $dosageNumber = $dosage ? preg_replace('/[^0-9]/', '', $dosage) : 'GEN';
-        if ($dosageNumber === '') {
-            $dosageNumber = 'GEN';
-        }
-
-        $categoryCode = strtoupper($category->alias ?? substr($category->name, 0, 3));
-        $unitAlias = strtoupper($unit->alias ?? substr($unit->name, 0, 3));
-
-        $baseCode = $appName . '/' . $namePrefix . $dosageNumber . '/' . $categoryCode . '/' . $unitAlias;
-
-        $lastRecord = Medicine::where('code', 'like', $baseCode . '/%')
-            ->orderBy('code', 'desc')
-            ->first();
-        if ($lastRecord) {
-            $lastNumber = (int) substr($lastRecord->code, strrpos($lastRecord->code, '/') + 1);
-            $newNumber = str_pad((string) ($lastNumber + 1), 3, '0', STR_PAD_LEFT);
-        } else {
-            $newNumber = '001';
-        }
-
-        return $baseCode . '/' . $newNumber;
+        return [$unit->id, 1];
     }
 
     /**
@@ -269,7 +276,7 @@ class SpkTestDataSeeder extends Seeder
                     'medicine_id' => $medicine->id,
                     'medicine_name' => $medicine->name,
                     'qty' => $qty,
-                    'price' => $medicine->purchase_price,
+                    'price' => $this->purchasePrice[$medicine->id],
                     'batch_number' => 'BATCH-' . strtoupper(Str::random(6)),
                     'manufacture_date' => Carbon::now()->subDays(mt_rand(30, 365)),
                     'expired_date' => $plan['expired_date'],
@@ -280,7 +287,7 @@ class SpkTestDataSeeder extends Seeder
                     'qty' => $qty,
                     'type_account' => 'D',
                     'date' => $ro->receive_date,
-                    'hpp' => $medicine->purchase_price,
+                    'hpp' => $this->purchasePrice[$medicine->id],
                     'receive_order_id' => $ro->id,
                     'description' => 'Penerimaan ' . $roNumber,
                     'created_by' => $userId,
@@ -328,10 +335,10 @@ class SpkTestDataSeeder extends Seeder
                     'medicine_id' => $m->id,
                     'medicine_name' => $m->name,
                     'qty' => $qty,
-                    'price' => $m->sale_price,
-                    'total' => $qty * $m->sale_price,
+                    'price' => $this->salePrice[$m->id],
+                    'total' => $qty * $this->salePrice[$m->id],
                 ];
-                $grandTotal += $qty * $m->sale_price;
+                $grandTotal += $qty * $this->salePrice[$m->id];
             }
             unset($plan);
 
@@ -357,7 +364,7 @@ class SpkTestDataSeeder extends Seeder
                     'qty' => $itemData['qty'],
                     'type_account' => 'C',
                     'date' => $orderDate,
-                    'hpp' => $this->plans[$itemData['medicine_id']]['medicine']->purchase_price,
+                    'hpp' => $this->purchasePrice[$itemData['medicine_id']],
                     'order_id' => $order->id,
                     'description' => 'Penjualan ' . $code,
                     'created_by' => $userId,

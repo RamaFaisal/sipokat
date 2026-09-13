@@ -54,13 +54,11 @@ function makeMedicine(array $overrides = []): Medicine
     $seq++;
 
     return Medicine::create(array_merge([
-        'code' => sprintf('SIP/FIX%03d/OBB/STR/001', $seq),
-        'name' => 'Obat Fixture ' . $seq,
-        'dosage' => '500 mg',
+        'name' => 'OBAT FIXTURE ' . $seq . ' 500MG',
         'category_id' => test()->category->id,
         'unit_id' => test()->unit->id,
-        'purchase_price' => 5000,
-        'sale_price' => 7500,
+        'pack_unit_id' => test()->unit->id,
+        'pack_size' => 1,
         'min_stock' => 20,
     ], $overrides));
 }
@@ -102,13 +100,17 @@ function makeReceiveOrder(
         'medicine_id' => $medicine->id,
         'medicine_name' => $medicine->name,
         'qty' => $qty,
-        'price' => $medicine->purchase_price,
+        'price' => FIXTURE_PURCHASE_PRICE,
         'batch_number' => $batch,
         'expired_date' => $expiredDate,
     ]);
 
     return $receiveOrder;
 }
+
+/** Harga fixture: harga hidup di transaksi, bukan di master obat (rencana M4, M5). */
+const FIXTURE_PURCHASE_PRICE = 5000;
+const FIXTURE_SALE_PRICE = 7500;
 
 /** Penjualan beserta itemnya, TANPA entri kartu stok. */
 function makeOrder(Medicine $medicine, int $qty): Order
@@ -120,7 +122,7 @@ function makeOrder(Medicine $medicine, int $qty): Order
         'order_code' => sprintf('ORD-FIX-%04d', $seq),
         'no_payment' => sprintf('PAY-FIX-%04d', $seq),
         'order_date' => now()->toDateString(),
-        'grand_total' => $qty * $medicine->sale_price,
+        'grand_total' => $qty * FIXTURE_SALE_PRICE,
         'status' => 'paid',
     ]);
 
@@ -129,8 +131,8 @@ function makeOrder(Medicine $medicine, int $qty): Order
         'medicine_id' => $medicine->id,
         'medicine_name' => $medicine->name,
         'qty' => $qty,
-        'price' => $medicine->sale_price,
-        'total' => $qty * $medicine->sale_price,
+        'price' => FIXTURE_SALE_PRICE,
+        'total' => $qty * FIXTURE_SALE_PRICE,
     ]);
 
     return $order;
@@ -146,7 +148,7 @@ function receiveInto(Medicine $medicine, int $qty, ?string $expiredDate = null, 
         'qty' => $qty,
         'type_account' => 'D',
         'date' => $receiveOrder->receive_date,
-        'hpp' => $medicine->purchase_price,
+        'hpp' => FIXTURE_PURCHASE_PRICE,
         'receive_order_id' => $receiveOrder->id,
         'description' => 'Penerimaan fixture',
     ]);
@@ -164,7 +166,7 @@ function sellFrom(Medicine $medicine, int $qty): Order
         'qty' => $qty,
         'type_account' => 'C',
         'date' => $order->order_date,
-        'hpp' => $medicine->sale_price,
+        'hpp' => FIXTURE_SALE_PRICE,
         'order_id' => $order->id,
         'description' => 'Penjualan fixture',
     ]);

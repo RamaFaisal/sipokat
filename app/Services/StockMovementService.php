@@ -101,7 +101,7 @@ class StockMovementService
 
             if ((float) $item['qty'] > $available) {
                 throw new \Exception(
-                    "Stok {$medicine->name} {$medicine->dosage} tidak mencukupi (tersedia: {$available}, diminta: {$item['qty']})"
+                    "Stok {$medicine->name} tidak mencukupi (tersedia: {$available}, diminta: {$item['qty']})"
                 );
             }
         }

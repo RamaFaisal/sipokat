@@ -65,14 +65,14 @@ class PurchaseOrderForm
                                 Select::make('medicine_id')
                                     ->label('Nama Obat')
                                     ->columnSpan(2)
-                                    ->options(fn () => Medicine::all()->mapWithKeys(fn($medicine) => [$medicine->id => $medicine->name . ' ' . $medicine->dosage]))
+                                    ->options(fn () => Medicine::query()->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->required()
                                     ->live(onBlur:true)
                                     ->afterStateUpdated(function (Set $set, Get $get, $state) {
                                         if($state) {
                                             $medicine = Medicine::find($state);
-                                            $newPrice = $medicine?->purchase_price ?? 0;
+                                            $newPrice = $medicine?->latestPurchasePrice() ?? 0;
                                             $set('price', $newPrice);
                                             $qty = (float) ($get('qty') ?? 0);
                                             $discountPercent = (float) ($get('discount') ?? 0);

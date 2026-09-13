@@ -284,9 +284,6 @@
                         <td>{{ $index + 1 }}</td>
                         <td>
                             {{ $item->medicine->name ?? '-' }}
-                            @if($item->medicine?->dosage)
-                                <br><small style="color: #888;">{{ $item->medicine->dosage }}</small>
-                            @endif
                         </td>
                         <td class="text-center">{{ $item->qty }}</td>
                         <td class="text-right">Rp {{ number_format($item->price, 0, ',', '.') }}</td>

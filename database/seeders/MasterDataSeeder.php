@@ -19,6 +19,8 @@ class MasterDataSeeder extends Seeder
             ['name' => 'Sachet', 'alias' => 'SCH'],
             ['name' => 'Box', 'alias' => 'BOX'],
             ['name' => 'Tube', 'alias' => 'TUB'],
+            ['name' => 'Ampul', 'alias' => 'AMP'],
+            ['name' => 'Kaleng', 'alias' => 'KLG'],
         ];
         foreach ($units as $unit) {
             Unit::updateOrCreate(['name' => $unit['name']], $unit);

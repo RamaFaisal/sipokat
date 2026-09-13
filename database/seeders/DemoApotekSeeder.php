@@ -17,9 +17,9 @@ use App\Models\Supplier;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\StockCardService;
-use App\Settings\GeneralSettings;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class DemoApotekSeeder extends Seeder
@@ -47,6 +47,12 @@ class DemoApotekSeeder extends Seeder
 
     /** @var array<int,int> medicine_id => stok berjalan */
     protected array $stock = [];
+
+    /** @var array<int,int> harga beli per obat (dipakai PO/RO/opname) */
+    protected array $purchasePrice = [];
+
+    /** @var array<int,int> harga jual per obat (dipakai order) */
+    protected array $salePrice = [];
 
     /** @var array<int,int> medicine_id => bobot popularitas (0 = dead stock) */
     protected array $pop = [];
@@ -82,6 +88,7 @@ class DemoApotekSeeder extends Seeder
 
         $this->command->info('Membuat ' . self::TOTAL_MEDICINES . ' data obat...');
         $this->seedMedicines();
+        $this->writeSeededMedicineIds();
 
         $this->command->info('Menentukan popularitas & target stok tiap obat...');
         $this->planMedicines();
@@ -137,7 +144,7 @@ class DemoApotekSeeder extends Seeder
             PurchaseOrder::withTrashed()->whereIn('id', $poIds)->forceDelete();
         }
 
-        $medIds = Medicine::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
+        $medIds = $this->readSeededMedicineIds();
         if ($medIds) {
             MedicineStock::withTrashed()->whereIn('medicine_id', $medIds)->forceDelete();
             Medicine::withTrashed()->whereIn('id', $medIds)->forceDelete();
@@ -200,15 +207,12 @@ class DemoApotekSeeder extends Seeder
         $seen = [];
 
         for ($i = 1; $i <= self::TOTAL_MEDICINES; $i++) {
-            $name = strtoupper($names[$i - 1] ?? ('Generik Obat ' . $i));
-            $dosage = $this->randomDosage();
-
-            $dupKey = $name . '|' . $dosage;
-            while (isset($seen[$dupKey])) {
-                $dosage = $this->randomDosage();
-                $dupKey = $name . '|' . $dosage;
+            $baseName = strtoupper($names[$i - 1] ?? ('Generik Obat ' . $i));
+            $name = $baseName . ' ' . strtoupper($this->randomDosage());
+            while (isset($seen[$name])) {
+                $name = $baseName . ' ' . strtoupper($this->randomDosage());
             }
-            $seen[$dupKey] = true;
+            $seen[$name] = true;
 
             $categoryId = $categoryIds[array_rand($categoryIds)];
             $unitId = $unitIds[array_rand($unitIds)];
@@ -216,19 +220,22 @@ class DemoApotekSeeder extends Seeder
             $purchase = $this->randomPurchasePrice();
             $sale = (int) (round(($purchase * mt_rand(115, 150) / 100) / 100) * 100);
 
+            [$packUnitId, $packSize] = $this->packFor($units[$unitId], $units);
+
             $medicine = Medicine::create([
-                'code' => $this->generateMedicineCode($name, $dosage, $categories[$categoryId], $units[$unitId]),
                 'name' => $name,
-                'dosage' => $dosage,
                 'category_id' => $categoryId,
                 'unit_id' => $unitId,
-                'purchase_price' => $purchase,
-                'sale_price' => $sale,
+                'pack_unit_id' => $packUnitId,
+                'pack_size' => $packSize,
                 'min_stock' => mt_rand(5, 20),
                 'stock_status' => 'empty',
                 'status' => 'active',
-                'description' => self::MARKER . ' Data demo apotek.',
             ]);
+
+            // Harga hidup di transaksi (M4, M5); seeder menyimpannya sementara di memori.
+            $this->purchasePrice[$medicine->id] = $purchase;
+            $this->salePrice[$medicine->id] = $sale;
 
             $this->medById[$medicine->id] = $medicine;
             $this->medIds[] = $medicine->id;
@@ -335,7 +342,7 @@ class DemoApotekSeeder extends Seeder
             foreach ($chunk as $id) {
                 $m = $this->medById[$id];
                 $qty = $needing[$id];
-                $price = (int) $m->purchase_price;
+                $price = $this->purchasePrice[$id];
                 $total = $qty * $price;
                 $subTotal += $total;
                 $lines[] = [
@@ -485,13 +492,13 @@ class DemoApotekSeeder extends Seeder
                 }
 
                 $m = $this->medById[$id];
-                $price = (int) $m->sale_price;
+                $price = $this->salePrice[$id];
                 $total = $qty * $price;
                 $grandTotal += $total;
 
                 $items[] = [
                     'medicine_id' => $id,
-                    'medicine_name' => trim($m->name . ' ' . $m->dosage),
+                    'medicine_name' => $m->name,
                     'qty' => $qty,
                     'price' => $price,
                     'total' => $total,
@@ -585,7 +592,7 @@ class DemoApotekSeeder extends Seeder
                 $this->stock[$id] += $qty;
             }
 
-            $hpp = (int) $m->purchase_price * $qty;
+            $hpp = $this->purchasePrice[$id] * $qty;
 
             MedicineStockOpnameItem::create([
                 'medicine_stock_opname_id' => $opname->id,
@@ -628,7 +635,7 @@ class DemoApotekSeeder extends Seeder
             foreach ($chunk as $id) {
                 $m = $this->medById[$id];
                 $qty = mt_rand(20, 80);
-                $price = (int) $m->purchase_price;
+                $price = $this->purchasePrice[$id];
                 $total = $qty * $price;
                 $subTotal += $total;
                 $lines[] = compact('id', 'qty', 'price', 'total');
@@ -743,42 +750,48 @@ class DemoApotekSeeder extends Seeder
         return $max;
     }
 
-    /**
-     * Mirror dari MedicineForm::generateCode().
-     */
-    protected function generateMedicineCode(string $name, ?string $dosage, MedicineCategories $category, Unit $unit): string
+    /** Berkas penanda obat demo — pengganti penanda di kolom description (M12). */
+    protected function seededIdsPath(): string
     {
-        $appName = strtoupper(substr(app(GeneralSettings::class)->app_name ?? 'SIP', 0, 3));
+        return storage_path('app/demo-apotek.json');
+    }
 
-        $namePrefix = strtoupper(substr($name, 0, 4));
-        $conflict = Medicine::whereRaw('UPPER(SUBSTRING(name, 1, 4)) = ?', [$namePrefix])
-            ->where('name', '!=', $name)
-            ->exists();
-        if ($conflict) {
-            $namePrefix = strtoupper(substr($name, 0, 5));
+    /** @return array<int,int> */
+    protected function readSeededMedicineIds(): array
+    {
+        $path = $this->seededIdsPath();
+        if (! is_file($path)) {
+            return [];
+        }
+        $ids = json_decode((string) file_get_contents($path), true);
+
+        return is_array($ids) ? array_map('intval', $ids) : [];
+    }
+
+    protected function writeSeededMedicineIds(): void
+    {
+        file_put_contents($this->seededIdsPath(), json_encode(array_values($this->medIds)));
+    }
+
+    /**
+     * Kemasan pembelian bawaan per satuan jual: Strip → Box isi 10, Pcs → Box isi 100,
+     * lainnya dibeli dalam satuan jualnya sendiri (isi 1).
+     *
+     * @return array{0:int,1:int} [pack_unit_id, pack_size]
+     */
+    protected function packFor(Unit $unit, Collection $units): array
+    {
+        $box = $units->first(fn (Unit $u) => strtolower($u->name) === 'box');
+        $name = strtolower($unit->name);
+
+        if ($box && $name === 'strip') {
+            return [$box->id, 10];
+        }
+        if ($box && $name === 'pcs') {
+            return [$box->id, 100];
         }
 
-        $dosageNumber = $dosage ? preg_replace('/[^0-9]/', '', $dosage) : 'GEN';
-        if ($dosageNumber === '') {
-            $dosageNumber = 'GEN';
-        }
-
-        $categoryCode = strtoupper($category->alias ?? substr($category->name, 0, 3));
-        $unitAlias = strtoupper($unit->alias ?? substr($unit->name, 0, 3));
-
-        $baseCode = $appName . '/' . $namePrefix . $dosageNumber . '/' . $categoryCode . '/' . $unitAlias;
-
-        $lastRecord = Medicine::where('code', 'like', $baseCode . '/%')
-            ->orderBy('code', 'desc')
-            ->first();
-        if ($lastRecord) {
-            $lastNumber = (int) substr($lastRecord->code, strrpos($lastRecord->code, '/') + 1);
-            $newNumber = str_pad((string) ($lastNumber + 1), 3, '0', STR_PAD_LEFT);
-        } else {
-            $newNumber = '001';
-        }
-
-        return $baseCode . '/' . $newNumber;
+        return [$unit->id, 1];
     }
 
     protected function randomExpiryDate(Carbon $from): Carbon

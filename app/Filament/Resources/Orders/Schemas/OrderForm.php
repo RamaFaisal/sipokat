@@ -53,14 +53,15 @@ class OrderForm
                                 Hidden::make('medicine_name'),
                                 Select::make('medicine_id')
                                     ->label('Obat')
-                                    ->options(fn () => Medicine::all()->mapWithKeys(fn ($medicine) => [$medicine->id => trim($medicine->name.' '.$medicine->dosage)]))
+                                    ->options(fn () => Medicine::query()->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->required()
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
                                         $medicine = Medicine::find($state);
-                                        $price = $medicine?->sale_price ?? 0;
-                                        $set('medicine_name', $medicine ? trim($medicine->name.' '.$medicine->dosage) : null);
+                                        // Harga jual diketik kasir (rencana S3); tidak ada autofill dari master.
+                                        $price = (float) ($get('price') ?? 0);
+                                        $set('medicine_name', $medicine?->name);
                                         $set('price', $price);
                                         self::updateItemTotal($set, $get, $price);
                                         self::updateGrandTotalFromItem($set, $get, $price);

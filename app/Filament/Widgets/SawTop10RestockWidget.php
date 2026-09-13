@@ -36,7 +36,7 @@ class SawTop10RestockWidget extends BaseWidget
             ->query(function () use ($calculationId): Builder {
                 $query = SawCalculationResult::query()
                     ->where('saw_calculation_id', $calculationId)
-                    ->with('medicine:id,code,name,dosage')
+                    ->with('medicine:id,code,name')
                     ->orderBy('rank');
 
                 $query->limit(5);
