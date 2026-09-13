@@ -160,29 +160,150 @@ class StockMovementService
     }
 
     /**
-     * Tulis entri kredit (stok keluar) untuk seluruh item penjualan.
-     * Alokasi ke lapisan (FEFO) menyusul di E4; sampai itu layer_stock_id kosong.
+     * Tulis entri kredit (stok keluar) untuk seluruh item penjualan, dialokasikan FEFO ke
+     * lapisan yang belum kedaluwarsa (F0, F1): satu item bisa menjadi beberapa baris C.
+     *
+     * @throws \RuntimeException bila stok tersedia tidak mencukupi.
      */
     public function recordSale(Order $order): array
     {
         $affected = [];
 
         foreach ($order->items()->get() as $item) {
-            MedicineStock::create([
-                'medicine_id' => $item->medicine_id,
-                'qty' => $item->qty,
-                'type_account' => 'C',
-                'date' => $order->order_date,
-                'hpp' => $this->stockCard->currentHpp($item->medicine_id) ?? 0,
-                'order_id' => $order->id,
-                'description' => 'Penjualan '.$order->order_code,
-                'created_by' => auth()->id(),
-            ]);
+            $hpp = $this->stockCard->currentHpp($item->medicine_id) ?? 0;
+
+            foreach ($this->allocateFefo((int) $item->medicine_id, (int) $item->qty) as [$layer, $take]) {
+                MedicineStock::create([
+                    'medicine_id' => $item->medicine_id,
+                    'qty' => $take,
+                    'type_account' => 'C',
+                    'date' => $order->order_date,
+                    'hpp' => $hpp,
+                    'order_id' => $order->id,
+                    'layer_stock_id' => $layer->id,
+                    'description' => 'Penjualan '.$order->order_code,
+                    'created_by' => auth()->id(),
+                ]);
+            }
 
             $affected[] = $item->medicine_id;
         }
 
         return $this->replayAll($affected);
+    }
+
+    /**
+     * Alokasi FEFO (§5.2): lapisan dengan sisa > 0 yang belum kedaluwarsa (B1), lapisan tanpa ED
+     * (data lama) paling dulu, lalu ED terdekat, lalu id.
+     *
+     * @return array<int, array{0: MedicineStock, 1: int}> pasangan [lapisan, jumlah diambil]
+     *
+     * @throws \RuntimeException bila total sisa lapisan yang layak < qty
+     */
+    public function allocateFefo(int $medicineId, int $qty): array
+    {
+        if ($qty <= 0) {
+            return [];
+        }
+
+        $plan = [];
+        $left = $qty;
+
+        foreach ($this->stockCard->sellableLayers($medicineId) as $layer) {
+            if ($left <= 0) {
+                break;
+            }
+            $take = min($left, (int) $layer->remaining);
+            if ($take <= 0) {
+                continue;
+            }
+            $plan[] = [$layer, $take];
+            $left -= $take;
+        }
+
+        if ($left > 0) {
+            $medicine = Medicine::find($medicineId);
+            $available = $qty - $left;
+            throw new \RuntimeException(
+                'Stok '.($medicine?->name ?? $medicineId)." tidak mencukupi (tersedia: {$available}, diminta: {$qty})"
+            );
+        }
+
+        return $plan;
+    }
+
+    /**
+     * F6: atribusikan baris C lama (tanpa lapisan) secara FEFO historis — urut ED naik tanpa
+     * memandang kedaluwarsa (saat terjual dulu batch itu masih layak), lapisan tanpa ED paling
+     * dulu. Baris yang melintasi dua lapisan dipecah. Deterministik; aman dijalankan ulang.
+     *
+     * @return int jumlah satuan yang tidak bisa diatribusikan (data lama tidak konsisten)
+     */
+    public function backfillLayers(int $medicineId): int
+    {
+        return DB::transaction(function () use ($medicineId) {
+            $layers = MedicineStock::layers()
+                ->where('medicine_id', $medicineId)
+                ->withSum('consumptions', 'qty')
+                ->orderByRaw('CASE WHEN expired_date IS NULL THEN 0 ELSE 1 END')
+                ->orderBy('expired_date')
+                ->orderBy('id')
+                ->get();
+
+            $remaining = $layers->mapWithKeys(fn ($l) => [$l->id => (int) $l->qty - (int) ($l->consumptions_sum_qty ?? 0)])->all();
+            $unattributed = 0;
+
+            $rows = MedicineStock::query()
+                ->where('medicine_id', $medicineId)
+                ->where('type_account', 'C')
+                ->whereNull('layer_stock_id')
+                ->orderBy('date')
+                ->orderBy('id')
+                ->get();
+
+            foreach ($rows as $row) {
+                $left = (int) $row->qty;
+                $first = true;
+
+                foreach ($layers as $layer) {
+                    if ($left <= 0) {
+                        break;
+                    }
+                    $take = min($left, $remaining[$layer->id]);
+                    if ($take <= 0) {
+                        continue;
+                    }
+
+                    if ($first) {
+                        $row->update(['qty' => $take, 'layer_stock_id' => $layer->id]);
+                        $first = false;
+                    } else {
+                        $copy = $row->replicate();
+                        $copy->qty = $take;
+                        $copy->layer_stock_id = $layer->id;
+                        $copy->save();
+                    }
+
+                    $remaining[$layer->id] -= $take;
+                    $left -= $take;
+                }
+
+                if ($left > 0) {
+                    // Tidak ada lapisan tersisa: biarkan (sebagian) tanpa atribusi, catat.
+                    if ($first) {
+                        $unattributed += $left;
+                    } else {
+                        $rest = $row->replicate();
+                        $rest->qty = $left;
+                        $rest->layer_stock_id = null;
+                        $rest->save();
+                        $unattributed += $left;
+                    }
+                }
+            }
+
+            return $unattributed;
+        });
     }
 
     /** Hapus entri kartu stok milik satu penjualan (sungguhan, B5), kembalikan stoknya. */
@@ -204,14 +325,31 @@ class StockMovementService
         $affected = [];
 
         foreach ($opname->medicineStockOpnameItems()->get() as $item) {
-            $hpp = $this->stockCard->currentHpp($item->medicine_id) ?? 0;
+            $hpp = $this->stockCard->currentHpp($item->medicine_id);
+
+            // Penambahan hanya untuk obat yang sudah punya HPP; stok awal obat baru lewat RO (§7.3).
+            if ($item->type_account === 'D' && $hpp === null) {
+                $medicine = Medicine::find($item->medicine_id);
+                throw new \RuntimeException(
+                    'Obat '.($medicine?->name ?? $item->medicine_id).' belum punya riwayat harga — masukkan stok awal lewat Penerimaan, bukan opname.'
+                );
+            }
+
+            $layer = $item->layer_stock_id ? MedicineStock::find($item->layer_stock_id) : null;
+            $isOut = $item->type_account === 'C';
 
             MedicineStock::create([
                 'medicine_id' => $item->medicine_id,
                 'qty' => $item->qty,
                 'type_account' => $item->type_account,
+                // Pengurangan menunjuk lapisan yang dikoreksi (termasuk lapisan kedaluwarsa — satu-satunya
+                // jalan mengeluarkannya, F1). Penambahan membuat lapisan baru dengan batch/ED yang disebut,
+                // atau menyalin batch/ED lapisan acuan (selisih lebih pada batch yang ada).
+                'layer_stock_id' => $isOut ? $item->layer_stock_id : null,
+                'batch_number' => $isOut ? null : ($item->batch_number ?? $layer?->batch_number),
+                'expired_date' => $isOut ? null : ($item->expired_date ?? $layer?->expired_date),
                 'date' => $opname->opname_date,
-                'hpp' => $hpp,
+                'hpp' => $hpp ?? 0,
                 'medicine_stock_opname_id' => $opname->id,
                 'description' => 'opname dari '.$opname->opname_number,
                 'created_by' => auth()->id(),
@@ -259,10 +397,10 @@ class StockMovementService
     {
         foreach ($items as $item) {
             $medicine = Medicine::findOrFail($item['medicine_id']);
-            $available = $this->stockCard->getAvailableStock($medicine->id);
+            $available = $this->stockCard->availableStock($medicine->id);
 
-            if ((float) $item['qty'] > $available) {
-                throw new \Exception(
+            if ((int) $item['qty'] > $available) {
+                throw new \RuntimeException(
                     "Stok {$medicine->name} tidak mencukupi (tersedia: {$available}, diminta: {$item['qty']})"
                 );
             }

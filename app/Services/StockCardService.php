@@ -253,10 +253,52 @@ class StockCardService
         return (int) ($totalIn - $totalOut);
     }
 
-    /** Stok tersedia untuk jual. Sampai alokasi FEFO (E4) sama dengan stok fisik. */
+    /**
+     * Semua lapisan (baris D) satu obat beserta sisanya, urut FEFO: lapisan tanpa ED (data lama)
+     * paling dulu, lalu ED terdekat, lalu id.
+     *
+     * @return Collection<int, MedicineStock>
+     */
+    public function layers(int $medicineId): Collection
+    {
+        return MedicineStock::layers()
+            ->where('medicine_id', $medicineId)
+            ->withSum('consumptions', 'qty')
+            ->orderByRaw('CASE WHEN expired_date IS NULL THEN 0 ELSE 1 END')
+            ->orderBy('expired_date')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /** Lapisan yang boleh dijual: sisa > 0 dan belum kedaluwarsa (`expired_date > hari ini`, B1). */
+    public function sellableLayers(int $medicineId): Collection
+    {
+        return $this->layers($medicineId)
+            ->filter(fn (MedicineStock $l) => $l->remaining > 0 && ! $l->isExpired())
+            ->values();
+    }
+
+    /**
+     * Stok tersedia (B4, F2) = sisa lapisan belum kedaluwarsa. Baris C lama yang tidak
+     * teratribusi ke lapisan mana pun (data tidak konsisten) tetap dikurangkan supaya angka
+     * tidak melebihi stok fisik.
+     */
+    public function availableStock(int $medicineId): int
+    {
+        $fromLayers = $this->sellableLayers($medicineId)->sum('remaining');
+
+        $unattributed = (int) MedicineStock::where('medicine_id', $medicineId)
+            ->where('type_account', 'C')
+            ->whereNull('layer_stock_id')
+            ->sum('qty');
+
+        return max(0, (int) $fromLayers - $unattributed);
+    }
+
+    /** @deprecated pakai availableStock(); dipertahankan untuk pemanggil lama. */
     public function getAvailableStock(int $medicineId): float
     {
-        return (float) $this->physicalStock($medicineId);
+        return (float) $this->availableStock($medicineId);
     }
 
     /** HPP rata-rata bergerak saat ini = hpp_avg baris kartu stok terakhir (urut tanggal, id). */
@@ -270,11 +312,12 @@ class StockCardService
         return $avg === null ? null : (int) $avg;
     }
 
+    /** Status stok dari **stok tersedia** (belum kedaluwarsa, B4) dibanding batas waspada obat. */
     public function getAvailableStockLabel(int $medicineId): string
     {
         $medicine = Medicine::findOrFail($medicineId);
 
-        $currentStock = $this->getAvailableStock($medicineId);
+        $currentStock = $this->availableStock($medicineId);
         $minimumStock = $medicine->min_stock;
 
         if ($currentStock <= 0) {

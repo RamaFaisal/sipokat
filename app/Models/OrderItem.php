@@ -16,12 +16,10 @@ class OrderItem extends Model
         'medicine_name',
         'qty',
         'price',
-        'total',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
-        'total' => 'decimal:2',
     ];
 
     public function order(): BelongsTo

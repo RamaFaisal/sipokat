@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\MedicineStockOpnames;
 
 use App\Filament\Resources\MedicineStockOpnames\Pages\CreateMedicineStockOpname;
-use App\Filament\Resources\MedicineStockOpnames\Pages\EditMedicineStockOpname;
 use App\Filament\Resources\MedicineStockOpnames\Pages\ListMedicineStockOpnames;
 use App\Filament\Resources\MedicineStockOpnames\Pages\ViewMedicineStockOpname;
 use App\Filament\Resources\MedicineStockOpnames\Schemas\MedicineStockOpnameForm;
@@ -48,7 +47,7 @@ class MedicineStockOpnameResource extends Resource
         return [
             'index' => ListMedicineStockOpnames::route('/'),
             'create' => CreateMedicineStockOpname::route('/create'),
-            'view' => ViewMedicineStockOpname::route('/{record}')
+            'view' => ViewMedicineStockOpname::route('/{record}'),
         ];
     }
 

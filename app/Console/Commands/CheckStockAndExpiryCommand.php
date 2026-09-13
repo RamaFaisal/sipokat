@@ -3,8 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\Medicine;
-use App\Models\ReceiveOrderItem;
+use App\Models\MedicineStock;
 use App\Models\User;
+use App\Services\StockMovementService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Console\Command;
@@ -23,13 +24,25 @@ class CheckStockAndExpiryCommand extends Command
 
         if ($users->isEmpty()) {
             $this->warn('Tidak ada user — notifikasi tidak dikirim.');
+
             return self::SUCCESS;
         }
+
+        // Q1: batch bisa kedaluwarsa tanpa ada mutasi, jadi status stok (berbasis stok tersedia, B4)
+        // dihitung ulang dulu untuk semua obat aktif sebelum dipindai.
+        $this->refreshStockStatuses();
 
         $this->checkLowStock($users);
         $this->checkExpiring($users, (int) $this->option('expiry-days'));
 
         return self::SUCCESS;
+    }
+
+    protected function refreshStockStatuses(): void
+    {
+        $ids = Medicine::query()->where('status', 'active')->pluck('id')->all();
+        app(StockMovementService::class)->refreshStockStatus($ids);
+        $this->info('Status stok dihitung ulang untuk '.count($ids).' obat.');
     }
 
     protected function checkLowStock($users): void
@@ -41,6 +54,7 @@ class CheckStockAndExpiryCommand extends Command
 
         if ($lowStock->isEmpty()) {
             $this->info('Low-stock: tidak ada obat menipis/habis.');
+
             return;
         }
 
@@ -68,17 +82,21 @@ class CheckStockAndExpiryCommand extends Command
         $today = Carbon::now()->startOfDay()->toDateString();
         $threshold = Carbon::now()->addDays($days)->toDateString();
 
-        $expiring = ReceiveOrderItem::query()
+        // F5: hanya lapisan (batch) yang masih bersisa — batch yang sudah habis terjual tidak diperingatkan.
+        $expiring = MedicineStock::layers()
             ->whereNotNull('expired_date')
             ->whereBetween('expired_date', [$today, $threshold])
-            ->whereHas('receiveOrder')
             ->whereHas('medicine', fn ($q) => $q->where('status', 'active'))
+            ->withSum('consumptions', 'qty')
             ->with('medicine:id,name')
             ->orderBy('expired_date')
-            ->get();
+            ->get()
+            ->filter(fn (MedicineStock $layer) => $layer->remaining > 0)
+            ->values();
 
         if ($expiring->isEmpty()) {
             $this->info("Expiring: tidak ada batch mendekati ED (≤ {$days} hari).");
+
             return;
         }
 

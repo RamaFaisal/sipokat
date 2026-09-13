@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\ReceiveOrderItem;
+use App\Models\MedicineStock;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -22,9 +22,11 @@ class StatExpiringSoonWidget extends BaseWidget
         $today = Carbon::now()->startOfDay();
         $expiryThreshold = $today->copy()->addDays(90);
 
-        $expiringSoonCount = ReceiveOrderItem::whereNotNull('expired_date')
+        // F5: hanya lapisan (batch) yang masih bersisa.
+        $expiringSoonCount = MedicineStock::layers()
+            ->withRemainingStock()
+            ->whereNotNull('expired_date')
             ->whereBetween('expired_date', [$today->toDateString(), $expiryThreshold->toDateString()])
-            ->whereHas('receiveOrder')
             ->whereHas('medicine', fn ($q) => $q->where('status', 'active'))
             ->distinct('medicine_id')
             ->count('medicine_id');

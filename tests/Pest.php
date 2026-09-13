@@ -2,7 +2,6 @@
 
 use App\Models\Medicine;
 use App\Models\MedicineCategories;
-use App\Models\MedicineStock;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PurchaseOrder;
@@ -54,7 +53,7 @@ function makeMedicine(array $overrides = []): Medicine
     $seq++;
 
     return Medicine::create(array_merge([
-        'name' => 'OBAT FIXTURE ' . $seq . ' 500MG',
+        'name' => 'OBAT FIXTURE '.$seq.' 500MG',
         'category_id' => test()->category->id,
         'unit_id' => test()->unit->id,
         'pack_unit_id' => test()->unit->id,
@@ -122,10 +121,8 @@ function makeOrder(Medicine $medicine, int $qty): Order
 
     $order = Order::create([
         'order_code' => sprintf('ORD-FIX-%04d', $seq),
-        'no_payment' => sprintf('PAY-FIX-%04d', $seq),
         'order_date' => now()->toDateString(),
         'grand_total' => $qty * FIXTURE_SALE_PRICE,
-        'status' => 'paid',
     ]);
 
     OrderItem::create([
@@ -134,44 +131,25 @@ function makeOrder(Medicine $medicine, int $qty): Order
         'medicine_name' => $medicine->name,
         'qty' => $qty,
         'price' => FIXTURE_SALE_PRICE,
-        'total' => $qty * FIXTURE_SALE_PRICE,
     ]);
 
     return $order;
 }
 
-/** Penerimaan + entri kartu stok D — meniru CreateReceiveOrder::afterCreate(). */
+/** Penerimaan + lapisan kartu stok lewat service — jalur yang sama dengan CreateReceiveOrder::afterCreate(). */
 function receiveInto(Medicine $medicine, int $qty, ?string $expiredDate = null, string $batch = 'B-001'): ReceiveOrder
 {
     $receiveOrder = makeReceiveOrder($medicine, $qty, $expiredDate, $batch);
-
-    MedicineStock::create([
-        'medicine_id' => $medicine->id,
-        'qty' => $qty,
-        'type_account' => 'D',
-        'date' => $receiveOrder->receive_date,
-        'hpp' => FIXTURE_PURCHASE_PRICE,
-        'receive_order_id' => $receiveOrder->id,
-        'description' => 'Penerimaan fixture',
-    ]);
+    app(App\Services\StockMovementService::class)->recordReceipt($receiveOrder);
 
     return $receiveOrder;
 }
 
-/** Penjualan + entri kartu stok C — meniru CreateOrder::handleRecordCreation(). */
+/** Penjualan + alokasi FEFO lewat service — jalur yang sama dengan CreateOrder::afterCreate(). */
 function sellFrom(Medicine $medicine, int $qty): Order
 {
     $order = makeOrder($medicine, $qty);
-
-    MedicineStock::create([
-        'medicine_id' => $medicine->id,
-        'qty' => $qty,
-        'type_account' => 'C',
-        'date' => $order->order_date,
-        'hpp' => FIXTURE_SALE_PRICE,
-        'order_id' => $order->id,
-        'description' => 'Penjualan fixture',
-    ]);
+    app(App\Services\StockMovementService::class)->recordSale($order);
 
     return $order;
 }

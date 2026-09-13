@@ -165,23 +165,44 @@ class Medicine extends Model
         return $avg === null ? null : (int) $avg;
     }
 
-    public function nearestExpiryDate(): ?\Illuminate\Support\Carbon
+    /** Stok tersedia = sisa lapisan yang belum kedaluwarsa (B4, F2). */
+    public function availableStock(): int
     {
-        if ($this->currentStock() <= 0) {
-            return null;
-        }
-
-        return $this->receiveOrderItems()
-            ->whereNotNull('expired_date')
-            ->whereDate('expired_date', '>=', now()->toDateString())
-            ->orderBy('expired_date', 'asc')
-            ->value('expired_date');
+        return app(\App\Services\StockCardService::class)->availableStock($this->id);
     }
 
+    /**
+     * C3 (K3): ED **batch terjauh yang masih bersisa** dan belum kedaluwarsa. Dengan FEFO,
+     * batch terjauh adalah yang dikonsumsi terakhir — itulah horizon stok yang akan tersisa.
+     * Tidak ada lapisan layak (stok tersedia 0) → null; pemanggil memperlakukannya sebagai 0 hari.
+     */
+    public function farthestExpiryDate(): ?\Illuminate\Support\Carbon
+    {
+        $layer = app(\App\Services\StockCardService::class)
+            ->sellableLayers($this->id)
+            ->filter(fn (MedicineStock $l) => $l->expired_date !== null)
+            ->sortByDesc(fn (MedicineStock $l) => $l->expired_date->timestamp)
+            ->first();
+
+        return $layer?->expired_date;
+    }
+
+    /** Sisa hari ke ED batch terjauh yang bersisa; 0 bila tidak ada stok tersedia (K3, T2). */
+    public function farthestExpiryDays(): int
+    {
+        $ed = $this->farthestExpiryDate();
+
+        return $ed ? max(0, (int) today()->diffInDays($ed->copy()->startOfDay(), false)) : 0;
+    }
+
+    /** @deprecated dipakai SAW lama; diganti farthestExpiryDays() pada tahap E5. */
     public function nearestExpiryDays(): ?int
     {
-        $ed = $this->nearestExpiryDate();
+        $layer = app(\App\Services\StockCardService::class)
+            ->sellableLayers($this->id)
+            ->filter(fn (MedicineStock $l) => $l->expired_date !== null)
+            ->first();
 
-        return $ed ? (int) now()->startOfDay()->diffInDays($ed->startOfDay(), false) : null;
+        return $layer ? (int) today()->diffInDays($layer->expired_date->copy()->startOfDay(), false) : null;
     }
 }

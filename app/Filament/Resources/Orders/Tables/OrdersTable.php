@@ -3,8 +3,9 @@
 namespace App\Filament\Resources\Orders\Tables;
 
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -13,41 +14,35 @@ class OrdersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->withCount('items'))
+            ->defaultSort('order_date', 'desc')
             ->columns([
                 TextColumn::make('order_code')
-                    ->label('Nomor Order')
-                    ->searchable(),
+                    ->label('Nomor')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('order_date')
                     ->label('Tanggal')
                     ->date('d-m-Y')
                     ->sortable(),
-                TextColumn::make('no_payment')
-                    ->label('Nomor Pembayaran')
-                    ->searchable(),
+                TextColumn::make('items_count')
+                    ->label('Item')
+                    ->alignCenter(),
                 TextColumn::make('grand_total')
                     ->label('Total')
-                    ->numeric()
-                    ->sortable()
-                    ->formatStateUsing(fn($state) => 'Rp. ' . number_format($state, 0, ',', '.')),
-                TextColumn::make('status')
-                    ->label('Status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pending' => 'warning',
-                        'paid' => 'success',
-                        'cancelled' => 'danger',
-                    })
-                    ->formatStateUsing(fn($state) => match ($state) {
-                        'pending' => 'Pending',
-                        'paid' => 'Lunas',
-                        'cancelled' => 'Dibatalkan',
-                    }),
-            ])
-            ->filters([
-                //
+                    ->money('IDR')
+                    ->alignEnd()
+                    ->sortable(),
+                TextColumn::make('note')
+                    ->label('Catatan')
+                    ->limit(40)
+                    ->placeholder('—'),
             ])
             ->recordActions([
-                EditAction::make(),
+                ViewAction::make(),
+                // Tidak ada edit (S6): salah input → hapus → buat ulang.
+                DeleteAction::make()
+                    ->modalDescription('Stok yang terjual akan dikembalikan ke batch asalnya.'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

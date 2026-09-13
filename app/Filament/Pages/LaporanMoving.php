@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\Medicine;
 use App\Models\OrderItem;
 use Barryvdh\DomPDF\Facade\Pdf;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
@@ -13,7 +14,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -26,8 +26,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class LaporanMoving extends Page implements HasSchemas
 {
-    use InteractsWithSchemas;
     use HasPageShield;
+    use InteractsWithSchemas;
 
     protected string $view = 'filament.pages.laporan-moving';
 
@@ -131,8 +131,7 @@ class LaporanMoving extends Page implements HasSchemas
         // Aggregate semua medicines aktif dengan penjualan dalam periode
         $salesAgg = OrderItem::query()
             ->whereHas('order', fn ($q) => $q
-                ->whereBetween('order_date', [$start->toDateString(), $end->toDateString()])
-                ->where('status', '!=', 'cancelled'))
+                ->whereBetween('order_date', [$start->toDateString(), $end->toDateString()]))
             ->select(
                 'medicine_id',
                 DB::raw('SUM(qty) as total_qty'),
@@ -159,7 +158,7 @@ class LaporanMoving extends Page implements HasSchemas
                 'name' => $m->name,
                 'category' => $m->category?->name ?? '-',
                 'unit' => $m->unit?->alias ?? $m->unit?->name ?? '-',
-                'current_stock' => $m->currentStock(),
+                'current_stock' => $m->availableStock(), // B4: stok tersedia (belum kedaluwarsa)
                 'total_qty' => $totalQty,
                 'monthly_avg' => $monthlyAvg,
                 'total_value' => (float) ($sale->total_value ?? 0),
@@ -190,7 +189,7 @@ class LaporanMoving extends Page implements HasSchemas
             ->values();
 
         $this->meta = [
-            'periode' => $start->format('d M Y') . ' s/d ' . $end->format('d M Y'),
+            'periode' => $start->format('d M Y').' s/d '.$end->format('d M Y'),
             'days' => $days,
             'total_obat_aktif' => $allMedicines->count(),
             'obat_dengan_transaksi' => $rows->where('total_qty', '>', 0)->count(),
@@ -229,7 +228,7 @@ class LaporanMoving extends Page implements HasSchemas
 
         return response()->streamDownload(
             fn () => print ($pdf->output()),
-            'fast_slow_moving_' . now()->format('Ymd_His') . '.pdf',
+            'fast_slow_moving_'.now()->format('Ymd_His').'.pdf',
         );
     }
 
@@ -239,7 +238,7 @@ class LaporanMoving extends Page implements HasSchemas
             return;
         }
 
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $spreadsheet->removeSheetByIndex(0);
 
         foreach ([
@@ -250,7 +249,7 @@ class LaporanMoving extends Page implements HasSchemas
             $sheet = $spreadsheet->createSheet();
             $sheet->setTitle($sheetName);
 
-            $sheet->setCellValue('A1', strtoupper($sheetName) . ' — ' . $this->meta['periode']);
+            $sheet->setCellValue('A1', strtoupper($sheetName).' — '.$this->meta['periode']);
             $sheet->mergeCells('A1:H1');
             $sheet->getStyle('A1')->applyFromArray([
                 'font' => ['bold' => true, 'size' => 13],
@@ -280,8 +279,8 @@ class LaporanMoving extends Page implements HasSchemas
             }
 
             if ($row > 4) {
-                $sheet->getStyle("A3:H" . ($row - 1))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-                $sheet->getStyle("H4:H" . ($row - 1))->getNumberFormat()->setFormatCode('#,##0');
+                $sheet->getStyle('A3:H'.($row - 1))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $sheet->getStyle('H4:H'.($row - 1))->getNumberFormat()->setFormatCode('#,##0');
             }
 
             foreach (range('A', 'H') as $col) {
@@ -295,6 +294,6 @@ class LaporanMoving extends Page implements HasSchemas
 
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
-        }, 'fast_slow_moving_' . now()->format('Ymd_His') . '.xlsx');
+        }, 'fast_slow_moving_'.now()->format('Ymd_His').'.xlsx');
     }
 }

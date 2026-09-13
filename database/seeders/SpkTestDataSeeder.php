@@ -336,7 +336,6 @@ class SpkTestDataSeeder extends Seeder
                     'medicine_name' => $m->name,
                     'qty' => $qty,
                     'price' => $this->salePrice[$m->id],
-                    'total' => $qty * $this->salePrice[$m->id],
                 ];
                 $grandTotal += $qty * $this->salePrice[$m->id];
             }
@@ -348,10 +347,8 @@ class SpkTestDataSeeder extends Seeder
 
             $order = Order::create([
                 'order_code' => $code,
-                'no_payment' => 'PAY-SPK-' . sprintf('%04d', $orderCount + 1),
                 'order_date' => $orderDate,
                 'grand_total' => $grandTotal,
-                'status' => 'paid',
                 'note' => self::TEST_MARKER . ' Test data SPK seeder',
                 'created_by' => $userId,
             ]);

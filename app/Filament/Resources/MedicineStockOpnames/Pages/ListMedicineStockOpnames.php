@@ -10,7 +10,7 @@ class ListMedicineStockOpnames extends ListRecords
 {
     protected static string $resource = MedicineStockOpnameResource::class;
 
-    protected static ?string $title = "Stok Opname";
+    protected static ?string $title = 'Stok Opname';
 
     protected function getHeaderActions(): array
     {

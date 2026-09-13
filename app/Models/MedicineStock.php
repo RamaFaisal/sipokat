@@ -92,6 +92,14 @@ class MedicineStock extends Model
         return $query->where('type_account', 'D');
     }
 
+    /** Lapisan yang sisanya masih > 0 (dihitung di SQL supaya bisa dipakai query tabel/widget). */
+    public function scopeWithRemainingStock(Builder $query): Builder
+    {
+        return $query->whereRaw(
+            'medicine_stocks.qty > (SELECT COALESCE(SUM(c.qty), 0) FROM medicine_stocks c WHERE c.layer_stock_id = medicine_stocks.id)'
+        );
+    }
+
     /** Sisa lapisan = qty D − Σ qty C yang menunjuknya. Hanya bermakna untuk baris D. */
     public function getRemainingAttribute(): int
     {
@@ -99,9 +107,11 @@ class MedicineStock extends Model
             return 0;
         }
 
-        $consumed = $this->relationLoaded('consumptions')
-            ? $this->consumptions->sum('qty')
-            : $this->consumptions()->sum('qty');
+        $consumed = match (true) {
+            array_key_exists('consumptions_sum_qty', $this->attributes) => $this->attributes['consumptions_sum_qty'],
+            $this->relationLoaded('consumptions') => $this->consumptions->sum('qty'),
+            default => $this->consumptions()->sum('qty'),
+        };
 
         return (int) $this->qty - (int) $consumed;
     }

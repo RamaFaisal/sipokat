@@ -143,15 +143,15 @@ it('menandai stok tepat di batas minimum sebagai available', function () {
 });
 
 // ---------------------------------------------------------------------------
-// Kedaluwarsa (sumber kriteria C3)
+// Kedaluwarsa (sumber kriteria C3) — batch TERJAUH yang masih bersisa (rencana K3)
 // ---------------------------------------------------------------------------
 
-it('memakai batch dengan kedaluwarsa terdekat', function () {
+it('memakai batch dengan kedaluwarsa terjauh yang masih bersisa', function () {
     $medicine = makeMedicine();
-    receiveInto($medicine, 50, now()->addDays(400)->toDateString(), 'B-LAMA');
+    receiveInto($medicine, 50, now()->addDays(400)->toDateString(), 'B-JAUH');
     receiveInto($medicine, 50, now()->addDays(120)->toDateString(), 'B-DEKAT');
 
-    expect($medicine->nearestExpiryDays())->toBe(120);
+    expect($medicine->farthestExpiryDays())->toBe(400);
 });
 
 it('mengabaikan batch yang sudah lewat tanggal kedaluwarsanya', function () {
@@ -159,32 +159,28 @@ it('mengabaikan batch yang sudah lewat tanggal kedaluwarsanya', function () {
     receiveInto($medicine, 50, now()->subDays(10)->toDateString(), 'B-KADALUWARSA');
     receiveInto($medicine, 50, now()->addDays(200)->toDateString(), 'B-AKTIF');
 
-    expect($medicine->nearestExpiryDays())->toBe(200);
+    expect($medicine->farthestExpiryDays())->toBe(200)
+        ->and($medicine->availableStock())->toBe(50)   // batch kedaluwarsa tidak tersedia (F2)
+        ->and($medicine->currentStock())->toBe(100);   // tapi masih ada secara fisik
 });
 
-it('tidak memberi tanggal kedaluwarsa saat stok habis', function () {
+it('memberi 0 hari saat stok tersedia habis (T2: obat kosong paling mendesak)', function () {
     $medicine = makeMedicine();
     receiveInto($medicine, 30, now()->addDays(100)->toDateString());
     sellFrom($medicine, 30);
 
     expect($medicine->currentStock())->toBe(0)
-        ->and($medicine->nearestExpiryDate())->toBeNull();
+        ->and($medicine->farthestExpiryDate())->toBeNull()
+        ->and($medicine->farthestExpiryDays())->toBe(0);
 });
 
-it('masih membaca batch yang stoknya sudah habis terjual', function () {
-    // KARAKTERISASI CACAT YANG AKAN DIPERBAIKI DI TAHAP 7.
-    // Batch dekat (30 hari) sudah habis terjual, fisik yang tersisa hanya
-    // batch jauh (400 hari) — tetapi nearestExpiryDate() tidak memeriksa sisa
-    // per batch, sehingga C3 tetap membaca 30 hari.
-    //
-    // Setelah lapisan batch selesai, tes ini HARUS gagal dan diubah jadi 400.
-    // Kegagalannya adalah bukti refactor berhasil.
+it('tidak lagi membaca batch yang sudah habis terjual (cacat lama tertutup lapisan)', function () {
     $medicine = makeMedicine();
     receiveInto($medicine, 10, now()->addDays(30)->toDateString(), 'B-DEKAT');
     receiveInto($medicine, 100, now()->addDays(400)->toDateString(), 'B-JAUH');
-
-    sellFrom($medicine, 10);
+    sellFrom($medicine, 10); // FEFO menghabiskan B-DEKAT
 
     expect($medicine->currentStock())->toBe(100)
-        ->and($medicine->nearestExpiryDays())->toBe(30);
+        ->and($medicine->farthestExpiryDays())->toBe(400)
+        ->and($medicine->nearestExpiryDays())->toBe(400);
 });

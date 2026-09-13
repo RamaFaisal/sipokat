@@ -3,8 +3,6 @@
 namespace App\Filament\Resources\MedicineStockOpnames\Pages;
 
 use App\Filament\Resources\MedicineStockOpnames\MedicineStockOpnameResource;
-use Filament\Actions\EditAction;
-use Filament\Tables\Table;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
@@ -13,22 +11,24 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
 {
     use InteractsWithTable;
+
     protected static string $resource = MedicineStockOpnameResource::class;
 
     protected static ?string $title = 'Detail Stock Opname';
 
-    protected  string $view = 'filament.pages.medicine-stock-opname-detail';
+    protected string $view = 'filament.pages.medicine-stock-opname-detail';
 
     public function mount(string|int $record): void
     {
         parent::mount($record);
 
-        if (!$this->record->medicineStockOpnameItems()->exists()) {
+        if (! $this->record->medicineStockOpnameItems()->exists()) {
             Notification::make()
                 ->title('Belum ada item obat di opname ini')
                 ->warning()
@@ -51,15 +51,15 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
 
                         TextEntry::make('description')
                             ->label('Keterangan')
-                            ->state(fn($record) => $record->description ?: '-'),
+                            ->state(fn ($record) => $record->description ?: '-'),
 
                         TextEntry::make('total_items')
                             ->label('Total Item')
-                            ->state(fn($record) => $record->medicineStockOpnameItems()->count()),
+                            ->state(fn ($record) => $record->medicineStockOpnameItems()->count()),
 
                         TextEntry::make('total_hpp')
                             ->label('Total HPP')
-                            ->state(fn($record) => 'Rp ' . number_format($record->medicineStockOpnameItems()->sum('hpp'), 0, ',', '.')),
+                            ->state(fn ($record) => 'Rp '.number_format($record->medicineStockOpnameItems()->sum('hpp'), 0, ',', '.')),
 
                         TextEntry::make('creator.name')
                             ->label('Dibuat Oleh'),
@@ -73,16 +73,21 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
     {
         return $table
             ->query($this->getTableQuery())
-            ->heading('Detail Item medicine')
+            ->heading('Penyesuaian per Batch')
             ->columns([
                 TextColumn::make('medicine.name')
-                    ->label('Nama medicine')
+                    ->label('Obat')
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('medicine.code')
-                    ->label('Kode medicine')
-                    ->searchable(),
+                TextColumn::make('batch')
+                    ->label('Batch · ED')
+                    ->state(function ($record) {
+                        $batch = $record->batch_number ?? $record->layer?->batch_number ?? '-';
+                        $ed = $record->expired_date ?? $record->layer?->expired_date;
+
+                        return $batch.($ed ? ' · '.$ed->format('m-Y') : '');
+                    }),
 
                 TextColumn::make('qty')
                     ->label('Jumlah')
@@ -92,12 +97,12 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
                 TextColumn::make('type_account')
                     ->label('Jenis Akun')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'D' => 'success',
                         'C' => 'danger',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'D' => 'Debit (Masuk)',
                         'C' => 'Kredit (Keluar)',
                         default => $state,

@@ -3,11 +3,11 @@
 namespace App\Filament\Resources\Orders\Pages;
 
 use App\Filament\Resources\Orders\OrderResource;
+use App\Models\Order;
 use App\Services\StockMovementService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
+use Filament\Support\Exceptions\Halt;
 
 class CreateOrder extends CreateRecord
 {
@@ -16,46 +16,29 @@ class CreateOrder extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['created_by'] = auth()->id();
-        $data['status'] = 'paid';
+        $data['grand_total'] = collect($this->data['items'] ?? [])
+            ->sum(fn ($row) => ((int) ($row['qty'] ?? 0)) * ((float) ($row['price'] ?? 0)));
 
         return $data;
     }
 
-    protected function handleRecordCreation(array $data): Model
-    {
-        try {
-            return DB::transaction(function () use ($data) {
-                $movement = app(StockMovementService::class);
-                $items = $this->data['items'] ?? [];
-
-                if (empty($items)) {
-                    throw new \Exception('Order harus memiliki minimal 1 item.');
-                }
-
-                $movement->assertAvailable($items);
-
-                $order = parent::handleRecordCreation($data);
-
-                $movement->recordSale($order);
-
-                return $order;
-            });
-        } catch (\Throwable $e) {
-            Notification::make()
-                ->danger()
-                ->title('Gagal membuat Order')
-                ->body($e->getMessage())
-                ->send();
-
-            throw $e;
-        }
-    }
-
+    /**
+     * Item baru tersimpan setelah handleRecordCreation (saveRelationships), jadi kartu stok
+     * ditulis di sini — masih di dalam transaksi Filament: gagal alokasi = seluruhnya batal.
+     */
     protected function afterCreate(): void
     {
-        app(StockMovementService::class)->refreshStockStatus(
-            $this->record->items()->pluck('medicine_id')->all()
-        );
+        /** @var Order $order */
+        $order = $this->record;
+
+        try {
+            $movement = app(StockMovementService::class);
+            $movement->refreshStockStatus($movement->recordSale($order));
+        } catch (\RuntimeException $e) {
+            Notification::make()->danger()->title('Penjualan dibatalkan')->body($e->getMessage())->persistent()->send();
+
+            throw (new Halt)->rollBackDatabaseTransaction();
+        }
     }
 
     protected function getRedirectUrl(): string

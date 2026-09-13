@@ -8,12 +8,12 @@ use App\Models\OrderItem;
 use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
 use Barryvdh\DomPDF\Facade\Pdf;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
@@ -24,14 +24,13 @@ use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class LaporanRekap extends Page implements HasSchemas
 {
-    use InteractsWithSchemas;
     use HasPageShield;
+    use InteractsWithSchemas;
 
     protected string $view = 'filament.pages.laporan-rekap';
 
@@ -131,8 +130,7 @@ class LaporanRekap extends Page implements HasSchemas
         if (in_array($tipe, ['keduanya', 'penjualan'])) {
             $sales = OrderItem::query()
                 ->whereHas('order', fn ($q) => $q
-                    ->whereBetween('order_date', [$start->toDateString(), $end->toDateString()])
-                    ->where('status', '!=', 'cancelled'))
+                    ->whereBetween('order_date', [$start->toDateString(), $end->toDateString()]))
                 ->select(
                     'medicine_id',
                     DB::raw('SUM(qty) as total_qty'),
@@ -167,7 +165,9 @@ class LaporanRekap extends Page implements HasSchemas
 
         $this->rows = $medicineIds->map(function ($medicineId) use ($medicines, $sales, $purchases) {
             $m = $medicines[$medicineId] ?? null;
-            if (! $m) return null;
+            if (! $m) {
+                return null;
+            }
 
             $sale = $sales[$medicineId] ?? null;
             $purchase = $purchases[$medicineId] ?? null;
@@ -196,11 +196,10 @@ class LaporanRekap extends Page implements HasSchemas
             'total_beli' => $this->rows->sum('beli_nilai'),
             'total_jual_qty' => $this->rows->sum('jual_qty'),
             'total_beli_qty' => $this->rows->sum('beli_qty'),
-            'jumlah_transaksi_jual' => Order::whereBetween('order_date', [$start->toDateString(), $end->toDateString()])
-                ->where('status', '!=', 'cancelled')->count(),
+            'jumlah_transaksi_jual' => Order::whereBetween('order_date', [$start->toDateString(), $end->toDateString()])->count(),
             'jumlah_transaksi_beli' => ReceiveOrder::whereBetween('receive_date', [$start->toDateString(), $end->toDateString()])->count(),
             'margin_kotor' => $this->rows->sum('margin_kotor'),
-            'periode' => $start->format('d M Y') . ' s/d ' . $end->format('d M Y'),
+            'periode' => $start->format('d M Y').' s/d '.$end->format('d M Y'),
             'tipe' => $tipe,
         ]);
     }
@@ -226,7 +225,7 @@ class LaporanRekap extends Page implements HasSchemas
 
         return response()->streamDownload(
             fn () => print ($pdf->output()),
-            'rekap_penjualan_pembelian_' . now()->format('Ymd_His') . '.pdf',
+            'rekap_penjualan_pembelian_'.now()->format('Ymd_His').'.pdf',
         );
     }
 
@@ -236,7 +235,7 @@ class LaporanRekap extends Page implements HasSchemas
             return;
         }
 
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Rekap Penjualan & Pembelian');
 
@@ -247,7 +246,7 @@ class LaporanRekap extends Page implements HasSchemas
             'font' => ['bold' => true, 'size' => 14],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
-        $sheet->setCellValue('A2', 'Periode: ' . $this->summary['periode']);
+        $sheet->setCellValue('A2', 'Periode: '.$this->summary['periode']);
         $sheet->mergeCells('A2:J2');
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
@@ -307,6 +306,6 @@ class LaporanRekap extends Page implements HasSchemas
 
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
-        }, 'rekap_penjualan_pembelian_' . now()->format('Ymd_His') . '.xlsx');
+        }, 'rekap_penjualan_pembelian_'.now()->format('Ymd_His').'.xlsx');
     }
 }

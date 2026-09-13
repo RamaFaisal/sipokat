@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\ReceiveOrderItem;
+use App\Models\MedicineStock;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -24,13 +24,15 @@ class ExpiringMedicinesWidget extends BaseWidget
 
         return $table
             ->heading('Obat Mendekati Kedaluwarsa')
-            ->description('Batch dengan sisa masa kedaluwarsa ≤ 90 hari (data dari Receive Order).')
+            ->description('Batch yang masih bersisa dengan masa kedaluwarsa ≤ 90 hari.')
             ->query(function () use ($today, $threshold): Builder {
-                $query = ReceiveOrderItem::query()
+                // F5: lapisan (baris D kartu stok) yang sisanya > 0 — bukan item RO yang mungkin sudah habis terjual.
+                $query = MedicineStock::layers()
+                    ->withRemainingStock()
                     ->whereNotNull('expired_date')
                     ->whereBetween('expired_date', [$today->toDateString(), $threshold->toDateString()])
-                    ->whereHas('receiveOrder')
                     ->whereHas('medicine', fn (Builder $q) => $q->where('status', 'active'))
+                    ->withSum('consumptions', 'qty')
                     ->with([
                         'medicine:id,code,name,stock_status',
                         'receiveOrder.supplier:id,name',
@@ -50,8 +52,9 @@ class ExpiringMedicinesWidget extends BaseWidget
                 TextColumn::make('batch_number')
                     ->label('Batch')
                     ->placeholder('—'),
-                TextColumn::make('qty')
-                    ->label('Qty Batch')
+                TextColumn::make('remaining')
+                    ->label('Sisa Batch')
+                    ->state(fn (MedicineStock $record): int => $record->remaining)
                     ->numeric()
                     ->alignEnd(),
                 TextColumn::make('expired_date')
@@ -60,7 +63,7 @@ class ExpiringMedicinesWidget extends BaseWidget
                     ->sortable(),
                 TextColumn::make('days_remaining')
                     ->label('Sisa Hari')
-                    ->state(fn (ReceiveOrderItem $record): int => (int) now()->startOfDay()->diffInDays($record->expired_date->startOfDay(), false))
+                    ->state(fn (MedicineStock $record): int => (int) now()->startOfDay()->diffInDays($record->expired_date->startOfDay(), false))
                     ->badge()
                     ->color(fn (int $state): string => match (true) {
                         $state <= 30 => 'danger',

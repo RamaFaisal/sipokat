@@ -23,9 +23,9 @@ class SawTop10RestockWidget extends BaseWidget
         $latest = SawCalculation::orderByDesc('calculated_at')->first();
 
         $description = $latest
-            ? 'Hasil SAW terakhir: ' . $latest->calculated_at->format('d M Y')
-                . ' (periode ' . $latest->period_start->format('d M Y')
-                . ' - ' . $latest->period_end->format('d M Y') . ')'
+            ? 'Hasil SAW terakhir: '.$latest->calculated_at->format('d M Y')
+                .' (periode '.$latest->period_start->format('d M Y')
+                .' - '.$latest->period_end->format('d M Y').')'
             : 'Belum ada perhitungan SAW. Jalankan via menu SPK Restock → Hitung Prioritas Restock.';
 
         $calculationId = $latest?->id ?? 0;

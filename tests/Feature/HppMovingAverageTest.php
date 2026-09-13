@@ -55,10 +55,8 @@ function sellOn(string $date, $medicine, int $qty): Order
 
     $order = Order::create([
         'order_code' => sprintf('ORD-HPP-%04d', $seq),
-        'no_payment' => sprintf('PAY-HPP-%04d', $seq),
         'order_date' => $date,
         'grand_total' => $qty * 20000,
-        'status' => 'paid',
     ]);
     OrderItem::create([
         'order_id' => $order->id,
@@ -66,7 +64,6 @@ function sellOn(string $date, $medicine, int $qty): Order
         'medicine_name' => $medicine->name,
         'qty' => $qty,
         'price' => 20000,
-        'total' => $qty * 20000,
     ]);
     test()->movement->recordSale($order);
 
@@ -123,7 +120,8 @@ it('mereproduksi tabel contoh §4.3 baris per baris', function () {
         ['C', 10, 17200, 17200],
         ['D', 10, 20000, 18600],
         ['C', 2, 18600, 18600],
-        ['C', 18, 18600, 18600],
+        ['C', 10, 18600, 18600], // penjualan 18 dipecah FEFO: 10 dari batch 2 …
+        ['C', 8, 18600, 18600],  // … dan 8 dari batch 3 (.2)
         ['D', 10, 19000, 19000],
     ]);
 

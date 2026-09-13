@@ -55,3 +55,14 @@ it('merender daftar dan edit pengadaan (PO & RO) serta dashboard', function () {
     $this->get("/admin/receive-orders/{$ro->id}/edit")->assertOk();
     $this->get('/admin')->assertOk();
 });
+
+it('merender daftar dan detail penjualan (tanpa halaman edit)', function () {
+    $m = makeMedicine();
+    receiveInto($m, 10);
+    $order = sellFrom($m, 3);
+
+    $this->get('/admin/orders')->assertOk();
+    $this->get("/admin/orders/{$order->id}")->assertOk();
+    $this->get("/admin/orders/{$order->id}/edit")->assertNotFound();
+    $this->get('/admin/medicine-stock-opnames')->assertOk();
+});

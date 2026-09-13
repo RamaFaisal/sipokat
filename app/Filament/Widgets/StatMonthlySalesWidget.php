@@ -19,7 +19,7 @@ class StatMonthlySalesWidget extends BaseWidget
 
     protected function getStats(): array
     {
-        $monthlySales = Order::where('status', '!=', 'cancelled')
+        $monthlySales = Order::query()
             ->whereBetween('order_date', [
                 Carbon::now()->startOfMonth()->toDateString(),
                 Carbon::now()->endOfMonth()->toDateString(),
@@ -27,7 +27,7 @@ class StatMonthlySalesWidget extends BaseWidget
             ->sum('grand_total');
 
         return [
-            Stat::make('Penjualan Bulan Ini', 'Rp ' . number_format((float) $monthlySales, 0, ',', '.'))
+            Stat::make('Penjualan Bulan Ini', 'Rp '.number_format((float) $monthlySales, 0, ',', '.'))
                 ->description(Carbon::now()->locale('id')->translatedFormat('F Y'))
                 ->icon(Heroicon::OutlinedBanknotes)
                 ->color('success'),

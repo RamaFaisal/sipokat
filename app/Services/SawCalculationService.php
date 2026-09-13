@@ -10,7 +10,7 @@ use App\Models\SawCriteria;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
- 
+
 class SawCalculationService
 {
     public const CRITERIA_CODES = ['C1', 'C2', 'C3', 'C4'];
@@ -36,7 +36,7 @@ class SawCalculationService
 
         $missingCodes = array_diff(self::CRITERIA_CODES, $criteria->keys()->all());
         if (! empty($missingCodes)) {
-            throw new \RuntimeException('Kriteria SAW kurang lengkap. Hilang: ' . implode(', ', $missingCodes));
+            throw new \RuntimeException('Kriteria SAW kurang lengkap. Hilang: '.implode(', ', $missingCodes));
         }
 
         $medicines = Medicine::where('status', 'active')->get();
@@ -121,8 +121,8 @@ class SawCalculationService
     {
         $totalQty = (int) OrderItem::where('medicine_id', $medicine->id)
             ->whereHas('order', function ($q) use ($start, $end) {
-                $q->whereBetween('order_date', [$start->toDateString(), $end->toDateString()])
-                    ->where('status', '!=', 'cancelled');
+                // Order yang dibatalkan = soft delete; whereHas sudah mengecualikannya.
+                $q->whereBetween('order_date', [$start->toDateString(), $end->toDateString()]);
             })
             ->sum('qty');
 

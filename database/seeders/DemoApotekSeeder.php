@@ -497,16 +497,14 @@ class DemoApotekSeeder extends Seeder
             }
 
             $roll = mt_rand(1, 100);
-            $status = $roll <= 85 ? 'paid' : ($roll <= 97 ? 'pending' : 'cancelled');
+            $status = 'paid'; // status & pembatalan dihapus (S1); seeder dirombak di E6
 
             [$orderCode, $payNumber] = $this->nextOrderNumbers($date);
 
             $order = Order::create([
                 'order_code' => $orderCode,
-                'no_payment' => $payNumber,
                 'order_date' => $date->toDateString(),
                 'grand_total' => $grandTotal,
-                'status' => $status,
                 'note' => self::MARKER . ' Penjualan demo.',
                 'created_by' => $this->userId,
             ]);
@@ -519,7 +517,6 @@ class DemoApotekSeeder extends Seeder
                     'medicine_name' => $item['medicine_name'],
                     'qty' => $item['qty'],
                     'price' => $item['price'],
-                    'total' => $item['total'],
                 ]);
 
                 // Order batal = barang tidak keluar (stok tidak berkurang, tidak dihitung permintaan).
