@@ -55,22 +55,34 @@ sama. Penilaian kepentingan dipakai sebagai acuan.
 Nilai mentah tiap kriteria dikonversi ke skala 1–5 sebelum dinormalisasi. Ambang di bawah ini
 menggantikan angka lama yang berasal dari asumsi proposal.
 
-| Skor | C1 Stok (unit) | C2 Permintaan (unit/bln) | C3 Sisa ED (hari) | C4 Harga beli (Rp) |
+> **Diperbarui 2026-09-14 (revisi September, `docs/rencana-revisi-2026-09.md` Bagian 7).** Tabel di
+> bawah adalah yang **terpasang di sistem** (`SawCriteriaSeeder`). Dua hal berubah dari draf awal:
+> C1 dinyatakan sebagai **rasio stok tersedia ÷ batas minimum** (ambang unit wawancara dibagi 20 =
+> batas waspada narasumber), dan C4 memakai **HPP rata-rata bergerak**, bukan harga master.
+> Semua rentang inklusif; nilai mentah C1 dibulatkan 2 desimal sebelum dicocokkan.
+
+| Skor | C1 Rasio stok ÷ min | C2 Permintaan (satuan jual/bln) | C3 Sisa ED (hari) | C4 HPP (Rp) |
 |:---:|---|---|---|---|
-| 1 | ≤ 20 | ≤ 10 | ≤ 90 | ≤ 2.000 |
-| 2 | 21 – 40 | 11 – 30 | 91 – 180 | 2.001 – 10.000 |
-| 3 | 41 – 70 | 31 – 65 | 181 – 365 | 10.001 – 50.000 |
-| 4 | 71 – 100 | 66 – 100 | 366 – 730 | 50.001 – 100.000 |
-| 5 | ≥ 101 | ≥ 101 | ≥ 731 | > 100.000 |
+| 1 | ≤ 1,00 | ≤ 10 | ≤ 90 | ≤ 2.000 |
+| 2 | 1,01 – 2,00 | 11 – 30 | 91 – 180 | 2.001 – 10.000 |
+| 3 | 2,01 – 3,50 | 31 – 65 | 181 – 365 | 10.001 – 50.000 |
+| 4 | 3,51 – 5,00 | 66 – 100 | 366 – 730 | 50.001 – 100.000 |
+| 5 | ≥ 5,01 | ≥ 101 | ≥ 731 | ≥ 100.001 |
 
 Arah skor mengikuti keputusan normalisasi baku (Opsi Y): skor disusun searah nilai mentah, dan
 prioritas dibentuk lewat rumus normalisasi — `min/X` untuk kriteria *cost* (C1, C3, C4) dan `X/max`
-untuk kriteria *benefit* (C2).
+untuk kriteria *benefit* (C2). Nilai mentah tiap kriteria:
+
+- **C1** = stok tersedia (lapisan belum kedaluwarsa) ÷ `min_stock` obat.
+- **C2** = Σ qty terjual dalam periode × 30 ÷ jumlah hari periode (inklusif).
+- **C3** = sisa hari ke ED batch **terjauh** yang masih bersisa; stok tersedia 0 → 0 hari.
+- **C4** = HPP rata-rata bergerak per satuan jual.
 
 ### Dasar tiap ambang
 
-**C1 — Stok.** Narasumber menyebut batas waspada **20 unit**. Angka itu dipakai sebagai batas
-skor 1 (paling mendesak), lalu dinaikkan bertingkat.
+**C1 — Stok.** Narasumber menyebut batas waspada **20 unit**. Angka itu menjadi batas skor 1 dalam
+bentuk rasio (20 ÷ 20 = 1,00), lalu dinaikkan bertingkat (40 → 2,00; 70 → 3,50; 100 → 5,00). Dengan
+rasio, obat bersatuan Flask yang batas minimumnya 6 dinilai terhadap 6, bukan terhadap 20 strip.
 
 **C2 — Permintaan.** Narasumber memberi tiga tingkat untuk satuan kapsul: ramai **≥ 101/bulan**,
 sedang **31–100**, sepi **≤ 30**. Ketiga batas itu dipertahankan apa adanya; rentang sedang dan
@@ -82,8 +94,8 @@ berada di kisaran ratusan.
 lagi dapat dikembalikan, sehingga seluruh risiko kerugian berpindah ke apotek. Inilah alasan
 90 hari dipakai sebagai batas skor paling mendesak, bukan sekadar angka bulat.
 
-**C4 — Harga beli.** Narasumber menyebut murah **≤ Rp2.000** dan mahal **> Rp100.000** per strip.
-Kedua ujung itu dipakai sebagai batas skor 1 dan skor 5.
+**C4 — Harga.** Narasumber menyebut murah **≤ Rp2.000** dan mahal **> Rp100.000** per strip.
+Kedua ujung itu dipakai sebagai batas skor 1 dan skor 5, diterapkan pada HPP per satuan jual.
 
 ### Keterbatasan yang harus ditulis di Bab 1.4
 
@@ -97,9 +109,9 @@ diakui sebagai batasan pada Bab 1.4 dan diusulkan pada saran Bab 5.2.
 
 ### Yang perlu diubah
 
-- `database/seeders/SawCriteriaSeeder.php` — field `scale_rules` untuk keempat kriteria.
-- Tabel 3.5–3.8 pada naskah.
-- Jalankan ulang `php artisan sipokat:recalculate-saw` setelah seeder diperbarui.
+- ✅ `database/seeders/SawCriteriaSeeder.php` — sudah memuat tabel di atas (commit E5, 2026-09-13).
+- Tabel 3.5–3.8 pada naskah — ikuti tabel di atas (C1 rasio, C4 HPP).
+- `php artisan sipokat:recalculate-saw` dijalankan setelah seeder diperbarui.
 
 Bobot pada seeder **tidak perlu disentuh**.
 
@@ -124,9 +136,10 @@ Tiga konsekuensinya:
    keputusan melepas `supplier_id` dari tabel `medicines` dan menempatkan PBF di tingkat PO/RO
    sudah sesuai praktik lapangan.
 2. **Definisi operasional C4 perlu ditulis eksplisit.** Harga beli bukan atribut tetap milik obat,
-   melainkan hasil perbandingan saat pemesanan. Di Bab III, C4 sebaiknya didefinisikan sebagai
-   *harga beli acuan, yaitu harga dari PBF termurah pada penerimaan terakhir* — nilai yang
-   diperbarui setiap kali penerimaan dicatat.
+   melainkan hasil perbandingan saat pemesanan. Karena itu sistem (revisi September) tidak menyimpan
+   harga di master obat sama sekali; C4 didefinisikan sebagai **harga pokok persediaan (HPP)
+   rata-rata bergerak per satuan jual** — `(saldo × HPP + qty × harga faktur) ÷ (saldo + qty)`,
+   dibulatkan ke atas — yang diperbarui setiap kali penerimaan dicatat. Tulis begitu di Bab III.
 3. **Obat yang sering kosong bukan karena terkunci di satu PBF.** Obat yang hanya tersedia di satu
    PBF jumlahnya sedikit, dan kelima obat yang paling sering kosong justru tersedia di PBF lain.
    Apotek juga tidak menunggu PBF termurah kembali tersedia, melainkan langsung membandingkan PBF

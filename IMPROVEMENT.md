@@ -1,10 +1,29 @@
 # IMPROVEMENT — Audit Perhitungan SAW Sipokat
 
-Dibuat: 2026-08-20
+Dibuat: 2026-08-20 · **Ditutup: 2026-09-14** (revisi September, commit E5 `434729d` dan sesudahnya).
 Lingkup: audit tahapan SAW (Bab 3.4.3–3.4.4) terhadap implementasi kode dan tampilan sistem.
-Status naskah saat audit: Tabel 4.1, 4.2, dan seluruh Gambar 4.1–4.9 di `docs/draft_isi_ta_4-5.md` **masih placeholder**.
+
+## Status penutupan
+
+| Temuan | Status | Penyelesaian |
+|---|---|---|
+| T1 Label rumus di modal detail | ✅ | `saw-result-detail.blade.php` menampilkan `min/X` untuk cost dan `X/max` untuk benefit, beserta Min/Max kolom |
+| T2 Obat berstok 0 kehilangan C3 | ✅ | C3 = ED batch terjauh yang bersisa; stok tersedia 0 → 0 hari → skor 1 (K1) |
+| T3 Aturan skor 0 tidak ada di naskah | ✅ (kode) | Skor 0 → R = 0 hanya untuk kriteria tanpa data; dengan aturan T2 dan HPP, obat aktif berhistori selalu punya skor ≥ 1. Tulis di Bab III |
+| T4 Validasi Σ bobot = 1 hanya di UI | ✅ | `SawCalculationService::activeCriteria()` menolak Σ ≠ 1,000; CLI ikut; toggle aktif/non-aktif di tabel dihapus (K7) |
+| T5 Pembagi periode C2 meleset di CLI | ✅ | Jumlah hari inklusif bilangan bulat; `RecalculateSawCommand` memakai `today()` sebagai akhir (K2) |
+| T6 Celah skala untuk nilai non-bulat | ✅ | Semua rentang inklusif dan sadar desimal; C1 rasio 2 desimal; HPP bilangan bulat dibulatkan ke atas (B2, K14) |
+| T7 Vi kembar, peringkat seri arbitrer | ✅ | Peringkat padat ("Tingkat") + tie-breaker tampilan rasio → permintaan → ED (K9) |
+| T8 Unit test SAW hilang | ✅ | `tests/Feature/SawCalculationTest.php` (contoh 5 alternatif) + `EndToEndFlowTest` |
+| T9 Klaim kriteria bisa dinonaktifkan | ✅ | Toggle dihapus; keempat kriteria wajib aktif. Hapus klaim di naskah |
+| T10 Batasan alternatif belum tertulis | ✅ (kode) | Alternatif = obat aktif dengan ≥ 1 baris kartu stok; jumlah yang dikecualikan disimpan di `excluded_count` (K0, K12). Tulis di Bab III |
+| T11 Dokumen internal masih skema lama | ✅ | CLAUDE.md, README, `update-dari-wawancara.md` §3/§4.1 disinkronkan 2026-09-14 |
+
+Yang tersisa dari daftar ini hanya pekerjaan **naskah** (T3, T9, T10) — bukan kode. Isi audit asli
+dipertahankan di bawah sebagai jejak.
 
 ---
+
 
 ## Ringkasan audit per tahapan
 

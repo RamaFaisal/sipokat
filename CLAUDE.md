@@ -1,8 +1,10 @@
 # CLAUDE.md — Sipokat: Progress & Mentoring Document
 
-> Dokumen ini merangkum **kondisi proyek saat ini** dibanding **requirement di draft proposal TA "Rancang Bangun Sistem Inventory Obat Berbasis Web dengan SPK Metode SAW pada Apotek Anugrah Husada"** (Bab I-III).
-> Tujuan: bahan review/mentoring untuk dosen pembimbing.
-> Last updated: 2026-09-07
+> Rangkuman **kondisi proyek saat ini** dibanding requirement draft TA "Rancang Bangun Sistem Inventory
+> Obat Berbasis Web dengan SPK Metode SAW pada Apotek Anugrah Husada" (Bab I–III), untuk bahan
+> review/mentoring dosen pembimbing.
+> Last updated: 2026-09-14 — setelah **revisi besar September 2026** (rencana lengkap dan alasan tiap
+> keputusan ada di [docs/rencana-revisi-2026-09.md](docs/rencana-revisi-2026-09.md)).
 
 ---
 
@@ -10,687 +12,160 @@
 
 | Aspek | Status | Catatan |
 |-------|--------|---------|
-| Master Data (obat, supplier, unit) | ✅ Selesai | CRUD lengkap di Filament. Rak Obat dihapus; Kategori dikunci 2 golongan (Obat Bebas/Obat Keras), tanpa CRUD — lihat Section 12 |
-| Procurement (PO + RO partial + ED tracking) | ✅ Selesai | Auto-numbering, status tracking, export Excel; field ED/batch/manufacture_date sudah di-input per item RO |
-| Inventory (Kartu Stok via `MedicineStock` D/C) | ✅ Selesai | `StockCardService` solid; status auto-update; `Medicine::currentStock()` konsisten dengan filter soft-delete |
-| Stock Opname | ✅ Selesai | Bisa adjustment D/C |
-| Orders (penjualan) | ✅ Selesai | Auto-deduct via MedicineStock C entry, validasi availability, reverse-recreate saat edit, transactional |
-| Authentication & User CRUD | ✅ Selesai | Filament Shield + Spatie Permission terpasang |
-| Role-based access (Admin / Petugas / Pemilik) | ⏸️ Skip | User handle sendiri pakai Filament Shield |
-| **SPK SAW (core skripsi)** | ✅ **Selesai** | Modul lengkap: 3 model + service + Filament resource bobot + Page hitung + scheduled recalc + 3-layer validasi bobot |
-| Notifikasi stok minimum & kedaluwarsa | ✅ Selesai | Daily scheduled command kirim Filament DB notification ke semua user |
-| Dashboard & Widget | ✅ Selesai | 5 widget aktif: SawTop10, LowStock, PendingPO, Expiring, SalesSummary |
-| Data demo SPK (150 obat) | ✅ Selesai | Seeder `SpkTestDataSeeder` — 150 obat + 250 orders + 5 RO dengan ED, distribusi merata semua bracket scale_rules |
-| Reporting lanjutan (rekap penjualan/pembelian, fast/slow moving) | ✅ Selesai | Page `LaporanRekap` + `LaporanMoving` dengan export Excel |
-| Audit trail SAW (riwayat snapshot) | ✅ Selesai | Resource `SawCalculations` — list + view detail snapshot historis |
-| Detail breakdown per obat (verifikasi V_i) | ✅ Selesai | ViewAction modal di SawCalculation page & history — kalkulasi V_i step-by-step match Bab 3.4.4 |
+| Master Data (obat, PBF, satuan) | ✅ | Obat: 5 isian (nama, kategori, satuan jual, kemasan beli + isi, batas minimum). Kode `OBT-####` otomatis. Tanpa harga, dosis, foto, deskripsi (Bagian 1 rencana) |
+| Kartu stok per batch + HPP | ✅ | `medicine_stocks` = ledger lapisan: baris D membawa batch/ED, baris C menunjuk lapisan asalnya. HPP rata-rata bergerak per obat (Bagian 4) |
+| Procurement (PO → RO per faktur) | ✅ | PO = catatan internal per PBF setelah konfirmasi WA; satu RO = satu faktur; input dalam kemasan, tersimpan dalam satuan jual (Bagian 2–3) |
+| Penjualan FEFO | ✅ | Alokasi otomatis dari batch ED terdekat, bisa memecah ke beberapa lapisan; harga ≥ HPP; qty ≤ stok tersedia; tanpa edit (hapus → buat ulang) (Bagian 5) |
+| Stok Opname per batch | ✅ | Hitung fisik per lapisan; selisih → penyesuaian pada lapisan itu; jalur retur/pemusnahan obat kedaluwarsa (Bagian 6) |
+| **SPK SAW (inti skripsi)** | ✅ | C1 rasio stok÷min, C2 permintaan/bulan, C3 ED batch terjauh yang bersisa, C4 HPP; skala hasil wawancara; peringkat padat; "Buat PO" dari ranking (Bagian 7) |
+| Notifikasi stok & ED | ✅ | `sipokat:check-stock-and-expiry` harian 08:00 (Filament DB notification) |
+| Dashboard & widget | ✅ | Top-10 SAW, stok kritis, PO terbuka, batch mendekati ED, grafik penjualan |
+| Laporan | ✅ | Kartu stok per obat (per batch + HPP), Rekap penjualan/pembelian, Fast/slow moving — Excel & PDF |
+| Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat lewat jalur service) + template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
+| Pengujian | ✅ | 84 tes Pest / 826 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament |
+| Roles & Permissions | ⏸️ | Ditangani peneliti via Filament Shield (D7). Permission di DB sudah bersih dari halaman yang dihapus |
+| Deploy VPS (MySQL) + cron | 🔜 | E9 — lihat §8 |
 
 ---
 
-## 2. Functional Requirements (Tabel 3.3 Proposal) vs Implementation
+## 2. Functional Requirements (Tabel 3.3 Proposal) vs Implementasi
 
 | Kode | Requirement | Status | Implementasi |
 |------|-------------|--------|--------------|
-| F-01 | Login & autentikasi | ✅ | Laravel auth + Filament login panel |
-| F-02 | Kelola data obat (CRUD) | ✅ | Filament `MedicineResource` |
-| F-03 | Catat transaksi obat masuk & keluar | ✅ | Masuk via RO → `MedicineStock` type D; keluar via Orders → type C dengan validasi qty ≤ availableStock |
-| F-04 | Notifikasi stok minimum & obat mendekati kedaluwarsa | ✅ | Command `sipokat:check-stock-and-expiry` dijadwalkan 08:00 daily, kirim Filament DB notification |
-| F-05 | Laporan inventory otomatis | ✅ | Kartu stok per obat + 5 dashboard widgets + Page `LaporanRekap` (rekap penjualan/pembelian, export Excel) + Page `LaporanMoving` (fast/slow moving + dead stock, export Excel) |
-| F-06 | SAW untuk rekomendasi prioritas restock | ✅ | `SawCalculationService` + Page "Hitung Prioritas Restock" + scheduled recalc 06:00 daily |
-| F-07 | Tampilan hasil perangkingan obat | ✅ | Page SawCalculation menampilkan ranking semua obat (paginated table), plus widget Top-10 di dashboard |
+| F-01 | Login & autentikasi | ✅ | Filament panel `/admin`. `User` implements `FilamentUser` (wajib di luar `APP_ENV=local`) |
+| F-02 | Kelola data obat | ✅ | `MedicineResource` + import Excel |
+| F-03 | Catat obat masuk & keluar | ✅ | Masuk: RO → baris D per batch. Keluar: penjualan → baris C FEFO per lapisan. Semua lewat `StockMovementService` |
+| F-04 | Notifikasi stok minimum & ED | ✅ | Stok tersedia < `min_stock`; batch bersisa dengan ED ≤ 90 hari |
+| F-05 | Laporan inventory | ✅ | Kartu stok, Rekap, Moving, dashboard |
+| F-06 | SAW prioritas restock | ✅ | `SawCalculationService` + halaman "Hitung Prioritas Restock" + terjadwal 06:00 |
+| F-07 | Tampilan perangkingan | ✅ | Tabel ranking (Tingkat, Stok/Min, C1–C4, V), detail hitungan per obat, riwayat snapshot |
 
 ---
 
-## 3. SPK SAW — Detail Implementasi (Core Skripsi)
+## 3. Aturan Domain yang Berlaku (ringkas)
 
-### 3.1 Skema Database (3 tabel baru)
+Rincian dan alasannya: `docs/rencana-revisi-2026-09.md`. Ini yang harus dipatuhi kode baru.
 
-```
-saw_criteria
-├── code (C1..C4, unique)
-├── name, type (cost|benefit), weight (decimal 4,3)
-├── scale_rules (JSON) — aturan konversi nilai mentah → skala 1-5
-├── sort_order, is_active, description
+**Master obat (M1–M12)**
+- `unit_id` = **satuan jual = satuan kartu stok**. `pack_unit_id` + `pack_size` = kemasan beli dari PBF (1 Box = N satuan jual). Isi kemasan milik obat, bukan milik satuan.
+- Nama unik (dinormalkan huruf besar; aplikasi, bukan indeks DB karena soft-delete). Kode `OBT-####` berurutan, tidak diubah.
+- `min_stock` bawaan: Strip → 20, lainnya = `pack_size`; harus > 0.
 
-saw_calculations (snapshot per perhitungan)
-├── calculated_at, calculated_by (FK user)
-├── period_start, period_end (date)
-├── trigger_type (manual|scheduled)
-├── criteria_snapshot (JSON — freeze config saat hitung untuk audit)
-├── total_alternatives
+**Kartu stok & HPP (S3, F1–F7, B5)**
+- Semua angka di ledger dalam satuan jual. Konversi kemasan hanya di titik input (`PackLine`).
+- Baris D (dari RO/opname) = **lapisan** dengan `batch_number`, `expired_date` (disimpan tanggal 1 bulan ED), `hpp` (harga beli per satuan jual), `hpp_avg` (HPP setelah baris itu). Baris C menunjuk `layer_stock_id`.
+- Kedaluwarsa = `expired_date <= hari ini`. Stok **tersedia** = Σ sisa lapisan belum kedaluwarsa; stok **fisik** = Σ semua lapisan.
+- HPP rata-rata bergerak, bilangan bulat dibulatkan ke atas: `(saldo × HPP + qty × harga) ÷ (saldo + qty)`. Dihitung ulang (`replayHpp`) tiap kali ledger obat berubah.
+- Hapus dokumen (RO/penjualan/opname) → baris ledger **dihapus sungguhan** lalu HPP di-replay. RO yang lapisannya sudah terpakai tidak bisa dihapus/diubah qty-nya (R8).
 
-saw_calculation_results (per obat per kalkulasi)
-├── saw_calculation_id (FK), medicine_id (FK)
-├── c1_raw..c4_raw (nilai mentah: stok, demand/bln, sisa ED hari, harga beli)
-├── c1_score..c4_score (skala 1-5 hasil konversi via scale_rules)
-├── c1_norm..c4_norm (hasil normalisasi X/max)
-├── preference_value (V_i), rank
-```
+**Pengadaan (R1–R15, P1–P12, Q0–Q9)**
+- PO: per PBF, dibuat manual atau dari ranking SAW (jumlah bawaan ⌈min_stock ÷ isi⌉ kemasan, harga = harga beli terakhir). Status diturunkan dari penerimaan: pending / partial / received / closed (tutup manual, aksi massal).
+- RO: satu faktur PBF = satu RO; `invoice_number` unik per PBF (aplikasi). Boleh tanpa PO. Dari PO: centang item → baris terisi otomatis; qty ≤ sisa PO (kelebihan = baris di luar PO). Setiap baris wajib batch + ED (bulan-tahun) > tanggal terima.
+- PPN 11% (pengaturan umum) hanya untuk tampilan cetak; harga faktur sudah termasuk PPN.
 
-### 3.2 Pipeline Perhitungan (SawCalculationService)
+**Penjualan (S1–S7)**
+- Tanpa status/pembayaran/diskon. Harga jual ≥ HPP saat itu; qty ≤ stok tersedia. Alokasi FEFO otomatis, satu baris penjualan bisa menjadi beberapa baris C. Tidak ada edit.
 
-```
-Input: period_start, period_end, trigger_type, user_id
-  │
-  ├─ getRawValue() per obat per kriteria:
-  │     C1 = Medicine::currentStock()
-  │     C2 = aggregate OrderItem.qty dalam periode, diproyeksikan ke ekuivalen bulanan
-  │          ((total_qty / period_days) × 30) — supaya scale_rules tetap konsisten
-  │          saat user pilih period bukan 30 hari
-  │     C3 = Medicine::nearestExpiryDays() — FEFO batch terdekat dari receive_order_items
-  │     C4 = Medicine.purchase_price
-  │
-  ├─ buildDecisionMatrix() — convert raw ke skor 1-5 via SawCriteria::convertToScore()
-  │
-  ├─ normalize() — R = X/max untuk SEMUA kriteria (lihat Section 5 untuk alasan)
-  │     Score 0 (data missing) → norm 0 (tidak menyumbang preferensi)
-  │
-  ├─ calculatePreference() — V_i = Σ (W_j × R_ij)
-  │
-  └─ persist DB transaction: saw_calculations + saw_calculation_results (rank ter-assign)
+**Opname (D1–D3)**
+- Per obat: daftar lapisan bersisa dengan sisa sistem → isi fisik; selisih menjadi C/D pada lapisan itu. Batch belum tercatat → lapisan D baru (butuh HPP obat sudah ada).
 
-Output: SawCalculation snapshot dengan results
-```
-
-### 3.3 Konversi Skala (scale_rules JSON di saw_criteria)
-
-Format konsisten untuk semua kriteria — editable admin via Filament:
-
-```json
-[
-  {"min": null, "max": 10,   "score": 5},
-  {"min": 11,   "max": 30,   "score": 4},
-  {"min": 31,   "max": 60,   "score": 3},
-  {"min": 61,   "max": 100,  "score": 2},
-  {"min": 101,  "max": null, "score": 1}
-]
-```
-
-`null` = open-ended. Seeder default isi sesuai Tabel 3.5-3.8 proposal.
-
-### 3.4 Kriteria SAW (Tabel 3.4 Proposal)
-
-| Kriteria | Bobot | Sumber Data | Status |
-|----------|-------|-------------|--------|
-| C1 — Stok (cost) | 0.300 | `Medicine::currentStock()` | ✅ |
-| C2 — Permintaan/bulan (benefit) | 0.300 | Agregasi `OrderItem.qty` per `medicine_id` per periode → diproyeksi ke 30 hari | ✅ |
-| C3 — Sisa kedaluwarsa hari (cost) | 0.200 | `Medicine::nearestExpiryDays()` via `receive_order_items.expired_date` (FEFO) | ✅ |
-| C4 — Harga beli (cost) | 0.200 | `Medicine.purchase_price` | ✅ |
-
-**Total bobot = 1.000** (di-validate di UI: kalau ≠ 1.000 muncul warning, dan tombol "Hitung Sekarang" reject).
+**SAW (K0–K15)**
+- Alternatif: obat aktif yang punya ≥ 1 baris kartu stok. Σ bobot aktif harus = 1,000 (divalidasi di service; CLI ikut).
+- C1 = stok tersedia ÷ `min_stock` (2 desimal); C2 = Σ qty terjual dalam periode × 30 ÷ jumlah hari (inklusif); C3 = sisa hari ke ED batch **terjauh** yang masih bersisa (stok tersedia 0 → 0 hari); C4 = HPP.
+- Skala 1–5 inklusif (tabel di §4). Normalisasi `min/X` untuk cost (C1, C3, C4), `X/max` untuk benefit (C2); skor 0 → R = 0. Vi dihitung presisi penuh, dibulatkan saat disimpan.
+- Peringkat **padat** ("Tingkat"): Vi sama → tingkat sama; urutan tampil pakai tie-breaker rasio → permintaan → ED. Obat yang ada di PO terbuka diberi tanda "sudah dipesan".
+- Periode: "Sampai" selalu hari ini; "Dari" bawaan 30 hari.
 
 ---
 
-## 4. Action Items per Priority
+## 4. Skala Konversi (hasil wawancara, `SawCriteriaSeeder`)
 
-### 🔴 Priority 1 — Blocker untuk SPK SAW
+| Skor | C1 Rasio stok÷min | C2 Permintaan (satuan jual/bln) | C3 Sisa ED (hari) | C4 HPP (Rp) |
+|:---:|---|---|---|---|
+| 1 | ≤ 1,00 | ≤ 10 | ≤ 90 | ≤ 2.000 |
+| 2 | 1,01 – 2,00 | 11 – 30 | 91 – 180 | 2.001 – 10.000 |
+| 3 | 2,01 – 3,50 | 31 – 65 | 181 – 365 | 10.001 – 50.000 |
+| 4 | 3,51 – 5,00 | 66 – 100 | 366 – 730 | 50.001 – 100.000 |
+| 5 | ≥ 5,01 | ≥ 101 | ≥ 731 | ≥ 100.001 |
 
-#### P1.1 Tambah tracking kedaluwarsa (C3) — ✅ Selesai
-
-**Keputusan**: Opsi B — kolom di `receive_order_items` (per batch, akurat dengan kenyataan apotek).
-
-Yang dibangun:
-- Migration `add_expiry_to_receive_order_items_table` — kolom `batch_number`, `manufacture_date`, `expired_date` (nullable + index)
-- `ReceiveOrderForm.php` — 3 field baru di repeater items, `expired_date` required dengan validasi `after(manufacture_date)`
-- `ReceiveOrderItem.php` — cast date
-- `Medicine.php` — method `nearestExpiryDate()` & `nearestExpiryDays()` dengan logika FEFO
-
-**Catatan FEFO**: Karena stok dihitung dinamis dari `MedicineStock` (bukan per batch), konvensi: anggap stok keluar mengurangi batch dengan ED terdekat. Untuk skripsi cukup pakai ED terdekat dari RO yang masih ada stok globalnya.
-
-#### P1.2 Bangun modul SAW — ✅ Selesai
-
-Yang dibangun:
-- 3 migration: `saw_criteria`, `saw_calculations`, `saw_calculation_results`
-- 3 model: `SawCriteria` (dengan `convertToScore()`), `SawCalculation` (dengan scope `latestCalculation`), `SawCalculationResult`
-- Service `SawCalculationService` dengan pipeline `execute() → getRawValue → buildDecisionMatrix → normalize → calculatePreference`
-- Seeder `SawCriteriaSeeder` — 4 kriteria default sesuai Tabel 3.4-3.8 proposal
-- Filament Resource `SawCriterias/` — CRUD bobot + scale_rules editor (Repeater dengan item label dinamis)
-- Filament Page `SawCalculation` — form periode + tombol "Hitung Sekarang" + table ranking paginated
-- **Polish iterasi 2026-05-30** (lihat Section 11 untuk detail):
-    - Toggle column `is_active` di table Kriteria SAW (aktif/non-aktif inline)
-    - 3-layer validasi bobot: per-range `min ≤ max`, save bobot ≤ 1.000, aktivasi via toggle ≤ 1.000
-    - Layout form Grid 3-kolom (rapi, helper text per field)
-    - Rename label `V_i` → "Nilai Prioritas" + tooltip notasi matematis
+Bobot tetap 0,30 / 0,30 / 0,20 / 0,20. C1 memakai rasio (ambang wawancara ÷ 20 = batas waspada
+narasumber) supaya obat bersatuan berbeda dinilai adil terhadap batas minimumnya sendiri (K6).
+Batasan yang tetap ditulis di Bab 1.4: skala C2 satu set untuk semua satuan.
 
 ---
 
-### 🟠 Priority 2 — Core functionality
+## 5. Peta Kode
 
-#### P2.1 Integrasi Orders ↔ MedicineStock — ✅ Selesai
+| Lapisan | Path | Peran |
+|---|---|---|
+| Service | `app/Services/StockMovementService.php` | Satu-satunya penulis ledger: `recordReceipt/reverseReceipt/syncReceipt`, `recordSale/reverseSale` (FEFO), `recordOpname/reverseOpname`, `replayHpp`, `refreshStockStatus` |
+| Service | `app/Services/StockCardService.php` | Pembaca: `physicalStock`, `availableStock`, `layers`, `sellableLayers`, `currentHpp`, kartu stok berjalan |
+| Service | `app/Services/SawCalculationService.php` | Pipeline SAW: alternatif → nilai mentah → skor → normalisasi → Vi → peringkat padat → snapshot |
+| Service | `app/Services/RealDataImporter.php`, `app/Support/RealDataTemplate.php` | Template & importer data riil (Obat → SaldoAwal → Faktur → Penjualan) |
+| Form | `app/Filament/Forms/PackLine.php` | Baris kemasan bersama PO & RO: satuan/isi/jumlah/harga → konversi ke satuan jual |
+| Model | `MedicineStock` | Scope `layers()`, `withRemainingStock()`; accessor `remaining`; `isExpired()` |
+| Model | `Order`, `ReceiveOrder`, `MedicineStockOpname` | Hook `deleting` → balikkan ledger lewat service |
+| Halaman | `app/Filament/Pages/SawCalculation.php` | Hitung, tabel ranking, detail hitungan, aksi massal "Buat PO" |
+| Perintah | `sipokat:recalculate-saw`, `sipokat:check-stock-and-expiry`, `sipokat:data-riil:template`, `sipokat:data-riil:import` | Jadwal: 06:00 & 08:00 (`routes/console.php`) |
+| Migrasi revisi | `database/migrations/2026_09_13_00000{1..5}_*.php` | Master → lapisan & HPP → pengadaan → penjualan/opname FEFO (backfill lapisan) → hasil SAW |
 
-Audit: 95% sudah ada saat dev plan ditulis. Yang ditambahkan:
-- ✅ `CreateOrder.handleRecordCreation()` — auto-create MedicineStock C entries + validate `qty <= getAvailableStock()` (sudah ada sebelumnya)
-- ✅ `EditOrder.handleRecordUpdate()` — delete old C entries, re-validate stock, recreate, transactional (sudah ada)
-- ✅ Soft delete cascade — `whereHas` di `StockCardService::getAvailableStock()` exclude entries dari Order soft-deleted (sudah ada)
-- ✅ **Fix konsistensi**: `Medicine::currentStock()` di-update agar pakai filter `whereHas` yang sama dengan `getAvailableStock()`. Penting karena `SawCalculationService` pakai `currentStock()` untuk C1 — sebelum fix, soft-deleted Order tidak ter-exclude → SAW over-estimate stok.
-
-#### P2.2 Dashboard Widgets — ✅ Selesai
-
-5 widget di `app/Filament/Widgets/`:
-- `SawTop10RestockWidget` — read snapshot SAW terakhir, top 10 dengan badge rank (danger 1-3, warning 4-7, gray 8-10)
-- `LowStockMedicinesWidget` — obat dengan `stock_status` empty/almost_empty
-- `PendingPurchaseOrdersWidget` — PO approved tapi belum fully received
-- `ExpiringMedicinesWidget` — batch ED ≤ 90 hari, badge "Sisa Hari" by urgency
-- `SalesSummaryWidget` — line chart 30 hari grand_total (Order status ≠ cancelled)
-
-Registered di `AdminPanelProvider.php` widgets array.
-
-#### P2.3 Roles & Permissions — ⏸️ DI-SKIP (user handle sendiri)
-
-User akan setup roles via Filament Shield mandiri. Konsekuensi untuk P2.4: notifikasi sementara dikirim ke **semua user**. Bisa di-refactor ke `User::role('admin')` setelah role di-setup.
-
-#### P2.4 Notifikasi (F-04) — ✅ Selesai
-
-Yang dibangun:
-- Command `app/Console/Commands/CheckStockAndExpiryCommand.php` — scan + kirim Filament DB notification
-- Command `app/Console/Commands/RecalculateSawCommand.php` — daily SAW recalc dengan `trigger_type=scheduled`
-- `routes/console.php` — schedule:
-  - `sipokat:recalculate-saw` daily 06:00 (hasil dipakai dashboard widget)
-  - `sipokat:check-stock-and-expiry` daily 08:00 (notif jam buka apotek)
-
-**Catatan deploy**: Server hosting perlu setup cron: `* * * * * cd /path && php artisan schedule:run >> /dev/null 2>&1`. Tanpa ini scheduled tasks tidak eksekusi.
+Tes (`tests/Feature`): `MedicineMasterTest`, `HppMovingAverageTest` (tabel §4.3 rencana),
+`FefoLayersTest`, `ProcurementTest`, `StockLedgerTest`, `StockMovementServiceTest`,
+`SawCalculationTest` (contoh 5 alternatif), `SpkTestDataSeederTest`, `RealDataImportTest`,
+`PanelPagesRenderTest`, `EndToEndFlowTest` (alur penuh lewat form Filament).
 
 ---
 
-### 🟡 Priority 3 — Enhancement — ✅ Selesai
+## 6. Catatan untuk Sidang
 
-- ✅ Laporan rekap penjualan & pembelian (export Excel) — Page `LaporanRekap`
-- ✅ Laporan fast-moving / slow-moving / dead-stock (export Excel) — Page `LaporanMoving`
-- ✅ History/audit log perubahan SAW — Resource `SawCalculations` (list + view detail snapshot historis)
-- ✅ Detail breakdown per obat dalam ranking — ViewAction modal dengan kalkulasi V_i step-by-step match Bab 3.4.4 proposal
-
----
-
-## 5. Catatan Teknis Penting (untuk Sidang)
-
-### 5.1 Inkonsistensi Proposal Bab 3.4.4 vs Tabel 3.5-3.8
-
-**Temuan**: PDF Tabel 3.10 (worked example) berisi nilai konversi terbalik dari Tabel 3.5-3.8.
-- Tabel 3.5 jelas bilang: stok ≤10 → score 5 (prioritas tinggi).
-- Tapi Tabel 3.10 menulis A1 (stok=8) → C1=1, A9 (stok=4) → C1=1. Itu inverted.
-- Lalu PDF pakai rumus cost `min/X` di atas nilai terbalik → V_i jadi tidak konsisten matematis.
-
-**Keputusan sistem (Opsi 2)**: Sistem mengikuti **Tabel 3.5-3.8 sebagai sumber kebenaran** (score 5 = high priority) dan menggunakan rumus normalisasi **`R = X/max` untuk SEMUA kriteria** (karena pasca konversi semua sudah benefit-like — tipe cost/benefit di RAW input sudah ter-encode di scale_rules).
-
-**Hasil ranking 5 alternatif sample PDF**:
-
-| Rank | Sistem (Opsi 2) | PDF Bab 3.4.4 (original) |
-|------|-----------------|---------------------------|
-| 1 | A2 Amoxicillin V=0.94 | A9 Lipitor V=0.84 |
-| 2 | A1 Paracetamol V=0.90 | A1 Paracetamol V=0.72 |
-| 3 | A7 Sangobion V=0.68 | A2 Amoxicillin V=0.61 |
-| 4 | A6 Lansoprazole V=0.66 | A6 Lansoprazole V=0.56 |
-| 5 | A9 Lipitor V=0.60 | A7 Sangobion V=0.40 |
-
-**Argumentasi sidang**: A2 menang karena stok rendah (12) + demand tinggi (90/bln) + ED dekat (450 hari) + harga murah (6.500) = kandidat restock yang paling urgent secara apotek logic. A9 (Lipitor) ranked terakhir karena meski stok 4, demand cuma 15/bulan dan harga 165rb — tidak urgent. Ranking sistem lebih defensible dibanding PDF.
-
-**Action**: Update Bab 3.4.4 proposal dengan hasil sistem + flag inkonsistensi sebagai "temuan dalam implementasi".
-
-### 5.2 Filtering Soft-Delete Konsisten
-
-`Medicine::currentStock()` di-update agar punya filter `whereHas` yang sama dengan `StockCardService::getAvailableStock()`. Tanpa fix ini, kalau Order di-soft-delete, `MedicineStock` C entries-nya tidak ter-exclude → SAW C1 over-estimate stok. Sekarang dua method ini equivalent dan keduanya respect soft-delete cascade.
-
-### 5.3 Proyeksi Demand ke Ekuivalen Bulanan
-
-Kalau user pilih period custom (mis. 60 hari), raw demand di-proyeksi ke 30 hari:
-```
-monthly_equivalent = (total_qty_dalam_periode / period_days) × 30
-```
-Tujuan: scale_rules tetap konsisten (Tabel 3.6: ">80 = score 5" tetap valid sebagai "demand bulanan").
-
-### 5.4 FEFO untuk Kriteria C3
-
-Karena `MedicineStock` tidak track batch-level (cuma D/C qty global), `nearestExpiryDays()` pakai konvensi FEFO:
-- Cari `receive_order_items.expired_date` terdekat yang `>= today`
-- Hanya valid kalau `Medicine::currentStock() > 0` (kalau stok habis, tidak ada batch tersisa)
-
-Untuk akurasi penuh per-batch perlu refactor `MedicineStock` jadi multi-batch (out of scope skripsi).
+1. **Normalisasi baku**: skor searah nilai mentah, prioritas dibentuk `min/X` (cost) dan `X/max`
+   (benefit). Contoh 5 alternatif di `SawCalculationTest`: A1 0,90 · A2 0,74 · A4 0,5467 · A5 0,54 · A3 0,42.
+2. **C3 = batch terjauh yang bersisa**, bukan batch terdekat: dengan FEFO batch terdekat memang habis
+   duluan; yang menentukan "kapan harus pesan lagi" adalah sisa umur stok terakhir. Obat berstok 0
+   → 0 hari → skor 1 (paling mendesak), sehingga tidak ada obat kosong yang kehilangan kriteria.
+3. **C4 = HPP rata-rata bergerak**, bukan harga master: harga beli memang berbeda antar PBF dan antar
+   faktur (wawancara §4.1), dan HPP-lah yang benar-benar tertanam di stok.
+4. **Peringkat padat** dipilih karena Vi kembar wajar terjadi dengan skala 1–5; angka urut 1,2,3 akan
+   memberi kesan perbedaan yang tidak ada.
+5. Konversi kemasan, HPP, FEFO, dan opname per batch adalah **prasyarat data** agar C1–C4 benar —
+   bukan fitur tambahan penjualan. Topik tetap prioritas restock.
+6. Apotek Winong hanya referensi internal peneliti — **tidak dicantumkan** di naskah.
 
 ---
 
-## 6. Keputusan Final (dijawab user 2026-05-21)
+## 7. Cara Uji Manual (demo)
 
-| # | Pertanyaan | Keputusan |
-|---|-----------|-----------|
-| 1 | Tracking ED | **Opsi B** — kolom di `receive_order_items` (per batch) |
-| 2 | Bobot SAW | **Editable admin via UI** (`saw_criteria.weight`) |
-| 3 | Skala konversi 1-5 | **Editable via DB** (`saw_criteria.scale_rules` JSON) |
-| 4 | Periode permintaan (C2) | **Custom date range** (form input, default 30 hari, normalisasi ke monthly equivalent) |
-| 5 | Frekuensi recalculate | **Keduanya** — button manual + scheduled harian 06:00 (untuk dashboard widget) |
-| 6 | Output ranking | **Tampil semua obat** (paginated table, sort by `preference_value DESC`) |
-| 7 | Role split | **User handle sendiri** — tidak setup roles/permissions di scope ini |
-| 8 | Resolusi inkonsistensi Tabel 3.10 | **Opsi 2** — sistem ikuti Tabel 3.5-3.8 + X/max universal, update Bab 3.4.4 proposal |
-
----
-
-## 7. Roadmap Eksekusi Final
-
-```
-Step 1 (P1.1)  → ✅ Migration expired_date di receive_order_items + UI form + nearestExpiryDays()
-Step 2 (P1.2a) → ✅ Migration & Model: SawCriteria, SawCalculation, SawCalculationResult + seeder
-Step 3 (P1.2b) → ✅ SawCalculationService (convert, normalize, preference, rank, execute)
-Step 4 (P1.2c) → ✅ Filament Resource SawCriteria (CRUD bobot + scale_rules) + Page SawCalculation
-Step 5 (P2.1)  → ✅ Tutup Phase 2: Order ↔ MedicineStock integration + fix Medicine::currentStock() konsistensi
-Step 6 (P2.2)  → ✅ Dashboard widgets (LowStock, Expiring, PendingPO, SalesSummary, SawTopRestock)
-Step 7 (P2.4)  → ✅ Scheduled commands: sipokat:recalculate-saw 06:00 + sipokat:check-stock-and-expiry 08:00
-Step 8 (P3)    → ✅ Laporan rekap + fast/slow moving + history snapshot SAW + detail breakdown V_i
-Step 9         → ✅ Perampingan master data: hapus Rak Obat, kunci Kategori jadi Obat Bebas/Obat Keras
-                    + resync segmen kategori pada kode obat (Section 12)
-— (P2.3 di-skip, user handle sendiri pakai Filament Shield)
-```
-
----
-
-## 8. File yang Dibangun (bukti kerja per Step)
-
-### Step 1 (P1.1 — Tracking ED)
-| Type | Path |
-|------|------|
-| Migration | `database/migrations/2026_05_21_000001_add_expiry_to_receive_order_items_table.php` |
-| Modified | `app/Filament/Resources/ReceiveOrders/Schemas/ReceiveOrderForm.php` |
-| Modified | `app/Models/ReceiveOrderItem.php` |
-| Modified | `app/Models/Medicine.php` (+nearestExpiryDate, nearestExpiryDays) |
-
-### Step 2-4 (P1.2 — Modul SAW)
-| Type | Path |
-|------|------|
-| Migration | `database/migrations/2026_05_21_000002_create_saw_criteria_table.php` |
-| Migration | `database/migrations/2026_05_21_000003_create_saw_calculations_table.php` |
-| Migration | `database/migrations/2026_05_21_000004_create_saw_calculation_results_table.php` |
-| Model | `app/Models/SawCriteria.php` |
-| Model | `app/Models/SawCalculation.php` |
-| Model | `app/Models/SawCalculationResult.php` |
-| Service | `app/Services/SawCalculationService.php` |
-| Seeder | `database/seeders/SawCriteriaSeeder.php` |
-| Modified | `database/seeders/DatabaseSeeder.php` (register seeder) |
-| Filament Resource | `app/Filament/Resources/SawCriterias/` (5 file: Resource, Form, Table, ListPage, EditPage) |
-| Filament Page | `app/Filament/Pages/SawCalculation.php` |
-| Blade View | `resources/views/filament/pages/saw-calculation.blade.php` |
-
-### Step 5 (P2.1 — Orders integration fix)
-| Type | Path |
-|------|------|
-| Modified | `app/Models/Medicine.php` (`currentStock()` filter soft-delete) |
-
-### Step 6 (P2.2 — Dashboard Widgets)
-| Type | Path |
-|------|------|
-| Widget | `app/Filament/Widgets/SawTop10RestockWidget.php` |
-| Widget | `app/Filament/Widgets/LowStockMedicinesWidget.php` |
-| Widget | `app/Filament/Widgets/PendingPurchaseOrdersWidget.php` |
-| Widget | `app/Filament/Widgets/ExpiringMedicinesWidget.php` |
-| Widget | `app/Filament/Widgets/SalesSummaryWidget.php` |
-| Modified | `app/Providers/Filament/AdminPanelProvider.php` (register widgets) |
-
-### Step 7 (P2.4 — Scheduled + Notifikasi)
-| Type | Path |
-|------|------|
-| Command | `app/Console/Commands/CheckStockAndExpiryCommand.php` |
-| Command | `app/Console/Commands/RecalculateSawCommand.php` |
-| Modified | `routes/console.php` (schedule commands) |
-
-### Polish iterasi 2026-05-30 (UX + Demo Data)
-| Type | Path |
-|------|------|
-| Seeder | `database/seeders/SpkTestDataSeeder.php` (150 obat + RO + Orders, distribusi merata, idempotent) |
-| Modified | `app/Filament/Resources/SawCriterias/Schemas/SawCriteriaForm.php` (Grid 3-kolom rapi, 3-layer validasi: scale_rules min≤max, bobot ≤ 1.000) |
-| Modified | `app/Filament/Resources/SawCriterias/Tables/SawCriteriaTable.php` (ToggleColumn `is_active` + beforeStateUpdated block aktivasi kalau total > 1) |
-| Modified | `app/Filament/Pages/SawCalculation.php` (label `V_i` → "Nilai Prioritas" + tooltip) |
-| Modified | `app/Filament/Widgets/SawTop10RestockWidget.php` (label `V_i` → "Nilai Prioritas" + tooltip) |
-
-### Step 8 (P3) — Reporting & Audit Trail (2026-06-03)
-| Type | Path |
-|------|------|
-| Page | `app/Filament/Pages/LaporanRekap.php` (filter periode + tipe, summary cards, agregasi per obat, export Excel) |
-| Blade | `resources/views/filament/pages/laporan-rekap.blade.php` |
-| Page | `app/Filament/Pages/LaporanMoving.php` (fast/slow/dead-stock analysis, multi-sheet Excel) |
-| Blade | `resources/views/filament/pages/laporan-moving.blade.php` |
-| Blade partial | `resources/views/filament/pages/partials/moving-table.blade.php` |
-| Resource | `app/Filament/Resources/SawCalculations/SawCalculationResource.php` (history snapshot SAW, read-only) |
-| Tables | `app/Filament/Resources/SawCalculations/Tables/SawCalculationHistoryTable.php` (filter trigger_type + date range) |
-| Pages | `app/Filament/Resources/SawCalculations/Pages/ListSawCalculationHistory.php`, `ViewSawCalculationHistory.php` |
-| Blade | `resources/views/filament/resources/saw-calculations/pages/view.blade.php` (info snapshot + criteria_snapshot collapsible + ranking table) |
-| Blade partial | `resources/views/filament/pages/partials/saw-result-detail.blade.php` (modal breakdown V_i step-by-step) |
-| Modified | `app/Filament/Pages/SawCalculation.php` (tambah ViewAction "Detail Hitungan" di table) |
-
-### Step 9 — Perampingan Master Data (2026-09-07)
-Daftar file lengkap ada di **Section 12.1** (Rak Obat) dan **Section 12.3** (migration). Ringkasnya: 2 migration baru, 15 file dihapus, 8 file kode dimodifikasi.
-
----
-
-## 9. Cara Test Manual (untuk Demo Sidang)
-
-### 9.0 Test Laporan & History SAW
-1. Login admin → sidebar muncul group **"Laporan"**
-    - Klik **"Rekap Penjualan & Pembelian"** → set periode + tipe → klik "Tampilkan Laporan" → summary cards + tabel agregasi muncul → klik "Export Excel" untuk download.
-    - Klik **"Fast / Slow Moving"** → analisis demand bulanan → tampilkan 3 tabel (fast/slow/dead stock) + multi-sheet Excel.
-2. Menu **"SPK Restock → Riwayat Perhitungan"** → list semua snapshot historis. Klik "Lihat Hasil" → tampilkan ranking lengkap + info snapshot + collapsible criteria_snapshot.
-3. Di table ranking (SawCalculation Page atau History), klik **"Detail Hitungan"** → modal breakdown V_i step-by-step (W₁×R₁ + W₂×R₂ + W₃×R₃ + W₄×R₄) match Bab 3.4.4 proposal.
-
-### 9.1 Generate data demo SPK
 ```bash
-php artisan db:seed --class=SpkTestDataSeeder
+php artisan migrate --seed                       # master + kriteria SAW
+php artisan db:seed --class=SpkTestDataSeeder    # 150 obat demo (idempoten)
 php artisan sipokat:recalculate-saw
-```
-- 150 obat ter-generate dengan code format match Filament form (mis. `SIP/PARAC100/OBB/STR/001`)
-- 5 ReceiveOrder + 250 Orders dalam 30 hari, distribusi atribut cover semua bracket Tabel 3.5-3.8
-- SAW snapshot ter-create, dashboard widget langsung berisi data
-
-### 9.2 Test SPK SAW end-to-end
-1. Login admin → sidebar muncul group **"SPK Restock"**
-2. Klik **"Kriteria SAW"** → 4 row (C1, C2, C3, C4).
-    - Toggle `is_active` di kolom "Aktif" untuk on/off inline.
-    - Edit salah satu → modifikasi bobot atau skala konversi (test validasi `min ≤ max` dan `total bobot ≤ 1.000`).
-3. Klik **"Hitung Prioritas Restock"** → set periode → klik **"Hitung Sekarang"** → snapshot baru tersimpan, table refresh.
-    - Kolom "Nilai Prioritas" (hover untuk lihat rumus `V_i = Σ Wj × Rij`).
-4. Buka **Dashboard** → widget **"Top 10 Prioritas Restock (SAW)"** sync dengan snapshot terakhir.
-
-### 9.3 Test Notifikasi
-```bash
 php artisan sipokat:check-stock-and-expiry
 ```
-- Console output: jumlah obat & batch yang trigger notif
-- DB notification masuk untuk semua user → bel notifikasi Filament di header panel muncul angka unread
 
-### 9.4 Test Scheduled Recalc
-```bash
-php artisan sipokat:recalculate-saw
-```
-- Snapshot baru dengan `trigger_type=scheduled` tersimpan di `saw_calculations`
-- Dashboard widget langsung pakai snapshot terbaru
+Alur demo: Obat → (SPK) Hitung Prioritas → centang → Buat PO → Penerimaan (pilih PO, centang item,
+isi batch/ED) → Penjualan (lihat pratinjau alokasi batch) → Kartu Stok (per batch + HPP) → Stok
+Opname (fisik per batch) → Hitung Prioritas lagi → Laporan.
 
-### 9.5 Verifikasi Schedule Cron
-```bash
-php artisan schedule:list
-```
-Output:
-```
-0 6 * * *  php artisan sipokat:recalculate-saw
-0 8 * * *  php artisan sipokat:check-stock-and-expiry
-```
+Data riil: `php artisan sipokat:data-riil:template` → isi 4 sheet → `php artisan
+sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → tanpa `--dry-run`.
 
 ---
 
-## 10. Open Items / Yang User Perlu Handle Sendiri
+## 8. Deploy (E9) & yang ditangani peneliti
 
-| # | Item | Catatan |
-|---|------|---------|
-| 1 | ~~Backfill `expired_date` untuk 6 RO existing~~ | ✅ Auto-handle via `SpkTestDataSeeder` — kalau pakai data demo, ED sudah ter-isi semua |
-| 2 | Update Bab 3.4.4 PDF dengan ranking sistem (Opsi 2) | Argumentasi siap di Section 5.1 dokumen ini |
-| 3 | Setup cron job di server hosting | `* * * * * cd /path && php artisan schedule:run >> /dev/null 2>&1` |
-| 4 | Setup Roles & Permissions via Filament Shield | User handle sendiri sesuai Bab 3 Tabel 3.2 (Admin/Petugas/Pemilik) |
-| 5 | Update `sipokat_project_overview.md` | Saat ini masih nulis "Laravel 11 + Filament v3", aktual "Laravel 12 + Filament 4". Penguji bisa tanya |
-| 6 | Smoke test browser end-to-end | Wajib sebelum demo sidang. Checklist + skenario lengkap ada di chat / [NEXT_STEPS.md](NEXT_STEPS.md) opsi C1 |
-| 7 | (Opsional P3) Laporan rekap & fast/slow moving | Bukan blocker TA tapi memperkuat manfaat. Lihat [NEXT_STEPS.md](NEXT_STEPS.md) opsi B1/B2 |
+- VPS + MySQL 8: `.env` `DB_CONNECTION=mysql`, `APP_ENV=production`, `APP_TIMEZONE` sudah
+  `Asia/Jakarta` di `config/app.php`. `php artisan migrate --force`, `php artisan db:seed --class=SawCriteriaSeeder`,
+  `php artisan storage:link`, `php artisan optimize`.
+- Cron: `* * * * * cd /path/sipokat && php artisan schedule:run >> /dev/null 2>&1` (cek `php artisan schedule:list`).
+- Roles: `php artisan shield:generate --all` lalu susun Admin/Petugas/Pemilik di menu Roles (Tabel 3.2).
+- Naskah: sinkronkan Bab 1.4, Bab III (Tabel 3.4–3.8, definisi C1–C4, algoritma FEFO/HPP), Bab IV
+  dengan `docs/update-dari-wawancara.md` dan `docs/rencana-revisi-2026-09.md` Bagian 7.
 
 ---
 
----
-
-## 11. Polish Iterasi 2026-05-30 (Detail)
-
-### 11.1 Seeder Data Demo SPK
-- **File**: `database/seeders/SpkTestDataSeeder.php`
-- **Output**: 150 obat + 1 supplier dummy + 5 ReceiveOrder + 250 Orders (30 hari)
-- **Algoritma plan-then-execute**: tentukan dulu `target_stock` & `target_demand` per obat → `ro_qty = stok + demand` → stok akhir TIDAK PERNAH negatif
-- **Distribusi merata** semua bracket Tabel 3.5-3.8: stok 0-200+, demand 0-130/bln, ED 30-1000 hari, harga 2k-250k
-- **Code obat match Filament form** — `generateMedicineCode()` mirror dari `MedicineForm::generateCode()` (uppercase, format `SIP/NAMA4/ALIAS_KAT/UNIT3/SEQ`, fallback 5-char prefix kalau konflik). Sejak 2026-09-07 segmen kategori pakai `alias` (OBB/OBK), bukan 3 huruf pertama nama — lihat Section 12.2
-- **Idempotent**: cleanup via marker `[SPK_TEST_DATA]` di description + prefix code `ORD-SPK-` / `RO-SPK-` (pakai `withTrashed()` supaya soft-deleted juga ke-purge)
-- **Run**: `php artisan db:seed --class=SpkTestDataSeeder`
-
-### 11.2 Toggle Column + 3-Layer Validasi Bobot
-- **ToggleColumn** di `SawCriteriaTable` — aktif/non-aktif kriteria inline tanpa masuk edit page
-- **Layer 1** (form, per range scale_rules): rule `min ≤ max` di field `min` dan `max` — error inline kalau dilanggar
-- **Layer 2** (form, saat save bobot): rule check `total_bobot_aktif_lain + bobot_baru ≤ 1.000` — block save dengan error inline detail
-- **Layer 3** (table, saat aktivasi via toggle): `beforeStateUpdated` cek `total + weight > 1.000` → throw exception + Filament notification danger persistent
-- **Non-aktif → aktif** divalidasi; **aktif → non-aktif** selalu boleh (toh tidak melanggar batas)
-
-### 11.3 Form Layout Rapi
-- Section "Identitas Kriteria" pakai Grid eksplisit:
-    - Baris 1: Kode (1/3) | Nama Kriteria (2/3)
-    - Baris 2: Jenis (1/3) | Bobot (1/3) | Urutan Tampil (1/3)
-    - Baris 3: Deskripsi full-width
-- `is_active` dipindah dari form ke ToggleColumn di tabel
-- Helper text per field (rumus bobot, range scale, posisi sort_order)
-
-### 11.4 Rename `V_i` → "Nilai Prioritas"
-- Kolom `preference_value` di `SawCalculation` page dan `SawTop10RestockWidget` di-relabel jadi **"Nilai Prioritas"**
-- Tooltip menyimpan notasi matematis: `V_i = Σ Wj × Rij. Semakin tinggi = semakin prioritas restock.`
-- User awam (apoteker, manajer) langsung paham; konteks akademis tetap accessible via hover
-
----
-
-## 12. Perampingan Master Data 2026-09-07
-
-Master data disederhanakan agar sesuai praktik apotek: **Rak Obat dihapus**, dan **Kategori tidak lagi dikelola lewat CRUD** melainkan dikunci pada dua golongan resmi — **Obat Bebas** dan **Obat Keras**.
-
-### 12.1 Rak Obat dihapus tuntas
-
-Kolom `medicines.rack_id` dan tabel `medicine_racks` di-drop, bukan sekadar disembunyikan dari sidebar — menyisakan kolom `NOT NULL` yang tak terpakai justru jadi utang teknis yang bisa ditanyakan penguji.
-
-| Aksi | Path |
-|------|------|
-| Dihapus | `app/Models/MedicineRack.php` |
-| Dihapus | `app/Filament/Resources/MedicineRacks/` (6 file) |
-| Dihapus | `app/Policies/MedicineRackPolicy.php` |
-| Modified | `app/Models/Medicine.php` (buang relasi `rack()` + `rack_id` dari `$fillable`) |
-| Modified | `app/Filament/Resources/Medicines/Schemas/MedicineForm.php` (buang Select Rak, grid jadi 2 kolom) |
-| Modified | `app/Filament/Resources/Medicines/Tables/MedicinesTable.php` (buang kolom `rack.name`) |
-| Modified | `app/Filament/Imports/MedicineImporter.php` (buang kolom & resolusi `rack_name`) |
-| Modified | `database/seeders/MasterDataSeeder.php`, `DemoApotekSeeder.php`, `SpkTestDataSeeder.php` |
-
-### 12.2 Kategori dikunci 2 golongan
-
-Tabel `medicine_categories` dan FK `medicines.category_id` **tetap dipertahankan** — laporan, importer, dan generator kode sudah bergantung padanya, jadi mengubahnya jadi kolom enum akan menyentuh jauh lebih banyak file tanpa manfaat setara. Yang dihapus hanya CRUD-nya (`app/Filament/Resources/MedicineCategories/` 6 file + `MedicineCategoriesPolicy.php`), sehingga isinya tidak bisa ditambah lewat UI.
-
-| Kategori | Alias | Keterangan |
-|----------|-------|------------|
-| Obat Bebas | `OBB` | Dapat dibeli bebas tanpa resep dokter |
-| Obat Keras | `OBK` | Penyerahannya harus dengan resep dokter |
-
-Alias ditambahkan ke `MedicineCategories::$fillable` — sebelumnya tidak ada di sana, sehingga seeder yang mengirim `alias` diam-diam mengabaikannya.
-
-**Kenapa alias wajib dipakai di kode obat**: `generateCode()` dulu memakai `substr($category->name, 0, 3)`. Dengan dua kategori baru, "Obat Bebas" dan "Obat Keras" sama-sama menghasilkan `OBA` — segmen kategori jadi tidak membedakan apa pun. Ketiga tempat yang menduplikasi algoritma ini (`MedicineForm`, `DemoApotekSeeder`, `SpkTestDataSeeder`) kini memakai `$category->alias`, sejalan dengan cara `Unit` diperlakukan di baris sebelahnya.
-
-> **Catatan untuk sidang**: skema lama sebenarnya sudah punya cacat serupa — "Antibiotik" dan "Antiseptik" sama-sama terpotong jadi `ANT`, sehingga 139 obat berbagi segmen yang sama padahal kategorinya berbeda. Perpindahan ke alias sekaligus menutup cacat lama itu.
-
-### 12.3 Migrasi data
-
-| Migration | Isi |
-|-----------|-----|
-| `2026_09_07_000001_remove_rack_and_lock_medicine_categories.php` | Remap obat ke 2 kategori final → hapus kategori lama → drop `rack_id` + tabel `medicine_racks` |
-| `2026_09_07_000002_resync_medicine_codes_with_category_alias.php` | Tulis ulang segmen kategori pada `medicines.code` jadi OBB/OBK |
-
-**Jebakan cascade**: `medicines.category_id` memakai `ON DELETE CASCADE`. Menghapus kategori lama tanpa me-remap obatnya lebih dulu akan **ikut menghapus obatnya**. Urutan di `up()` sengaja dibuat remap-dulu-baru-hapus.
-
-Aturan remap yang dipakai (eksplisit sebagai konstanta di migration, mudah diubah):
-
-| Kategori lama | → | Kategori baru | Jumlah obat |
-|---------------|---|---------------|-------------|
-| Antibiotik | → | Obat Keras | 69 |
-| Analisik, Antiseptik, Vitamin, dan lainnya | → | Obat Bebas | 204 |
-
-**Penomoran ulang kode**: penggabungan kategori bisa membuat dua obat bertemu di kode identik. Pada data aktual terjadi satu kasus — dua CIPROFLOXACIN 1000 mg (dulu Analisik dan Antiseptik) sama-sama jadi Obat Bebas — diselesaikan jadi `.../OBB/KAP/001` dan `.../OBB/KAP/002`. Penulisan dilakukan dua fase (parkir di nilai sementara dulu) supaya unique index `code` tidak terlanggar di tengah proses.
-
-`down()` migration kedua sengaja kosong: singkatan kategori lama tidak tersimpan di mana pun setelah kategorinya dihapus, jadi pemulihan hanya bisa lewat backup database.
-
-### 12.4 Hasil verifikasi
-
-| Cek | Hasil |
-|-----|-------|
-| Total obat sebelum → sesudah | 273 → **273** (nol kehilangan akibat cascade) |
-| Kategori | 4 → **2** (OBB 204 obat, OBK 69 obat) |
-| Tabel `medicine_racks` & kolom `rack_id` | hilang |
-| Obat dengan kategori yatim | 0 |
-| Kode obat unik | 273 dari 273 |
-| Kode dengan segmen kategori lama (ANA/ANT/VIT) | 0 |
-| Kode yang tidak cocok dengan kategori obatnya | 0 |
-| Permission Shield basi (2 resource terhapus) | 22 dibersihkan beserta pivotnya |
-
-### 12.5 Yang perlu diperhatikan
-
-1. **Ketepatan golongan obat belum ditinjau satu per satu.** Remap dilakukan per kategori lama, bukan per obat. Contoh nyata: dua CIPROFLOXACIN kini bergolongan Obat Bebas padahal secara farmasi termasuk obat keras — akibat asalnya berkategori Analisik/Antiseptik. Perlu dirapikan lewat UI sebelum demo sidang.
-2. **Data duplikat**: dua CIPROFLOXACIN 1000 mg dengan satuan sama adalah duplikat bawaan seeder demo (dulu lolos karena kategorinya berbeda). Pertimbangkan menghapus salah satunya.
-3. Kalau `SpkTestDataSeeder` atau `DemoApotekSeeder` dijalankan ulang, kode obat otomatis memakai OBB/OBK — tidak perlu menjalankan migration kedua lagi.
-
----
-
-## 13. Rencana Implementasi Stok per Batch & FEFO (disusun 2026-09-10)
-
-> **Status: rencana, belum dieksekusi.** Disusun setelah wawancara lapangan (lihat
-> [docs/update-dari-wawancara.md](docs/update-dari-wawancara.md)). Rencana ini **memperluas cakupan**
-> yang sebelumnya dinyatakan di luar skripsi pada Section 5.4 — konsekuensinya dijelaskan di 13.7.
-
-### 13.1 Kenapa dikerjakan
-
-Wawancara mengonfirmasi bahwa **batch memang bercampur di rak**: saat konsumsi tinggi obat dipesan
-sebelum stok lama habis, sehingga satu obat bisa punya dua tanggal kedaluwarsa atau lebih. Apotek
-juga menegaskan obat yang kedaluwarsanya lebih dulu harus keluar lebih dulu.
-
-Sementara itu `medicine_stocks` hanya mencatat D/C global — punya `receive_order_id` tetapi **tidak
-punya `receive_order_item_id`**, padahal `batch_number` dan `expired_date` tinggal di
-`receive_order_items`. Begitu obat keluar, sistem tidak tahu batch mana yang berkurang.
-
-Akibatnya terlihat di `Medicine::nearestExpiryDate()`: method itu mengambil tanggal kedaluwarsa
-terdekat yang belum lewat **tanpa memeriksa apakah batch itu masih bersisa**. Batch yang sudah lama
-habis terjual tetap menyetir nilai C3 sampai tanggalnya lewat sendiri. Inilah lubang metodologis
-terakhir pada SAW.
-
-### 13.2 Tiga aturan mati
-
-1. **Kartu stok selalu dalam satu satuan dasar.** Konversi kemasan hanya terjadi di titik input,
-   tidak pernah tersimpan campur. Ledger berisi campuran box dan kaplet = seluruh perhitungan stok,
-   HPP, dan SAW rusak dan sulit ditelusuri.
-2. **Isi kemasan milik obat, bukan milik satuan.** Satu box Obat A berisi 100 kaplet, Obat B bisa
-   30. Kolomnya di `medicines`, **bukan** di `units`.
-3. **FEFO satu kebijakan, berlaku menyeluruh.** Wawancara sempat menyebut FEFO di gudang dan FIFO di
-   apotek, tetapi apotek meyakini yang kedaluwarsa duluan harus keluar duluan. Jadi cukup satu aturan
-   pengurutan, dan C3 langsung sejalan dengan praktik.
-
-### 13.3 Perubahan skema
-
-| Tabel | Kolom baru | Guna |
-|---|---|---|
-| `medicines` | `pack_size` (int, nullable) | Isi per kemasan, mis. 100 |
-| `medicines` | `pack_label` (string, nullable) | Nama kemasan, mis. "Box" / "Strip" |
-| `receive_order_items` | `pack_qty` (int, nullable) | Jumlah kemasan yang diinput saat penerimaan |
-| `receive_order_items` | `pack_size` (int, nullable) | Snapshot isi kemasan saat itu |
-| `medicine_stocks` | `receive_order_item_id` (FK nullable, index) | Atribusi lapisan batch |
-| `medicine_stock_opname_items` | `receive_order_item_id` (FK nullable) | Penyesuaian menyebut batch |
-
-**Kenapa menambah kolom, bukan membuat tabel `medicine_batches` baru**: ledger yang ada sudah
-bekerja, sudah sadar soft-delete, dan seluruh modul membacanya. Sisa per batch cukup dihitung
-`SUM(D) - SUM(C)` yang dikelompokkan per `receive_order_item_id`. Bonusnya, kolom `hpp` yang sudah
-ada jadi akurat dengan sendirinya karena tiap lapisan membawa harga belinya masing-masing — margin
-di laporan rekap ikut benar tanpa pekerjaan tambahan.
-
-**Kenapa `receive_order_items` menyimpan jejak konversi**: isi kemasan dari PBF bisa berubah
-sewaktu-waktu, dan faktur harus tetap bisa direkonsiliasi dengan angka yang tersimpan.
-
-### 13.4 Tahapan eksekusi
-
-| Tahap | Isi | Verifikasi |
-|---|---|---|
-| 0 | Isi `pack_size` & `pack_label` per obat; tetapkan `min_stock` nyata | Tidak ada obat aktif dengan `pack_size` kosong |
-| 1 | Master obat: 2 kolom baru + nilai bawaan `min_stock` = `pack_size` | Form obat menampilkan "1 Box = 100 Kapsul" |
-| 2 | PO & RO: input kemasan → konversi ke satuan dasar, **harga ikut dikonversi** | RO 2 Box tersimpan qty 200; `price` per satuan dasar; sisa PO tetap benar |
-| 3 | Ledger per batch: RO menulis satu baris D per item batch | `SUM(D)` per obat sama persis dengan sebelum perubahan |
-| 4 | Penjualan: alokasi FEFO, satu penjualan bisa memecah jadi beberapa baris C | Penjualan 30 unit yang melintasi 2 batch menghasilkan 2 baris C; total stok tidak berubah |
-| 5 | Stok opname sadar batch — termasuk jalur retur PBF & pemusnahan | Pemusnahan batch X menghabiskan lapisan X, bukan lapisan lain |
-| 6 | Kartu stok: tampilan per batch (turunan, bukan pekerjaan baru) | Sisa per batch = `SUM(D) - SUM(C)` per `receive_order_item_id` |
-| 7 | SAW: tulis ulang `nearestExpiryDate()` agar membaca sisa per lapisan | Obat yang batch terdekatnya sudah habis memakai batch berikutnya |
-
-Kalau lapisan batch benar, **modul SAW nyaris tidak tersentuh** — hanya satu method. Itu sebabnya
-SAW dikerjakan paling akhir.
-
-### 13.5 Dampak ke modul yang hari ini berstatus selesai
-
-| Modul | Dampak |
-|---|---|
-| Master Data | Ringan — 2 kolom + penyesuaian form |
-| Procurement (PO/RO) | **Berat** — konversi kemasan + harga, penulisan lapisan batch |
-| Orders (penjualan) | **Berat** — alokasi FEFO, pemecahan baris C, termasuk jalur edit/reverse |
-| Stock Opname | Sedang — penyesuaian per batch |
-| Kartu Stok | Ringan — turunan |
-| SPK SAW | Ringan — satu method |
-| Laporan & Widget | Perlu diperiksa ulang; `hpp` per lapisan mengubah angka margin |
-
-### 13.6 Jebakan yang harus dihindari
-
-1. **Harga per kemasan vs per satuan dasar.** Faktur PBF mencantumkan harga per box. Kalau qty
-   dikonversi tetapi harga tidak, HPP dan `purchase_price` meleset seratus kali lipat — dan
-   `purchase_price` adalah sumber C4. Tidak akan terlihat sampai laporan margin dibuka.
-2. **PO dan RO harus memakai aturan konversi yang sama.** `ReceiveOrderForm.php` (bagian validasi
-   sisa penerimaan) membandingkan qty RO langsung dengan qty PO. Kalau RO dalam box sementara PO
-   dalam kaplet, validasi sisa PO salah **tanpa memunculkan error apa pun**.
-3. **Baris C lama tidak punya atribusi batch.** Perlu backfill, atau diperlakukan sebagai lapisan
-   warisan yang dikonsumsi lebih dulu.
-4. **Stok opname wajib ikut sadar batch.** Kalau tidak, obat kedaluwarsa yang dimusnahkan mengurangi
-   stok tanpa menghapus lapisannya, dan C3 terus membaca batch yang fisiknya sudah tidak ada.
-5. **`Medicine::isLowStock()` adalah dead code** — tidak pernah dipanggil, dan ambangnya
-   (`<= min_stock`) berbeda dari yang benar-benar dipakai sistem (`< min_stock` di
-   `StockCardService::getAvailableStockLabel()`). Hapus atau samakan agar tidak menyesatkan.
-
-### 13.7 Konsekuensi ke naskah TA
-
-- **Section 5.4 dokumen ini dicabut** setelah Tahap 7 selesai — FEFO tidak lagi konvensi pendekatan,
-  melainkan perhitungan sungguhan.
-- **Batasan masalah Bab 1.4**: hapus batasan "stok tidak dilacak per batch"; pertahankan batasan
-  skala konversi C2 yang masih satu set untuk semua satuan.
-- **Bab III**: definisi operasional C4 ditulis sebagai *harga beli acuan, yaitu harga dari PBF
-  termurah pada penerimaan terakhir* (lihat `docs/update-dari-wawancara.md` §4.1).
-- **Bab 5.2 saran**: skala konversi per satuan obat, dan pemetaan obat–PBF beserta harga per PBF.
-
-### 13.8 Keputusan yang sudah diambil (wawancara 2026-09)
-
-| # | Hal | Keputusan |
-|---|-----|-----------|
-| 1 | Konversi kemasan | Ya — input RO boleh dalam kemasan, disimpan dalam satuan dasar |
-| 2 | Nilai bawaan `min_stock` | Isi satu kemasan (`pack_size`), dapat ditimpa per obat |
-| 3 | Urutan konsumsi batch | FEFO menyeluruh |
-| 4 | Modul retur & pemusnahan | Tidak dibangun — dijalankan lewat Stok Opname |
-| 5 | Bobot SAW | Tetap 0,30 / 0,30 / 0,20 / 0,20 |
-
-**Belum diputuskan**: apakah `min_stock` nantinya diturunkan dari permintaan × lead time (lead time
-lapangan hampir 1 bulan). Kalau dikerjakan, jadikan **aksi massal manual**, bukan perhitungan
-otomatis berkelanjutan — angka yang berubah sendiri membuat notifikasi bergoyang dan sulit
-dijelaskan saat sidang. Catatan: `min_stock` tidak masuk perhitungan SAW (C1 memakai
-`currentStock()`), jadi tidak ada kekhawatiran sirkularitas.
-
----
-
-## 14. Satuan Obat Diganti ke Satuan Kemasan (2026-09-12)
-
-Satuan lama berbasis bentuk sediaan (Tablet/Kapsul/Sirup/Botol/Salep) diganti jadi satuan kemasan
-yang benar-benar dipakai saat jual-beli — selaras dengan aturan "kartu stok dalam satu satuan
-dasar" di Section 13.2.
-
-| Satuan | Alias | Asal remap |
-|--------|-------|-----------|
-| Pcs | `PCS` | — |
-| Strip | `STR` | Tablet, Kapsul |
-| Flask | `FLS` | Sirup, Botol |
-| Sachet | `SCH` | — |
-| Box | `BOX` | — |
-| Tube | `TUB` | Salep |
-
-| Aksi | Path |
-|------|------|
-| Migration | `2026_09_12_000001_remap_units_and_resync_medicine_codes.php` — pastikan 6 satuan final ada → remap obat → hapus satuan lama → tulis ulang segmen satuan pada `medicines.code` (dua fase, penomoran ulang bila bertabrakan). Pola sama dengan Section 12.3; `unit_id` juga `ON DELETE CASCADE`, jadi urutan remap-dulu-baru-hapus wajib |
-| Modified | `MasterDataSeeder.php`, `DemoApotekSeeder.php` (daftar satuan), `MedicineImporter.php` (contoh `Strip`), `tests/Pest.php` (fixture) |
-
-Hasil pada data aktual: 120 obat → 120, 0 unit yatim, 0 kode dengan segmen lama, 0 kode tak cocok
-dengan satuannya, tidak ada tabrakan kode. `down()` sengaja kosong — satuan lama tidak tersimpan
-di mana pun setelah dihapus.
-
-> Catatan lokal: `php` tidak ada di PATH; pakai `C:\laragon\bin\php\php-8.4.25-nts-Win32-vs17-x64\php.exe`.
-> `pdo_sqlite` tidak aktif di php.ini, jadi test dijalankan dengan
-> `php -d extension=pdo_sqlite -d extension=sqlite3 vendor/pestphp/pest/bin/pest` (bukan `artisan test`,
-> karena flag `-d` tidak diteruskan ke subprocess).
-
----
-
-**Status dokumen**: ✅ Mencerminkan kondisi aktual per 2026-09-12.
-**Tahap berikutnya**: Eksekusi Section 13 mulai Tahap 0. Selain itu masih terbuka: rapikan golongan
-obat per item (Section 12.5), smoke test browser end-to-end (lihat [NEXT_STEPS.md](NEXT_STEPS.md)
-opsi C1), dan Open Items di Section 10.
+> Catatan lokal (Windows/Laragon): `php` tidak ada di PATH; pakai
+> `C:\laragon\bin\php\php-8.4.25-nts-Win32-vs17-x64\php.exe`. `pdo_sqlite` tidak aktif di php.ini, jadi tes
+> dijalankan dengan `php -d extension=pdo_sqlite -d extension=sqlite3 vendor/pestphp/pest/bin/pest`
+> (bukan `artisan test`). `artisan tinker` tersangkut prompt interaktif — jangan dipakai.
+> Riwayat rencana sebelum revisi (Section 12–14 lama: rak obat dihapus, kategori 2 golongan, satuan
+> kemasan) tetap berlaku dan sudah tercermin di kode; dokumentasinya ada di git history.

@@ -2,16 +2,15 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
-     * Seed the application's database.
+     * Akun awal, master data (kategori, satuan, PBF), dan kriteria SAW.
+     * Data demo obat & transaksi: `php artisan db:seed --class=SpkTestDataSeeder`
+     * (sengaja terpisah supaya basis produksi tidak terisi data contoh).
+     * Tanpa WithoutModelEvents: hook `creating` Medicine (kode OBT-####) harus tetap jalan.
      */
     public function run(): void
     {
@@ -19,7 +18,6 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             MasterDataSeeder::class,
             SawCriteriaSeeder::class,
-            DemoApotekSeeder::class,
         ]);
     }
 }

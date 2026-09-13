@@ -1,98 +1,104 @@
 # Sipokat
 
-Sistem Inventory Obat berbasis web dengan Sistem Pendukung Keputusan (SPK) metode Simple Additive Weighting (SAW) untuk merekomendasikan prioritas restock obat pada Apotek Anugrah Husada.
-
-Aplikasi ini dibuat sebagai implementasi Tugas Akhir dengan judul "Rancang Bangun Sistem Inventory Obat Berbasis Web dengan SPK Metode SAW pada Apotek Anugrah Husada".
+Sistem Inventory Obat Berbasis Web dengan Sistem Pendukung Keputusan metode **SAW** (Simple Additive
+Weighting) untuk prioritas restock obat — studi kasus Apotek Anugrah Husada, Demak.
 
 ## Tentang Aplikasi
 
-Sipokat membantu apotek mengelola stok obat dari hulu ke hilir, mulai dari pengadaan, pencatatan obat masuk dan keluar, kartu stok, sampai stock opname. Selain itu aplikasi memberi rekomendasi obat mana yang paling perlu di-restock berdasarkan perhitungan SAW atas empat kriteria: sisa stok, permintaan, tanggal kedaluwarsa, dan harga beli.
+Sipokat mencatat stok obat dari hulu ke hilir — pemesanan ke PBF, penerimaan per faktur, kartu stok
+per batch, penjualan FEFO, sampai stok opname — lalu memberi rekomendasi obat mana yang paling perlu
+di-restock berdasarkan SAW atas empat kriteria: rasio stok terhadap batas minimum, permintaan per
+bulan, sisa kedaluwarsa, dan harga pokok persediaan.
 
 ### Fitur Utama
 
-- **Master Data**: kelola obat, supplier, satuan, kategori, dan rak.
-- **Pengadaan**: Purchase Order dan Receive Order dengan penerimaan bertahap, penomoran otomatis, tracking status, serta pencatatan nomor batch, tanggal produksi, dan tanggal kedaluwarsa per item.
-- **Inventory**: kartu stok berbasis entri debit dan kredit, status stok yang ter-update otomatis, dan stock opname untuk penyesuaian.
-- **Penjualan**: pengurangan stok otomatis dengan validasi ketersediaan, dijalankan transaksional, dan disusun ulang saat transaksi diedit.
-- **SPK SAW**: kriteria dan bobot bisa diubah lewat antarmuka, aturan konversi skala 1 sampai 5 tersimpan sebagai JSON, perhitungan bisa manual maupun terjadwal, ada riwayat snapshot untuk audit, dan rincian perhitungan nilai prioritas per obat.
-- **Notifikasi**: peringatan harian untuk stok menipis dan obat yang mendekati kedaluwarsa.
-- **Dashboard**: lima widget yaitu Top 10 Prioritas Restock, Low Stock, Pending PO, Expiring, dan ringkasan penjualan.
-- **Laporan**: rekap penjualan dan pembelian serta analisis fast, slow, dan dead moving, lengkap dengan export Excel.
+- **Master Data**: obat (satuan jual, kemasan beli + isi, batas minimum; kode `OBT-####` otomatis), PBF, satuan. Kategori dikunci Obat Bebas / Obat Keras.
+- **Pengadaan**: Purchase Order per PBF (bisa dibuat dari ranking SAW) dan Receive Order **satu per faktur** dengan input dalam kemasan yang otomatis dikonversi ke satuan jual; status PO (pending/sebagian/lengkap/ditutup) turun dari penerimaan.
+- **Kartu stok per batch**: setiap penerimaan menjadi lapisan dengan nomor batch, ED, dan harga beli; **HPP rata-rata bergerak** dihitung per obat.
+- **Penjualan FEFO**: stok keluar otomatis dari batch dengan ED terdekat (bisa memecah ke beberapa batch); harga jual ≥ HPP; jumlah ≤ stok tersedia. Salah input → hapus dan buat ulang.
+- **Stok Opname per batch**: hitung fisik tiap batch, selisih menjadi penyesuaian pada batch itu — sekaligus jalur retur/pemusnahan obat kedaluwarsa.
+- **SPK SAW**: bobot dan skala konversi 1–5 dapat diubah admin (Σ bobot harus 1,000), perhitungan manual & terjadwal, peringkat padat ("Tingkat"), tanda "sudah dipesan", aksi massal **Buat PO** dari ranking, riwayat snapshot, dan rincian perhitungan V per obat.
+- **Notifikasi** harian stok di bawah batas minimum dan batch yang mendekati kedaluwarsa.
+- **Dashboard**: Top-10 prioritas restock, stok kritis, PO terbuka, batch mendekati ED, grafik penjualan.
+- **Laporan**: kartu stok (per batch + HPP), rekap penjualan/pembelian, fast/slow/dead moving — Excel & PDF.
+- **Data riil**: template Excel 4 sheet dan importer (`sipokat:data-riil:*`).
 
 ### Kriteria SAW
 
-| Kode | Kriteria | Tipe | Bobot | Sumber Data |
-|------|----------|------|-------|-------------|
-| C1 | Stok | cost | 0.300 | `Medicine::currentStock()` |
-| C2 | Permintaan per bulan | benefit | 0.300 | Agregasi `OrderItem.qty` per periode, diproyeksi ke 30 hari |
-| C3 | Sisa kedaluwarsa (hari) | cost | 0.200 | `Medicine::nearestExpiryDays()` dengan pendekatan FEFO |
-| C4 | Harga beli | cost | 0.200 | `Medicine.purchase_price` |
+| Kode | Kriteria | Tipe | Bobot | Nilai mentah |
+|------|----------|------|-------|--------------|
+| C1 | Rasio stok | cost | 0,300 | Stok tersedia (belum kedaluwarsa) ÷ batas minimum obat |
+| C2 | Permintaan per bulan | benefit | 0,300 | Σ terjual dalam periode, diproyeksikan ke 30 hari |
+| C3 | Sisa kedaluwarsa (hari) | cost | 0,200 | ED batch **terjauh** yang masih bersisa; stok 0 → 0 hari |
+| C4 | Harga pokok (HPP) | cost | 0,200 | HPP rata-rata bergerak per satuan jual |
 
-Total bobot harus sama dengan 1.000 dan divalidasi di antarmuka. Bobot maupun aturan konversi skala bisa diubah admin tanpa menyentuh kode.
+Skor 1–5 (skala hasil wawancara, inklusif) dinormalisasi `min/X` untuk cost dan `X/max` untuk
+benefit, lalu V = Σ (bobot × R). Rincian: `docs/rencana-revisi-2026-09.md` Bagian 7.
 
 ## Teknologi
 
-- PHP 8.2 ke atas (target deploy PHP 8.4)
-- Laravel 12
-- Filament 4 untuk panel admin, dengan Filament Shield dan Spatie Laravel Settings
-- PostgreSQL
-- Tailwind CSS 4 dan Vite 7 untuk frontend
-- PhpSpreadsheet untuk export Excel dan Laravel DomPDF untuk PDF
-- Pest 4 untuk pengujian
+- PHP 8.2 ke atas (target deploy PHP 8.4), Laravel 12
+- Filament 4 (panel admin) + Filament Shield + Spatie Laravel Settings
+- **MySQL 8** (produksi); SQLite in-memory untuk pengujian
+- Tailwind CSS 4 dan Vite 7
+- PhpSpreadsheet (Excel) dan Laravel DomPDF (PDF)
 
 ## Instalasi (Development)
 
-Prasyarat: PHP 8.2 atau lebih baru, Composer, Node.js, dan PostgreSQL.
+Prasyarat: PHP 8.2+, Composer, Node.js, MySQL 8.
 
 ```bash
-# 1. Install dependency
+# 1. Dependency
 composer install
 npm install
 
-# 2. Siapkan environment
+# 2. Environment
 cp .env.example .env
 php artisan key:generate
-# sesuaikan koneksi database PostgreSQL di .env
+# .env: DB_CONNECTION=mysql, DB_DATABASE=sipokat, DB_USERNAME, DB_PASSWORD
 
-# 3. Migrasi dan seed
-php artisan migrate
-php artisan db:seed
+# 3. Migrasi + master data + kriteria SAW
+php artisan migrate --seed
 
-# 4. Build asset frontend
-npm run build
+# 4. (Opsional) data demo 150 obat, lalu hitung SAW
+php artisan db:seed --class=SpkTestDataSeeder
+php artisan sipokat:recalculate-saw
+
+# 5. Asset frontend
+npm run build      # atau: npm run dev
+
+php artisan serve  # panel: http://localhost:8000/admin
 ```
 
-Menjalankan aplikasi sekaligus (server, queue, dan vite):
+Akun awal dari `UserSeeder`; setelah itu buat role lewat menu **Roles** (Filament Shield):
+`php artisan shield:generate --all` bila permission belum ada.
+
+## Data Riil Apotek
 
 ```bash
-composer run dev
+php artisan sipokat:data-riil:template            # storage/app/import/template-data-riil.xlsx
+# isi sheet Obat → SaldoAwal → Faktur → Penjualan (baris 2 = petunjuk, baris contoh dihapus)
+php artisan sipokat:data-riil:import berkas.xlsx --period-start=2026-08-01 --dry-run
+php artisan sipokat:data-riil:import berkas.xlsx --period-start=2026-08-01
+php artisan sipokat:recalculate-saw
 ```
 
-Atau secara manual:
-
-```bash
-php artisan serve
-npm run dev
-```
-
-Panel admin bisa diakses di `/admin`.
+Impor transaksional: satu baris salah → tidak ada yang tersimpan, semua masalah dicetak.
 
 ## Command Terjadwal
 
-Penjadwalan diatur di `routes/console.php`:
+| Jadwal | Perintah | Fungsi |
+|--------|----------|--------|
+| 06:00 | `sipokat:recalculate-saw` | Snapshot SAW harian (dipakai widget dashboard) |
+| 08:00 | `sipokat:check-stock-and-expiry` | Notifikasi stok minimum & batch mendekati ED |
 
-| Command | Jadwal | Fungsi |
-|---------|--------|--------|
-| `sipokat:recalculate-saw` | Setiap hari 06:00 | Menghitung ulang SAW dan menyediakan data untuk widget dashboard |
-| `sipokat:check-stock-and-expiry` | Setiap hari 08:00 | Mengirim notifikasi stok menipis dan obat mendekati kedaluwarsa |
-
-Agar berjalan otomatis di server, tambahkan cron berikut:
+Cron di server:
 
 ```
 * * * * * cd /path/to/sipokat && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Untuk melihat daftar jadwal, jalankan `php artisan schedule:list`.
+Cek dengan `php artisan schedule:list`.
 
 ## Pengujian
 
@@ -102,14 +108,18 @@ composer test
 php artisan test
 ```
 
-## Deployment
+Suite Pest memakai SQLite in-memory (`phpunit.xml`). Kalau `pdo_sqlite` tidak aktif di php.ini:
+`php -d extension=pdo_sqlite -d extension=sqlite3 vendor/pestphp/pest/bin/pest`.
 
-Repo sudah menyertakan `nixpacks.toml` (PHP 8.4 dan Composer) untuk deploy berbasis Nixpacks. Beberapa hal yang perlu dipastikan di lingkungan produksi:
+## Deployment (VPS + MySQL)
 
-- Koneksi PostgreSQL sudah dikonfigurasi di `.env`
-- Menjalankan `php artisan migrate --force` saat rilis
-- Menjalankan `npm run build` untuk asset produksi
-- Cron `schedule:run` aktif (lihat bagian Command Terjadwal)
+Repo menyertakan `nixpacks.toml` (PHP 8.4 + Composer). Di produksi pastikan:
+
+- `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL`, koneksi MySQL
+- `php artisan migrate --force` dan `php artisan db:seed --class=SawCriteriaSeeder --force` saat rilis pertama
+- `npm run build`, `php artisan optimize`
+- Cron `schedule:run` aktif
+- Zona waktu aplikasi sudah `Asia/Jakarta` (`config/app.php`); samakan zona waktu MySQL/server
 
 ## Lisensi
 
