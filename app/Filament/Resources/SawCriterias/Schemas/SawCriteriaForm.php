@@ -54,26 +54,19 @@ class SawCriteriaForm
                                     ->step(0.001)
                                     ->minValue(0)
                                     ->maxValue(1)
-                                    ->helperText('Total bobot kriteria aktif harus = 1.000')
+                                    ->helperText('Total bobot keempat kriteria harus tepat 1,000 (K7) — kurang maupun lebih ditolak.')
                                     ->rules([
                                         static function (?SawCriteria $record): Closure {
                                             return static function (string $attribute, $value, Closure $fail) use ($record): void {
-                                                $newWeight = (float) $value;
-
-                                                if ($record && ! $record->is_active) {
-                                                    return;
-                                                }
-
                                                 $othersTotal = (float) SawCriteria::query()
-                                                    ->where('is_active', true)
                                                     ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
                                                     ->sum('weight');
 
-                                                $projected = round($othersTotal + $newWeight, 3);
+                                                $projected = round($othersTotal + (float) $value, 3);
 
-                                                if ($projected > 1.000) {
+                                                if (abs($projected - 1.0) > 0.0005) {
                                                     $fail(sprintf(
-                                                        'Total bobot kriteria aktif akan jadi %.3f (maks 1.000). Bobot kriteria aktif lain: %.3f. Turunkan bobot.',
+                                                        'Total bobot keempat kriteria akan jadi %.3f, harus tepat 1,000. Bobot kriteria lain: %.3f.',
                                                         $projected,
                                                         $othersTotal,
                                                     ));
@@ -95,7 +88,7 @@ class SawCriteriaForm
                     ]),
 
                 Section::make('Aturan Skala 1-5')
-                    ->description('Konversi nilai mentah ke skor 1-5. Kosongkan "Min" untuk batas bawah terbuka (≤ Max), kosongkan "Max" untuk batas atas terbuka (≥ Min).')
+                    ->description('Konversi nilai mentah ke skor 1-5. Semua batas inklusif. Kosongkan "Min" untuk batas bawah terbuka (≤ Max), kosongkan "Max" untuk batas atas terbuka (≥ Min). Untuk rasio (C1) tulis dua desimal tanpa celah, mis. 1,01–2,00.')
                     ->columnSpanFull()
                     ->schema([
                         Repeater::make('scale_rules')
@@ -104,6 +97,7 @@ class SawCriteriaForm
                                 TextInput::make('min')
                                     ->label('Min')
                                     ->numeric()
+                                    ->step(0.01)
                                     ->placeholder('null = open')
                                     ->rule(static function (Get $get): Closure {
                                         return static function (string $attribute, $value, Closure $fail) use ($get): void {
@@ -116,6 +110,7 @@ class SawCriteriaForm
                                 TextInput::make('max')
                                     ->label('Max')
                                     ->numeric()
+                                    ->step(0.01)
                                     ->placeholder('null = open')
                                     ->rule(static function (Get $get): Closure {
                                         return static function (string $attribute, $value, Closure $fail) use ($get): void {
@@ -139,7 +134,7 @@ class SawCriteriaForm
                             ->reorderable()
                             ->collapsible()
                             ->itemLabel(fn (array $state): ?string => isset($state['score'])
-                                ? "Skor {$state['score']}: " . ($state['min'] ?? '−∞') . ' s/d ' . ($state['max'] ?? '+∞')
+                                ? "Skor {$state['score']}: ".($state['min'] ?? '−∞').' s/d '.($state['max'] ?? '+∞')
                                 : null
                             ),
                     ]),

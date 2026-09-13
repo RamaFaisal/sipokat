@@ -17,6 +17,9 @@ class SawCalculationResult extends Model
         'c1_norm', 'c2_norm', 'c3_norm', 'c4_norm',
         'preference_value',
         'rank',
+        'sort_order',
+        'c1_stock',
+        'c1_min_stock',
     ];
 
     protected $casts = [
@@ -34,6 +37,9 @@ class SawCalculationResult extends Model
         'c4_norm' => 'decimal:6',
         'preference_value' => 'decimal:6',
         'rank' => 'integer',
+        'sort_order' => 'integer',
+        'c1_stock' => 'integer',
+        'c1_min_stock' => 'integer',
     ];
 
     public function calculation(): BelongsTo

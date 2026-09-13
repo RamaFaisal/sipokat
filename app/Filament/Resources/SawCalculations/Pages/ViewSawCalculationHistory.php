@@ -30,7 +30,7 @@ class ViewSawCalculationHistory extends Page implements HasTable
 
     public function getTitle(): string
     {
-        return 'Snapshot #' . $this->record->id . ' — ' . $this->record->calculated_at->format('d M Y H:i');
+        return 'Snapshot #'.$this->record->id.' — '.$this->record->calculated_at->format('d M Y H:i');
     }
 
     public function table(Table $table): Table
@@ -39,10 +39,12 @@ class ViewSawCalculationHistory extends Page implements HasTable
             ->query(fn (): Builder => SawCalculationResult::query()
                 ->where('saw_calculation_id', $this->record->id)
                 ->with('medicine:id,code,name'))
-            ->defaultSort('rank')
+            ->defaultSort('sort_order')
             ->columns([
                 TextColumn::make('rank')
-                    ->label('#')
+                    ->label('Tingkat')
+                    ->tooltip('Peringkat padat: nilai prioritas sama = tingkat sama')
+                    ->badge()
                     ->sortable(),
                 TextColumn::make('medicine.code')
                     ->label('Kode')
@@ -52,8 +54,10 @@ class ViewSawCalculationHistory extends Page implements HasTable
                     ->searchable()
                     ->wrap(),
                 TextColumn::make('c1_raw')
-                    ->label('Stok')
-                    ->numeric()
+                    ->label('Stok / Min (C1)')
+                    ->state(fn (SawCalculationResult $r) => $r->c1_stock === null
+                        ? number_format((float) $r->c1_raw, 2, ',', '.')
+                        : sprintf('%d / %d = %s', $r->c1_stock, $r->c1_min_stock, number_format((float) $r->c1_raw, 2, ',', '.')))
                     ->alignEnd(),
                 TextColumn::make('c2_raw')
                     ->label('Permintaan/Bln')
@@ -65,7 +69,7 @@ class ViewSawCalculationHistory extends Page implements HasTable
                     ->placeholder('—')
                     ->alignEnd(),
                 TextColumn::make('c4_raw')
-                    ->label('Harga Beli')
+                    ->label('HPP (C4)')
                     ->money('IDR')
                     ->alignEnd(),
                 TextColumn::make('preference_value')
@@ -79,7 +83,7 @@ class ViewSawCalculationHistory extends Page implements HasTable
                 ViewAction::make()
                     ->label('Detail')
                     ->icon(Heroicon::OutlinedCalculator)
-                    ->modalHeading(fn (SawCalculationResult $r) => 'Detail SAW: ' . ($r->medicine->name ?? '-'))
+                    ->modalHeading(fn (SawCalculationResult $r) => 'Detail SAW: '.($r->medicine->name ?? '-'))
                     ->modalDescription('Breakdown V_i sesuai Bab 3.4.4 proposal.')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')

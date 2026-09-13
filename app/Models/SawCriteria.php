@@ -4,6 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Kriteria SAW. Dikunci tepat empat (C1–C4, K8); yang dapat diubah admin: nama, jenis,
+ * bobot, dan skala konversi. Tidak ada skala per obat atau per satuan (K6).
+ */
 class SawCriteria extends Model
 {
     protected $table = 'saw_criteria';
@@ -38,8 +42,10 @@ class SawCriteria extends Model
 
     /**
      * Konversi nilai mentah ke skala 1-5 berdasarkan scale_rules.
-     * Format scale_rules: [{"min": null|number, "max": null|number, "score": 1..5}, ...]
-     * null = open-ended (min null = "≤ max", max null = "≥ min").
+     * Format: [{"min": null|number, "max": null|number, "score": 1..5}, ...] — semua batas
+     * INKLUSIF (B2); null = terbuka. Aturan berdesimal (C1 rasio) ditulis dua desimal tanpa
+     * celah dan nilai mentahnya dibulatkan dua desimal sebelum dicocokkan (K14).
+     * null → 0 = data tidak tersedia.
      */
     public function convertToScore(int|float|null $rawValue): int
     {
@@ -47,12 +53,14 @@ class SawCriteria extends Model
             return 0;
         }
 
-        foreach ($this->scale_rules ?? [] as $rule) {
-            $min = $rule['min'] ?? null;
-            $max = $rule['max'] ?? null;
+        $value = round((float) $rawValue, 2);
 
-            $matchMin = $min === null || $rawValue >= $min;
-            $matchMax = $max === null || $rawValue <= $max;
+        foreach ($this->scale_rules ?? [] as $rule) {
+            $min = isset($rule['min']) && $rule['min'] !== '' ? (float) $rule['min'] : null;
+            $max = isset($rule['max']) && $rule['max'] !== '' ? (float) $rule['max'] : null;
+
+            $matchMin = $min === null || $value >= $min;
+            $matchMax = $max === null || $value <= $max;
 
             if ($matchMin && $matchMax) {
                 return (int) ($rule['score'] ?? 0);
@@ -60,5 +68,11 @@ class SawCriteria extends Model
         }
 
         return 0;
+    }
+
+    /** Σ bobot kriteria aktif, dibulatkan 3 desimal (K7). */
+    public static function totalActiveWeight(): float
+    {
+        return round((float) static::query()->where('is_active', true)->sum('weight'), 3);
     }
 }

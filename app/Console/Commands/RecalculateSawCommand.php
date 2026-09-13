@@ -17,7 +17,7 @@ class RecalculateSawCommand extends Command
     {
         $days = max(1, (int) $this->option('days'));
         $start = Carbon::now()->subDays($days - 1)->startOfDay();
-        $end = Carbon::now()->endOfDay();
+        $end = Carbon::today(); // K2: tanggal saja, bukan endOfDay — pembagi hari harus bulat (T5)
 
         try {
             $calc = $service->execute($start, $end, 'scheduled', null);
@@ -32,8 +32,9 @@ class RecalculateSawCommand extends Command
 
             return self::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('Gagal: ' . $e->getMessage());
+            $this->error('Gagal: '.$e->getMessage());
             report($e);
+
             return self::FAILURE;
         }
     }

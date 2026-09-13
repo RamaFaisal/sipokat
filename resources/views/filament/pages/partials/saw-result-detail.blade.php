@@ -5,11 +5,22 @@
     $codes = ['C1', 'C2', 'C3', 'C4'];
 
     $criteriaInfo = [
-        'C1' => ['label' => 'Stok',              'raw_unit' => 'unit',  'raw_label' => 'Jumlah stok saat ini'],
-        'C2' => ['label' => 'Permintaan',        'raw_unit' => '/bulan','raw_label' => 'Permintaan rata-rata per bulan'],
-        'C3' => ['label' => 'Sisa Kedaluwarsa',  'raw_unit' => 'hari',  'raw_label' => 'Sisa hari hingga ED terdekat (FEFO)'],
-        'C4' => ['label' => 'Harga Beli',        'raw_unit' => 'Rp',    'raw_label' => 'Harga beli per unit'],
+        'C1' => ['label' => 'Rasio Stok',        'raw_unit' => '×',      'raw_label' => 'Stok tersedia ÷ batas minimum'],
+        'C2' => ['label' => 'Permintaan',        'raw_unit' => '/bulan', 'raw_label' => 'Permintaan per bulan (proyeksi 30 hari)'],
+        'C3' => ['label' => 'Sisa Kedaluwarsa',  'raw_unit' => 'hari',   'raw_label' => 'Sisa hari ke ED batch terjauh yang bersisa'],
+        'C4' => ['label' => 'Harga Pokok',       'raw_unit' => 'Rp',     'raw_label' => 'HPP rata-rata bergerak per satuan jual'],
     ];
+
+    // K10: Min/Max acuan kolom dari seluruh alternatif pada snapshot yang sama (skor 0 dikecualikan dari Min).
+    $columnStats = [];
+    $allScores = \App\Models\SawCalculationResult::query()
+        ->where('saw_calculation_id', $result->saw_calculation_id)
+        ->get(['c1_score', 'c2_score', 'c3_score', 'c4_score']);
+    foreach ($codes as $code) {
+        $col = $allScores->pluck(strtolower($code).'_score')->map(fn ($s) => (int) $s);
+        $positive = $col->filter(fn ($s) => $s > 0);
+        $columnStats[$code] = ['min' => $positive->isEmpty() ? 0 : $positive->min(), 'max' => $col->isEmpty() ? 0 : $col->max()];
+    }
 
     $vBreakdown = [];
     $vTotal = 0;
@@ -30,8 +41,9 @@
     {{-- Identitas --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Peringkat</div>
-            <div class="text-2xl font-bold text-amber-600 mt-1">#{{ $result->rank }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tingkat</div>
+            <div class="text-2xl font-bold text-amber-600 mt-1">{{ $result->rank }}</div>
+            <div class="text-xs text-gray-500">nilai sama = tingkat sama</div>
         </div>
         <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
             <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Kode</div>
@@ -60,7 +72,8 @@
                         <th class="px-3 py-2 text-right font-medium">Bobot (W)</th>
                         <th class="px-3 py-2 text-right font-medium">Nilai Mentah (X)</th>
                         <th class="px-3 py-2 text-center font-medium">Skor (1-5)</th>
-                        <th class="px-3 py-2 text-right font-medium">Normalisasi (R = X/max)</th>
+                        <th class="px-3 py-2 text-center font-medium">Min / Max kolom</th>
+                        <th class="px-3 py-2 text-right font-medium">Normalisasi (R)</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -92,6 +105,11 @@
                             <td class="px-3 py-2 text-right tabular-nums">
                                 @if ($raw === null)
                                     <span class="text-gray-400 italic">tidak ada data</span>
+                                @elseif ($code === 'C1' && $result->c1_stock !== null)
+                                    <div>{{ $result->c1_stock }} ÷ {{ $result->c1_min_stock }} = <strong>{{ number_format($raw, 2, ',', '.') }}</strong></div>
+                                    <div class="text-xs text-gray-500">stok tersedia ÷ batas minimum</div>
+                                @elseif ($code === 'C1')
+                                    {{ number_format($raw, 2, ',', '.') }} {{ $info['raw_unit'] }}
                                 @elseif ($code === 'C4')
                                     Rp {{ number_format($raw, 0, ',', '.') }}
                                 @else
@@ -109,7 +127,20 @@
                                     {{ $score }}
                                 </span>
                             </td>
-                            <td class="px-3 py-2 text-right tabular-nums font-medium">{{ number_format($norm, 4) }}</td>
+                            @php $st = $columnStats[$code]; @endphp
+                            <td class="px-3 py-2 text-center tabular-nums text-xs text-gray-600 dark:text-gray-300">{{ $st['min'] }} / {{ $st['max'] }}</td>
+                            <td class="px-3 py-2 text-right tabular-nums font-medium">
+                                <div>{{ number_format($norm, 4) }}</div>
+                                <div class="text-xs text-gray-500">
+                                    @if ($score <= 0)
+                                        skor 0 → R = 0
+                                    @elseif ($type === 'cost')
+                                        min/X = {{ $st['min'] }}/{{ $score }}
+                                    @else
+                                        X/max = {{ $score }}/{{ $st['max'] }}
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -137,8 +168,8 @@
                 @endforeach
                 <div class="border-t border-blue-300 dark:border-blue-700 pt-2 mt-2 flex items-baseline gap-2">
                     <span class="text-blue-600 dark:text-blue-400">V = </span>
-                    <span class="text-lg font-bold">{{ number_format($vTotal, 6) }}</span>
-                    <span class="text-xs text-blue-500 ml-2">(dibulatkan ke 4 desimal: <strong>{{ number_format($vTotal, 4) }}</strong>)</span>
+                    <span class="text-lg font-bold">{{ number_format((float) $result->preference_value, 6) }}</span>
+                    <span class="text-xs text-blue-500 ml-2">(dari Σ kontribusi di atas: {{ number_format($vTotal, 6) }}; sistem menghitung dengan presisi penuh, selisih hanya pembulatan tampilan ≤ 0,000001)</span>
                 </div>
             </div>
         </div>

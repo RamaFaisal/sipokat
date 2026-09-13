@@ -22,13 +22,13 @@ class ListSawCriteria extends ListRecords
     {
         parent::mount();
 
-        $totalWeight = (float) SawCriteria::where('is_active', true)->sum('weight');
+        $totalWeight = SawCriteria::totalActiveWeight();
 
         if (abs($totalWeight - 1.0) > 0.001) {
             Notification::make()
                 ->warning()
                 ->title('Total bobot tidak = 1.000')
-                ->body('Total bobot kriteria aktif saat ini: ' . number_format($totalWeight, 3) . '. SAW butuh total bobot = 1 supaya nilai preferensi valid.')
+                ->body('Total bobot kriteria aktif saat ini: '.number_format($totalWeight, 3).'. SAW butuh total bobot = 1 supaya nilai preferensi valid.')
                 ->persistent()
                 ->send();
         }

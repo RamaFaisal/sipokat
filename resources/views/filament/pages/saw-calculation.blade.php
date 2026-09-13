@@ -14,8 +14,11 @@
             <x-slot name="description">
                 Periode: {{ \Illuminate\Support\Carbon::parse($latest->period_start)->format('d M Y') }}
                 s/d {{ \Illuminate\Support\Carbon::parse($latest->period_end)->format('d M Y') }}
-                &middot; Total alternatif: {{ $latest->total_alternatives }}
-                &middot; Trigger: {{ $latest->trigger_type }}
+                &middot; Alternatif: {{ $latest->total_alternatives }} obat
+                @if ($latest->excluded_count > 0)
+                    &middot; <span class="text-warning-600">{{ $latest->excluded_count }} obat tanpa riwayat kartu stok dikecualikan</span>
+                @endif
+                &middot; Pemicu: {{ $latest->trigger_type === 'scheduled' ? 'terjadwal' : 'manual' }}
             </x-slot>
 
             {{ $this->table }}

@@ -18,6 +18,7 @@ class SawCalculation extends Model
         'trigger_type',
         'criteria_snapshot',
         'total_alternatives',
+        'excluded_count',
         'notes',
     ];
 
@@ -27,6 +28,7 @@ class SawCalculation extends Model
         'period_end' => 'date',
         'criteria_snapshot' => 'array',
         'total_alternatives' => 'integer',
+        'excluded_count' => 'integer',
     ];
 
     public function results(): HasMany

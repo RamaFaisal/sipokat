@@ -31,22 +31,23 @@ class SawTop10RestockWidget extends BaseWidget
         $calculationId = $latest?->id ?? 0;
 
         return $table
-            ->heading('Top 5 Prioritas Restock (SAW)')
+            ->heading('Top 10 Prioritas Restock (SAW)')
             ->description($description)
             ->query(function () use ($calculationId): Builder {
                 $query = SawCalculationResult::query()
                     ->where('saw_calculation_id', $calculationId)
                     ->with('medicine:id,code,name')
-                    ->orderBy('rank');
+                    ->orderBy('sort_order'); // 10 baris teratas menurut urutan tampil, bukan "semua tingkat ≤ 10" (K9)
 
-                $query->limit(5);
+                $query->limit(10);
 
                 return $query;
             })
             ->paginated(false)
             ->columns([
                 TextColumn::make('rank')
-                    ->label('#')
+                    ->label('Tingkat')
+                    ->tooltip('Nilai prioritas sama = tingkat sama')
                     ->badge()
                     ->color(fn (int $state): string => match (true) {
                         $state <= 3 => 'danger',
@@ -58,8 +59,8 @@ class SawTop10RestockWidget extends BaseWidget
                     ->label('Nama Obat')
                     ->wrap(),
                 TextColumn::make('c1_raw')
-                    ->label('Stok')
-                    ->numeric()
+                    ->label('Stok / Min')
+                    ->state(fn (SawCalculationResult $r) => $r->c1_stock === null ? number_format((float) $r->c1_raw, 2, ',', '.') : $r->c1_stock.' / '.$r->c1_min_stock)
                     ->alignEnd(),
                 TextColumn::make('c2_raw')
                     ->label('Permintaan/Bln')
