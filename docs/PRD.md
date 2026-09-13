@@ -400,7 +400,7 @@ PDF Tabel 3.10 (worked example Bab 3.4.4) berisi nilai konversi terbalik dari Ta
 ## 13. Demo Data
 
 Seeder `SpkTestDataSeeder` (idempotent) generate:
-- 150 medicines dengan format code match Filament form (mis. `SIP/PARAC100/ANT/SLP/001`)
+- 150 medicines dengan format code match Filament form (mis. `SIP/PARAC100/OBB/STR/001`)
 - 1 supplier "PT. Distributor SPK Test"
 - 5 ReceiveOrder dengan ED per batch (cover bracket Tabel 3.7: 30-90, 91-180, 181-365, 366-730, >730)
 - 250 Orders distributed over 30 hari dengan demand sesuai Tabel 3.6

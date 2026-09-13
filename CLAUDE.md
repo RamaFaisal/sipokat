@@ -372,7 +372,7 @@ Daftar file lengkap ada di **Section 12.1** (Rak Obat) dan **Section 12.3** (mig
 php artisan db:seed --class=SpkTestDataSeeder
 php artisan sipokat:recalculate-saw
 ```
-- 150 obat ter-generate dengan code format match Filament form (mis. `SIP/PARAC100/OBB/SLP/001`)
+- 150 obat ter-generate dengan code format match Filament form (mis. `SIP/PARAC100/OBB/STR/001`)
 - 5 ReceiveOrder + 250 Orders dalam 30 hari, distribusi atribut cover semua bracket Tabel 3.5-3.8
 - SAW snapshot ter-create, dashboard widget langsung berisi data
 
@@ -659,7 +659,38 @@ dijelaskan saat sidang. Catatan: `min_stock` tidak masuk perhitungan SAW (C1 mem
 
 ---
 
-**Status dokumen**: ✅ Mencerminkan kondisi aktual per 2026-09-10.
+## 14. Satuan Obat Diganti ke Satuan Kemasan (2026-09-12)
+
+Satuan lama berbasis bentuk sediaan (Tablet/Kapsul/Sirup/Botol/Salep) diganti jadi satuan kemasan
+yang benar-benar dipakai saat jual-beli — selaras dengan aturan "kartu stok dalam satu satuan
+dasar" di Section 13.2.
+
+| Satuan | Alias | Asal remap |
+|--------|-------|-----------|
+| Pcs | `PCS` | — |
+| Strip | `STR` | Tablet, Kapsul |
+| Flask | `FLS` | Sirup, Botol |
+| Sachet | `SCH` | — |
+| Box | `BOX` | — |
+| Tube | `TUB` | Salep |
+
+| Aksi | Path |
+|------|------|
+| Migration | `2026_09_12_000001_remap_units_and_resync_medicine_codes.php` — pastikan 6 satuan final ada → remap obat → hapus satuan lama → tulis ulang segmen satuan pada `medicines.code` (dua fase, penomoran ulang bila bertabrakan). Pola sama dengan Section 12.3; `unit_id` juga `ON DELETE CASCADE`, jadi urutan remap-dulu-baru-hapus wajib |
+| Modified | `MasterDataSeeder.php`, `DemoApotekSeeder.php` (daftar satuan), `MedicineImporter.php` (contoh `Strip`), `tests/Pest.php` (fixture) |
+
+Hasil pada data aktual: 120 obat → 120, 0 unit yatim, 0 kode dengan segmen lama, 0 kode tak cocok
+dengan satuannya, tidak ada tabrakan kode. `down()` sengaja kosong — satuan lama tidak tersimpan
+di mana pun setelah dihapus.
+
+> Catatan lokal: `php` tidak ada di PATH; pakai `C:\laragon\bin\php\php-8.4.25-nts-Win32-vs17-x64\php.exe`.
+> `pdo_sqlite` tidak aktif di php.ini, jadi test dijalankan dengan
+> `php -d extension=pdo_sqlite -d extension=sqlite3 vendor/pestphp/pest/bin/pest` (bukan `artisan test`,
+> karena flag `-d` tidak diteruskan ke subprocess).
+
+---
+
+**Status dokumen**: ✅ Mencerminkan kondisi aktual per 2026-09-12.
 **Tahap berikutnya**: Eksekusi Section 13 mulai Tahap 0. Selain itu masih terbuka: rapikan golongan
 obat per item (Section 12.5), smoke test browser end-to-end (lihat [NEXT_STEPS.md](NEXT_STEPS.md)
 opsi C1), dan Open Items di Section 10.

@@ -13,11 +13,12 @@ class MasterDataSeeder extends Seeder
     {
         // Seed Units
         $units = [
-            ['name' => 'Tablet', 'alias' => 'TAB'],
-            ['name' => 'Kapsul', 'alias' => 'KAP'],
-            ['name' => 'Sirup', 'alias' => 'SYR'],
-            ['name' => 'Botol', 'alias' => 'BTL'],
-            ['name' => 'Salep', 'alias' => 'SLP'],
+            ['name' => 'Pcs', 'alias' => 'PCS'],
+            ['name' => 'Strip', 'alias' => 'STR'],
+            ['name' => 'Flask', 'alias' => 'FLS'],
+            ['name' => 'Sachet', 'alias' => 'SCH'],
+            ['name' => 'Box', 'alias' => 'BOX'],
+            ['name' => 'Tube', 'alias' => 'TUB'],
         ];
         foreach ($units as $unit) {
             Unit::updateOrCreate(['name' => $unit['name']], $unit);

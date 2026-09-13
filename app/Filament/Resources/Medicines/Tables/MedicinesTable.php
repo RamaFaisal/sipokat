@@ -34,6 +34,11 @@ class MedicinesTable
                         'available' => 'success',
                         'almost_empty' => 'warning',
                         'empty' => 'danger',
+                    })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'available' => 'Tersedia',
+                        'almost_empty' => 'Hampir Habis',
+                        'empty' => 'Stok Kosong',
                     }),
                 TextColumn::make('status')
                     ->label('Status')
@@ -41,6 +46,10 @@ class MedicinesTable
                     ->color(fn ($state) => match ($state) {
                         'active' => 'success',
                         'inactive' => 'danger',
+                    })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'active' => 'Aktif',
+                        'inactive' => 'Tidak Aktif',
                     }),
             ])
             ->filters([

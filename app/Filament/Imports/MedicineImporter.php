@@ -48,7 +48,7 @@ class MedicineImporter extends Importer
                 ->label('Nama Unit')
                 ->exampleHeader('Nama Unit')
                 ->guess(['Nama Unit', 'Unit', 'Satuan', 'unit_name', 'unit'])
-                ->example('Tablet')
+                ->example('Strip')
                 ->requiredMapping()
                 ->rules(['required', 'string']),
             ImportColumn::make('purchase_price')

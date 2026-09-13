@@ -33,7 +33,7 @@ pest()->extend(Tests\TestCase::class)
 
 function seedMasterFixtures(): void
 {
-    test()->unit = Unit::create(['name' => 'Kapsul', 'alias' => 'KAP']);
+    test()->unit = Unit::create(['name' => 'Strip', 'alias' => 'STR']);
 
     test()->category = MedicineCategories::create([
         'name' => 'Obat Bebas',
@@ -54,7 +54,7 @@ function makeMedicine(array $overrides = []): Medicine
     $seq++;
 
     return Medicine::create(array_merge([
-        'code' => sprintf('SIP/FIX%03d/OBB/KAP/001', $seq),
+        'code' => sprintf('SIP/FIX%03d/OBB/STR/001', $seq),
         'name' => 'Obat Fixture ' . $seq,
         'dosage' => '500 mg',
         'category_id' => test()->category->id,

@@ -153,7 +153,7 @@ class DemoApotekSeeder extends Seeder
     {
         // Kategori & unit — buat bila belum ada (mengikuti MasterDataSeeder).
         if (Unit::count() === 0) {
-            foreach ([['Tablet', 'TAB'], ['Kapsul', 'KAP'], ['Sirup', 'SYR'], ['Botol', 'BTL'], ['Salep', 'SLP']] as [$n, $a]) {
+            foreach ([['Pcs', 'PCS'], ['Strip', 'STR'], ['Flask', 'FLS'], ['Sachet', 'SCH'], ['Box', 'BOX'], ['Tube', 'TUB']] as [$n, $a]) {
                 Unit::updateOrCreate(['name' => $n], ['name' => $n, 'alias' => $a]);
             }
         }
