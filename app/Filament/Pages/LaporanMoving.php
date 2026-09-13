@@ -131,11 +131,11 @@ class LaporanMoving extends Page implements HasSchemas
         // Aggregate semua medicines aktif dengan penjualan dalam periode
         $salesAgg = OrderItem::query()
             ->whereHas('order', fn ($q) => $q
-                ->whereBetween('order_date', [$start->toDateString(), $end->toDateString()]))
+                ->whereDate('order_date', '>=', $start->toDateString())->whereDate('order_date', '<=', $end->toDateString()))
             ->select(
                 'medicine_id',
                 DB::raw('SUM(qty) as total_qty'),
-                DB::raw('SUM(total) as total_value'),
+                DB::raw('SUM(qty * price) as total_value'),
                 DB::raw('COUNT(DISTINCT order_id) as transaksi'),
             )
             ->groupBy('medicine_id')

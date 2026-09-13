@@ -130,11 +130,11 @@ class LaporanRekap extends Page implements HasSchemas
         if (in_array($tipe, ['keduanya', 'penjualan'])) {
             $sales = OrderItem::query()
                 ->whereHas('order', fn ($q) => $q
-                    ->whereBetween('order_date', [$start->toDateString(), $end->toDateString()]))
+                    ->whereDate('order_date', '>=', $start->toDateString())->whereDate('order_date', '<=', $end->toDateString()))
                 ->select(
                     'medicine_id',
                     DB::raw('SUM(qty) as total_qty'),
-                    DB::raw('SUM(total) as total_value'),
+                    DB::raw('SUM(qty * price) as total_value'),
                     DB::raw('COUNT(DISTINCT order_id) as transaksi'),
                 )
                 ->groupBy('medicine_id')
@@ -145,7 +145,7 @@ class LaporanRekap extends Page implements HasSchemas
         if (in_array($tipe, ['keduanya', 'pembelian'])) {
             $purchases = ReceiveOrderItem::query()
                 ->whereHas('receiveOrder', fn ($q) => $q
-                    ->whereBetween('receive_date', [$start->toDateString(), $end->toDateString()]))
+                    ->whereDate('receive_date', '>=', $start->toDateString())->whereDate('receive_date', '<=', $end->toDateString()))
                 ->select(
                     'medicine_id',
                     DB::raw('SUM(qty) as total_qty'),
@@ -196,8 +196,8 @@ class LaporanRekap extends Page implements HasSchemas
             'total_beli' => $this->rows->sum('beli_nilai'),
             'total_jual_qty' => $this->rows->sum('jual_qty'),
             'total_beli_qty' => $this->rows->sum('beli_qty'),
-            'jumlah_transaksi_jual' => Order::whereBetween('order_date', [$start->toDateString(), $end->toDateString()])->count(),
-            'jumlah_transaksi_beli' => ReceiveOrder::whereBetween('receive_date', [$start->toDateString(), $end->toDateString()])->count(),
+            'jumlah_transaksi_jual' => Order::whereDate('order_date', '>=', $start->toDateString())->whereDate('order_date', '<=', $end->toDateString())->count(),
+            'jumlah_transaksi_beli' => ReceiveOrder::whereDate('receive_date', '>=', $start->toDateString())->whereDate('receive_date', '<=', $end->toDateString())->count(),
             'margin_kotor' => $this->rows->sum('margin_kotor'),
             'periode' => $start->format('d M Y').' s/d '.$end->format('d M Y'),
             'tipe' => $tipe,

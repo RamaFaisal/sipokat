@@ -28,7 +28,7 @@ class SalesSummaryWidget extends ChartWidget
         $end = Carbon::now()->endOfDay();
 
         $totals = Order::query()
-            ->whereBetween('order_date', [$start->toDateString(), $end->toDateString()])
+            ->whereDate('order_date', '>=', $start->toDateString())->whereDate('order_date', '<=', $end->toDateString())
             ->select(DB::raw('DATE(order_date) as day'), DB::raw('SUM(grand_total) as total'))
             ->groupBy('day')
             ->pluck('total', 'day');

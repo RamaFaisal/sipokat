@@ -20,10 +20,8 @@ class StatMonthlySalesWidget extends BaseWidget
     protected function getStats(): array
     {
         $monthlySales = Order::query()
-            ->whereBetween('order_date', [
-                Carbon::now()->startOfMonth()->toDateString(),
-                Carbon::now()->endOfMonth()->toDateString(),
-            ])
+            ->whereDate('order_date', '>=', Carbon::now()->startOfMonth()->toDateString())
+            ->whereDate('order_date', '<=', Carbon::now()->endOfMonth()->toDateString())
             ->sum('grand_total');
 
         return [

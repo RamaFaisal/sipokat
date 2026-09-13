@@ -243,8 +243,10 @@ class ReceiveOrderForm
         $remaining = $po->remainingByMedicine();
         $items = $get('items') ?? [];
 
-        // Buang baris PO yang tidak lagi dicentang.
-        $items = array_filter($items, fn ($row) => empty($row['from_po']) || in_array((int) ($row['medicine_id'] ?? 0), $checked, true));
+        // Buang baris PO yang tidak lagi dicentang, dan baris kosong bawaan repeater.
+        $items = array_filter($items, fn ($row) => ! empty($row['from_po'])
+            ? in_array((int) ($row['medicine_id'] ?? 0), $checked, true)
+            : filled($row['medicine_id'] ?? null));
         $present = array_map(fn ($row) => (int) ($row['medicine_id'] ?? 0), array_filter($items, fn ($row) => ! empty($row['from_po'])));
 
         foreach ($po->items as $poItem) {

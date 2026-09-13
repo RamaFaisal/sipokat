@@ -262,7 +262,7 @@ class SawCalculation extends Page implements HasSchemas, HasTable
                 ->color('primary')
                 ->requiresConfirmation()
                 ->modalDescription('Hitung ulang SAW untuk seluruh obat aktif yang punya riwayat kartu stok dan simpan sebagai snapshot baru?')
-                ->action('runCalculation'),
+                ->action(fn () => $this->runCalculation()),
         ];
     }
 
