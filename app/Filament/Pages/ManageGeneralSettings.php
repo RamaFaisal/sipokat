@@ -3,12 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Settings\GeneralSettings;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\SettingsPage;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Support\Icons\Heroicon;
 
 class ManageGeneralSettings extends SettingsPage
@@ -16,8 +16,11 @@ class ManageGeneralSettings extends SettingsPage
     use HasPageShield;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
+
     protected static string $settings = GeneralSettings::class;
+
     protected static ?string $title = 'Pengaturan';
+
     protected static ?string $navigationLabel = 'Pengaturan';
 
     public function form(Schema $schema): Schema
@@ -52,6 +55,15 @@ class ManageGeneralSettings extends SettingsPage
                                 ->url()
                                 ->maxLength(255)
                                 ->prefixIcon(Heroicon::GlobeAlt),
+
+                            TextInput::make('ppn_rate')
+                                ->label('Tarif PPN')
+                                ->numeric()
+                                ->integer()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->suffix('%')
+                                ->helperText('Hanya untuk pecahan DPP/PPN pada cetakan penerimaan. Harga faktur PBF sudah termasuk PPN.'),
                         ]),
                     ])
                     ->columnSpanFull(),

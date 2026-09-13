@@ -257,10 +257,8 @@ class SpkTestDataSeeder extends Seeder
                 'receive_order_number' => $roNumber,
                 'purchase_order_id' => null,
                 'supplier_id' => $supplier->id,
+                'invoice_number' => 'SPK-' . ($idx + 1),
                 'receive_date' => Carbon::now()->subDays(mt_rand(35, 60)),
-                'description' => self::TEST_MARKER . ' Test data SPK seeder',
-                'status' => 'completed',
-                'late_arrival' => false,
                 'received_by' => $userId,
             ]);
 
@@ -275,10 +273,12 @@ class SpkTestDataSeeder extends Seeder
                     'receive_order_id' => $ro->id,
                     'medicine_id' => $medicine->id,
                     'medicine_name' => $medicine->name,
+                    'pack_unit_id' => $medicine->unit_id,
+                    'pack_size' => 1,
+                    'pack_qty' => $qty,
                     'qty' => $qty,
                     'price' => $this->purchasePrice[$medicine->id],
                     'batch_number' => 'BATCH-' . strtoupper(Str::random(6)),
-                    'manufacture_date' => Carbon::now()->subDays(mt_rand(30, 365)),
                     'expired_date' => $plan['expired_date'],
                 ]);
 

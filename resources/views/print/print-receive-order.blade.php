@@ -260,8 +260,8 @@
                     <span class="po-reference">{{ $record->purchaseOrder->po_number ?? '-' }}</span>
                 </div>
 
-                <div class="info-label">Status</div>
-                <div class="info-value">{{ ucfirst($record->status ?? '-') }}</div>
+                <div class="info-label">Nomor Faktur PBF</div>
+                <div class="info-value">{{ $record->invoice_number ?? '-' }}</div>
             </div>
         </div>
 
@@ -270,14 +270,18 @@
             <thead>
                 <tr>
                     <th style="width: 5%;">No</th>
-                    <th style="width: 40%;">Nama Obat</th>
-                    <th class="text-center" style="width: 15%;">Qty Diterima</th>
-                    <th class="text-right" style="width: 20%;">Harga</th>
-                    <th class="text-right" style="width: 20%;">Subtotal</th>
+                    <th style="width: 31%;">Nama Obat</th>
+                    <th style="width: 16%;">Batch / ED</th>
+                    <th class="text-center" style="width: 14%;">Jumlah</th>
+                    <th class="text-right" style="width: 17%;">@Harga</th>
+                    <th class="text-right" style="width: 17%;">Jml. Harga</th>
                 </tr>
             </thead>
             <tbody>
-                @php $totalAmount = 0; @endphp
+                @php
+                    $totalAmount = 0;
+                    $ppnRate = (int) app(\App\Settings\GeneralSettings::class)->ppn_rate;
+                @endphp
                 @foreach ($record->items as $index => $item)
                     @php $subtotal = $item->qty * $item->price; $totalAmount += $subtotal; @endphp
                     <tr>
@@ -285,8 +289,10 @@
                         <td>
                             {{ $item->medicine->name ?? '-' }}
                         </td>
-                        <td class="text-center">{{ $item->qty }}</td>
-                        <td class="text-right">Rp {{ number_format($item->price, 0, ',', '.') }}</td>
+                        <td>{{ $item->batch_number }} / {{ $item->expired_date?->format('m-Y') }}</td>
+                        {{-- Seperti faktur: dalam kemasan (R1b). Harga per kemasan = harga satuan jual × isi. --}}
+                        <td class="text-center">{{ $item->pack_qty }} {{ $item->packUnit->name ?? '' }}($item->pack_size > 1) <small>(isi {{ $item->pack_size }})</small></td>
+                        <td class="text-right">Rp {{ number_format($item->price * $item->pack_size, 0, ',', '.') }}</td>
                         <td class="text-right">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
@@ -296,17 +302,27 @@
         {{-- Summary --}}
         <div class="summary-section">
             <div class="summary-left">
-                @if($record->description)
-                    <div class="notes-section">
-                        <div class="notes-title">Keterangan</div>
-                        <div class="notes-text">{{ $record->description }}</div>
-                    </div>
-                @endif
+                <div class="notes-section">
+                    <div class="notes-title">Keterangan</div>
+                    <div class="notes-text">Harga sudah termasuk PPN sesuai faktur PBF. DPP dan PPN di samping adalah pecahan dari total (tarif {{ $ppnRate }}%), bukan tambahan.</div>
+                </div>
             </div>
             <div class="summary-right">
                 <table class="summary-table">
+                    @php
+                        $dpp = $ppnRate > 0 ? $totalAmount / (1 + $ppnRate / 100) : $totalAmount;
+                        $ppn = $totalAmount - $dpp;
+                    @endphp
+                    <tr>
+                        <td class="label">Dasar Pengenaan Pajak</td>
+                        <td class="value">Rp {{ number_format($dpp, 0, ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">PPN {{ $ppnRate }}%</td>
+                        <td class="value">Rp {{ number_format($ppn, 0, ',', '.') }}</td>
+                    </tr>
                     <tr class="grand-total">
-                        <td class="label">Total Penerimaan</td>
+                        <td class="label">Total</td>
                         <td class="value">Rp {{ number_format($totalAmount, 0, ',', '.') }}</td>
                     </tr>
                 </table>

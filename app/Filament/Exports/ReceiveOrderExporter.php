@@ -16,31 +16,26 @@ class ReceiveOrderExporter extends Exporter
         return [
             ExportColumn::make('receive_order_number')
                 ->label('Nomor RO'),
-            ExportColumn::make('purchaseOrder.po_number')
-                ->label('Nomor PO'),
+            ExportColumn::make('invoice_number')
+                ->label('Nomor Faktur'),
             ExportColumn::make('supplier.name')
-                ->label('Supplier'),
+                ->label('PBF'),
+            ExportColumn::make('purchaseOrder.po_number')
+                ->label('Dari PO'),
             ExportColumn::make('receive_date')
-                ->label('Tanggal Penerimaan'),
-            ExportColumn::make('status')
-                ->label('Status')
-                ->formatStateUsing(fn(string $state): string => match ($state) {
-                    'pending' => 'Menunggu',
-                    'cancelled' => 'Dibatalkan',
-                    'completed' => 'Selesai',
-                    default => ucfirst($state),
-                }),
-            ExportColumn::make('description')
-                ->label('Keterangan'),
+                ->label('Tanggal Terima'),
+            ExportColumn::make('total')
+                ->label('Total Faktur')
+                ->state(fn (ReceiveOrder $record) => $record->total()),
         ];
     }
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'Ekspor receive order selesai. ' . number_format($export->successful_rows) . ' baris berhasil diekspor.';
+        $body = 'Ekspor receive order selesai. '.number_format($export->successful_rows).' baris berhasil diekspor.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' ' . number_format($failedRowsCount) . ' baris gagal diekspor.';
+            $body .= ' '.number_format($failedRowsCount).' baris gagal diekspor.';
         }
 
         return $body;

@@ -124,7 +124,8 @@ class DemoApotekSeeder extends Seeder
             Order::withTrashed()->whereIn('id', $orderIds)->forceDelete();
         }
 
-        $roIds = ReceiveOrder::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
+        $demoSupplierIds = Supplier::withTrashed()->where('code', 'like', 'DMO-%')->pluck('id')->all();
+        $roIds = ReceiveOrder::withTrashed()->whereIn('supplier_id', $demoSupplierIds)->pluck('id')->all();
         if ($roIds) {
             MedicineStock::whereIn('receive_order_id', $roIds)->delete();
             ReceiveOrderItem::withTrashed()->whereIn('receive_order_id', $roIds)->forceDelete();
@@ -138,7 +139,7 @@ class DemoApotekSeeder extends Seeder
             MedicineStockOpname::withTrashed()->whereIn('id', $opIds)->forceDelete();
         }
 
-        $poIds = PurchaseOrder::withTrashed()->where('description', 'like', self::MARKER . '%')->pluck('id')->all();
+        $poIds = PurchaseOrder::withTrashed()->whereIn('supplier_id', $demoSupplierIds)->pluck('id')->all();
         if ($poIds) {
             PurchaseOrderItem::withTrashed()->whereIn('purchase_order_id', $poIds)->forceDelete();
             PurchaseOrder::withTrashed()->whereIn('id', $poIds)->forceDelete();
@@ -361,17 +362,6 @@ class DemoApotekSeeder extends Seeder
                 'po_number' => $this->nextPoNumber(),
                 'supplier_id' => $supplier->id,
                 'po_date' => $date->toDateString(),
-                'sub_total' => $subTotal,
-                'discount' => 0,
-                'tax' => 0,
-                'total_tax' => 0,
-                'shipping_cost' => $shipping,
-                'other_cost' => 0,
-                'grand_total' => $grandTotal,
-                'status' => 'approved',
-                'description' => self::MARKER . ' Pengadaan rutin.',
-                'estimated_arrival' => $date->copy()->addDays(mt_rand(2, 6))->toDateString(),
-                'status_payment' => 'unpaid',
                 'status_receive_order' => 'pending',
                 'created_by' => $this->userId,
             ]);
@@ -380,11 +370,11 @@ class DemoApotekSeeder extends Seeder
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $po->id,
                     'medicine_id' => $line['medicine_id'],
-                    'description' => null,
+                    'pack_unit_id' => $this->medById[$line['medicine_id']]->unit_id,
+                    'pack_size' => 1,
+                    'pack_qty' => $line['qty'],
                     'qty' => $line['qty'],
                     'price' => $line['price'],
-                    'discount' => 0,
-                    'total' => $line['total'],
                 ]);
             }
 
@@ -416,9 +406,7 @@ class DemoApotekSeeder extends Seeder
             'purchase_order_id' => $po->id,
             'supplier_id' => $po->supplier_id,
             'receive_date' => $date->toDateString(),
-            'description' => self::MARKER . ' Penerimaan dari ' . $po->po_number,
-            'status' => 'completed',
-            'late_arrival' => $po->estimated_arrival && $date->gt($po->estimated_arrival),
+            'invoice_number' => 'DMO-' . $this->roSeq . '/' . $date->format('m/y'),
             'received_by' => $this->userId,
         ]);
 
@@ -439,10 +427,12 @@ class DemoApotekSeeder extends Seeder
                 'receive_order_id' => $ro->id,
                 'medicine_id' => $line['medicine_id'],
                 'medicine_name' => $m->name,
+                'pack_unit_id' => $m->unit_id,
+                'pack_size' => 1,
+                'pack_qty' => $qty,
                 'qty' => $qty,
                 'price' => $line['price'],
                 'batch_number' => 'BN' . $date->format('ym') . '-' . strtoupper(Str::random(5)),
-                'manufacture_date' => $date->copy()->subDays(mt_rand(30, 300))->toDateString(),
                 'expired_date' => $this->randomExpiryDate($date)->toDateString(),
             ]);
 
@@ -462,11 +452,8 @@ class DemoApotekSeeder extends Seeder
         }
 
         // Update status PO sesuai penerimaan.
-        $paymentRoll = mt_rand(1, 100);
         $po->update([
-            'status' => $fullyReceived ? 'completed' : 'approved',
             'status_receive_order' => $fullyReceived ? 'received' : 'partial',
-            'status_payment' => $paymentRoll <= 78 ? 'paid' : ($paymentRoll <= 92 ? 'unpaid' : 'partial'),
         ]);
     }
 
@@ -645,17 +632,6 @@ class DemoApotekSeeder extends Seeder
                 'po_number' => $this->nextPoNumber(),
                 'supplier_id' => $supplier->id,
                 'po_date' => $date->toDateString(),
-                'sub_total' => $subTotal,
-                'discount' => 0,
-                'tax' => 0,
-                'total_tax' => 0,
-                'shipping_cost' => 0,
-                'other_cost' => 0,
-                'grand_total' => $subTotal,
-                'status' => 'approved',
-                'description' => self::MARKER . ' PO menunggu penerimaan.',
-                'estimated_arrival' => Carbon::today()->addDays(mt_rand(1, 5))->toDateString(),
-                'status_payment' => 'unpaid',
                 'status_receive_order' => 'pending',
                 'created_by' => $this->userId,
             ]);
@@ -664,11 +640,11 @@ class DemoApotekSeeder extends Seeder
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $po->id,
                     'medicine_id' => $line['id'],
-                    'description' => null,
+                    'pack_unit_id' => $this->medById[$line['id']]->unit_id,
+                    'pack_size' => 1,
+                    'pack_qty' => $line['qty'],
                     'qty' => $line['qty'],
                     'price' => $line['price'],
-                    'discount' => 0,
-                    'total' => $line['total'],
                 ]);
             }
         }

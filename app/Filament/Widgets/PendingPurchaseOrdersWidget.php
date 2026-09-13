@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 class PendingPurchaseOrdersWidget extends BaseWidget
 {
     use HasWidgetShield;
+
     protected static ?int $sort = 2;
 
     protected int|string|array $columnSpan = 'full';
@@ -19,43 +20,38 @@ class PendingPurchaseOrdersWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Purchase Order Tertunda')
-            ->description('PO yang sudah approved tapi belum diterima penuh dari supplier.')
+            ->heading('Pesanan Belum Lengkap')
+            ->description('PO yang belum diterima penuh dari PBF (belum diterima / sebagian).')
             ->query(fn (): Builder => PurchaseOrder::query()
-                ->where('status', 'approved')
-                ->whereIn('status_receive_order', ['pending', 'partial'])
-                ->with('supplier:id,name')
-                ->orderBy('estimated_arrival'))
+                ->whereIn('status_receive_order', [PurchaseOrder::STATUS_PENDING, PurchaseOrder::STATUS_PARTIAL])
+                ->with(['supplier:id,name', 'items'])
+                ->withCount('items')
+                ->orderBy('po_date'))
             ->columns([
                 TextColumn::make('po_number')
                     ->label('No. PO')
                     ->searchable(),
                 TextColumn::make('supplier.name')
-                    ->label('Supplier')
+                    ->label('PBF')
                     ->searchable(),
                 TextColumn::make('po_date')
-                    ->label('Tgl PO')
+                    ->label('Tgl pesan')
                     ->date('d M Y')
                     ->sortable(),
-                TextColumn::make('estimated_arrival')
-                    ->label('Estimasi Sampai')
-                    ->date('d M Y')
-                    ->placeholder('—')
-                    ->sortable(),
-                TextColumn::make('grand_total')
-                    ->label('Total')
-                    ->money('IDR')
+                TextColumn::make('items_count')
+                    ->label('Item')
+                    ->alignCenter(),
+                TextColumn::make('remaining')
+                    ->label('Sisa (satuan jual)')
+                    ->state(fn (PurchaseOrder $record) => array_sum($record->remainingByMedicine()))
                     ->alignEnd(),
                 TextColumn::make('status_receive_order')
-                    ->label('Status RO')
+                    ->label('Status')
                     ->badge()
-                    ->colors([
-                        'warning' => 'pending',
-                        'info' => 'partial',
-                    ])
+                    ->color(fn (string $state): string => $state === PurchaseOrder::STATUS_PARTIAL ? 'warning' : 'danger')
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pending' => 'Belum diterima',
-                        'partial' => 'Diterima sebagian',
+                        PurchaseOrder::STATUS_PENDING => 'Belum diterima',
+                        PurchaseOrder::STATUS_PARTIAL => 'Sebagian diterima',
                         default => $state,
                     }),
             ])

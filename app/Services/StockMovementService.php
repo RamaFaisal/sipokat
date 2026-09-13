@@ -86,6 +86,80 @@ class StockMovementService
     }
 
     /**
+     * Sinkronkan lapisan dengan item RO setelah RO diedit (R8): batch/ED/harga selalu boleh
+     * berubah; jumlah hanya boleh turun sampai sisa lapisan; item yang dihapus hanya boleh
+     * bila lapisannya belum dikonsumsi; item baru menjadi lapisan baru.
+     *
+     * @throws \RuntimeException
+     */
+    public function syncReceipt(ReceiveOrder $receiveOrder): array
+    {
+        $receiveOrder->loadMissing('purchaseOrder');
+        $description = $receiveOrder->purchaseOrder
+            ? 'Penerimaan dari '.$receiveOrder->purchaseOrder->po_number
+            : 'Penerimaan '.$receiveOrder->receive_order_number;
+
+        $affected = [];
+        $items = $receiveOrder->items()->get()->keyBy('id');
+
+        $layers = MedicineStock::query()
+            ->where('receive_order_id', $receiveOrder->id)
+            ->where('type_account', 'D')
+            ->withSum('consumptions', 'qty')
+            ->get();
+
+        foreach ($layers as $layer) {
+            $consumed = (int) ($layer->consumptions_sum_qty ?? 0);
+            $item = $layer->receive_order_item_id ? $items->get($layer->receive_order_item_id) : null;
+            $affected[] = $layer->medicine_id;
+
+            if (! $item) {
+                if ($consumed > 0) {
+                    throw new \RuntimeException("Batch {$layer->batch_number} tidak dapat dihapus: sudah terjual {$consumed}. Koreksi lewat Stok Opname.");
+                }
+                $layer->delete();
+
+                continue;
+            }
+
+            if ((int) $item->qty < $consumed) {
+                throw new \RuntimeException("Jumlah batch {$item->batch_number} tidak boleh kurang dari yang sudah terjual ({$consumed}). Koreksi lewat Stok Opname.");
+            }
+
+            $layer->update([
+                'qty' => $item->qty,
+                'hpp' => $item->price,
+                'batch_number' => $item->batch_number,
+                'expired_date' => $item->expired_date,
+                'date' => $receiveOrder->receive_date,
+                'description' => $description,
+            ]);
+            $affected[] = $item->medicine_id;
+            $items->forget($item->id);
+        }
+
+        // Sisanya item baru → lapisan baru.
+        foreach ($items as $item) {
+            MedicineStock::create([
+                'medicine_id' => $item->medicine_id,
+                'qty' => $item->qty,
+                'type_account' => 'D',
+                'batch_number' => $item->batch_number,
+                'expired_date' => $item->expired_date,
+                'date' => $receiveOrder->receive_date,
+                'hpp' => $item->price,
+                'receive_order_id' => $receiveOrder->id,
+                'receive_order_item_id' => $item->id,
+                'description' => $description,
+                'created_by' => auth()->id(),
+            ]);
+            $affected[] = $item->medicine_id;
+        }
+
+        return $this->replayAll($affected);
+    }
+
+    /**
      * Tulis entri kredit (stok keluar) untuk seluruh item penjualan.
      * Alokasi ke lapisan (FEFO) menyusul di E4; sampai itu layer_stock_id kosong.
      */

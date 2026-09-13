@@ -2,230 +2,313 @@
 
 namespace App\Filament\Resources\ReceiveOrders\Schemas;
 
+use App\Filament\Forms\PackLine;
 use App\Models\Medicine;
 use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderItem;
 use App\Models\ReceiveOrder;
-use App\Models\ReceiveOrderItem;
+use Carbon\Carbon;
+use Closure;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
+use Illuminate\Validation\Rule;
 
+/**
+ * Penerimaan = satu faktur PBF (rencana-revisi-2026-09 Bagian 2).
+ *
+ * Header: nomor RO, nomor faktur (unik per PBF), PBF, tanggal terima, PO opsional.
+ * Dari PO petugas mencentang item yang ada di faktur (R9); baris di luar PO boleh ditambah (R11).
+ * Baris: kemasan → dikonversi ke satuan jual (R1); batch dan ED bulan-tahun wajib (R3, R4);
+ * ED disimpan tanggal 1 dan harus lewat dari tanggal terima (Q4).
+ */
 class ReceiveOrderForm
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
-                Section::make('Informasi')
-                    ->columns(2)
+                Section::make('Faktur')
+                    ->columns(4)
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('receive_order_number')
                             ->label('Nomor RO')
-                            ->required()
-                            ->default(function ($record) {
-                                return 'RO' . str_pad(ReceiveOrder::withTrashed()->count() + 1, 4, '0', STR_PAD_LEFT);
-                            })
+                            ->default(fn () => ReceiveOrder::nextNumber())
                             ->readOnly()
-                            ->disabled()
-                            ->dehydrated(),
+                            ->dehydrated()
+                            ->required(),
                         Select::make('purchase_order_id')
-                            ->label('Nomor PO')
-                            ->options(fn() => PurchaseOrder::query()->where('status_receive_order', '!=', 'received')->pluck('po_number', 'id'))
+                            ->label('Dari PO')
+                            ->options(fn () => PurchaseOrder::query()
+                                ->whereIn('status_receive_order', [PurchaseOrder::STATUS_PENDING, PurchaseOrder::STATUS_PARTIAL])
+                                ->with('supplier')
+                                ->orderByDesc('po_date')
+                                ->get()
+                                ->mapWithKeys(fn (PurchaseOrder $po) => [$po->id => $po->po_number.' — '.($po->supplier?->name ?? '')]))
                             ->searchable()
-                            ->reactive()
+                            ->live()
+                            ->disabled(fn (?ReceiveOrder $record) => $record !== null)
+                            ->dehydrated()
+                            ->helperText('Opsional. Satu PO bisa dipenuhi banyak faktur.')
                             ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                self::getPurchaseOrder($get, $set, $state);
+                                $po = $state ? PurchaseOrder::find($state) : null;
+                                if ($po) {
+                                    $set('supplier_id', $po->supplier_id);
+                                }
+                                $set('po_pick', []);
+                                $set('items', array_values(array_filter($get('items') ?? [], fn ($row) => empty($row['from_po']))));
                             }),
-                        TextInput::make('supplier_name')
-                            ->label('Nama Supplier')
-                            ->live(onBlur: true)
-                            ->readOnly()
-                            ->dehydrated(false),
-                        Hidden::make('supplier_id')
-                            ->required(),
+                        Select::make('supplier_id')
+                            ->label('PBF')
+                            ->relationship('supplier', 'name', fn ($query) => $query->where('status', 'active')->orderBy('name'))
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->live()
+                            ->disabled(fn (Get $get) => filled($get('purchase_order_id')))
+                            ->dehydrated(),
+                        TextInput::make('invoice_number')
+                            ->label('Nomor faktur PBF')
+                            ->required()
+                            ->maxLength(100)
+                            ->placeholder('02028/NPM/5/24')
+                            ->rules([
+                                fn (Get $get, ?ReceiveOrder $record) => Rule::unique('receive_orders', 'invoice_number')
+                                    ->where('supplier_id', $get('supplier_id'))
+                                    ->whereNull('deleted_at')
+                                    ->ignore($record?->id),
+                            ])
+                            ->validationMessages([
+                                'unique' => 'Nomor faktur ini sudah pernah dicatat untuk PBF yang sama.',
+                            ]),
                         DatePicker::make('receive_date')
-                            ->label('Tanggal')
+                            ->label('Tanggal terima')
                             ->default(now())
-                            ->required(),
-                        Textarea::make('description')
-                            ->label('Keterangan')
-                            ->columnSpanFull()
-                            ->rows(3),
-                    ])
-                    ->columnSpanFull(),
+                            ->required()
+                            ->live(onBlur: true),
+                        Hidden::make('received_by')
+                            ->default(fn () => auth()->id()),
+                    ]),
 
-                Section::make('RO Item')
+                Section::make('Pilih item dari PO')
+                    ->description('Centang item yang tercetak di faktur ini. Sisa PO berkurang bertahap sampai lengkap.')
+                    ->columnSpanFull()
+                    ->visible(fn (Get $get, ?ReceiveOrder $record) => $record === null && filled($get('purchase_order_id')))
+                    ->schema([
+                        CheckboxList::make('po_pick')
+                            ->hiddenLabel()
+                            ->dehydrated(false)
+                            ->live()
+                            ->columns(2)
+                            ->options(fn (Get $get) => self::poRemainingOptions($get('purchase_order_id')))
+                            ->afterStateUpdated(fn (Get $get, Set $set, $state) => self::syncItemsFromPo($get, $set, (array) $state)),
+                    ]),
+
+                Section::make('Item faktur')
                     ->columnSpanFull()
                     ->schema([
                         Repeater::make('items')
                             ->relationship()
+                            ->hiddenLabel()
                             ->schema([
-                                Hidden::make('medicine_id')
-                                    ->afterStateHydrated(function (Get $get, Set $set, $state) {
-                                        $set('medicine_id', $get('medicine_id'));
-                                    })
-                                    ->required(),
-                                TextInput::make('medicine_name')
-                                    ->label('Nama Obat')
-                                    ->readOnly()
+                                Hidden::make('from_po')->dehydrated(false),
+                                Hidden::make('po_max_qty')->dehydrated(false),
+                                Hidden::make('medicine_name'),
+                                Select::make('medicine_id')
+                                    ->label('Obat')
+                                    ->columnSpan(4)
+                                    ->options(fn () => Medicine::query()->where('status', 'active')->orderBy('name')->pluck('name', 'id'))
+                                    ->searchable()
                                     ->required()
-                                    ->columnSpan(3),
-                                TextInput::make('qty')
-                                    ->label('Jumlah')
-                                    ->numeric()
-                                    ->default(1)
-                                    ->required()
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(function (Get $get, Set $set) {
-                                        self::getValidateStock($get, $set);
-                                    })
-                                    ->columnSpan(3),
-                                TextInput::make('price')
-                                    ->label('Harga')
-                                    ->readOnly()
-                                    ->prefix('Rp')
-                                    ->required()
-                                    ->columnSpan(3),
+                                    ->live()
+                                    ->disabled(fn (Get $get) => (bool) $get('from_po'))
+                                    ->dehydrated()
+                                    ->afterStateUpdated(function (Set $set, $state) {
+                                        PackLine::applyMedicineDefaults($set, $state ? (int) $state : null, defaultPackQty: 1);
+                                        $set('medicine_name', $state ? Medicine::query()->whereKey($state)->value('name') : null);
+                                    }),
+                                PackLine::packUnitSelect()->columnSpan(2),
+                                PackLine::packSizeInput()->columnSpan(2),
+                                PackLine::packQtyInput('Jumlah')
+                                    ->columnSpan(2)
+                                    ->rules([
+                                        fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
+                                            // Q6: baris dari PO tidak boleh melebihi sisa PO (dalam satuan jual).
+                                            if (! $get('from_po')) {
+                                                return;
+                                            }
+                                            [$qty] = PackLine::convert($value, $get('pack_size'), null);
+                                            $max = (int) $get('po_max_qty');
+                                            if ($qty !== null && $qty > $max) {
+                                                $fail("Melebihi sisa PO ({$max} satuan jual). Kelebihan kiriman dicatat sebagai baris di luar PO.");
+                                            }
+                                        },
+                                    ]),
+                                PackLine::packPriceInput('Harga / satuan input')->columnSpan(2),
                                 TextInput::make('batch_number')
-                                    ->label('No. Batch')
-                                    ->maxLength(100)
-                                    ->columnSpan(4),
-                                DatePicker::make('manufacture_date')
-                                    ->label('Tgl Produksi')
-                                    ->native(false)
-                                    ->columnSpan(4),
-                                DatePicker::make('expired_date')
-                                    ->label('Tgl Kedaluwarsa')
-                                    ->native(false)
+                                    ->label('No. batch')
                                     ->required()
-                                    ->after('manufacture_date')
-                                    ->helperText('Wajib diisi untuk perhitungan SPK (kriteria kedaluwarsa)')
-                                    ->columnSpan(4),
+                                    ->maxLength(100)
+                                    ->columnSpan(3),
+                                TextInput::make('expired_month')
+                                    ->label('ED (bulan-tahun)')
+                                    ->placeholder('10-2026')
+                                    ->required()
+                                    ->regex('/^(0[1-9]|1[0-2])-\d{4}$/')
+                                    ->validationMessages(['regex' => 'Tulis bulan-tahun, mis. 10-2026.'])
+                                    ->helperText('Seperti tercetak di faktur. Obat dianggap kedaluwarsa sejak tanggal 1 bulan itu.')
+                                    ->rules([
+                                        fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
+                                            $ed = self::parseExpiredMonth($value);
+                                            $received = $get('../../receive_date');
+                                            if ($ed && $received && $ed->lte(Carbon::parse($received)->startOfDay())) {
+                                                $fail('ED harus lewat dari tanggal terima.');
+                                            }
+                                        },
+                                    ])
+                                    ->columnSpan(3),
+                                PackLine::conversionPreview()->columnSpan(6),
                             ])
                             ->columns(12)
-                            ->addable(false)
-                            ->deletable(false)
-                            ->live(onBlur: true),
+                            ->columnSpanFull()
+                            ->addActionLabel('Tambah item di luar PO')
+                            ->minItems(1)
+                            ->mutateRelationshipDataBeforeCreateUsing(fn (array $data) => self::dehydrateItem($data))
+                            ->mutateRelationshipDataBeforeSaveUsing(fn (array $data) => self::dehydrateItem($data))
+                            ->mutateRelationshipDataBeforeFillUsing(fn (array $data) => self::hydrateItem($data)),
+
+                        Placeholder::make('total_preview')
+                            ->label('Total RO')
+                            ->content(function (Get $get) {
+                                $total = 0;
+                                foreach ($get('items') ?? [] as $row) {
+                                    [$qty, $price] = PackLine::convert($row['pack_qty'] ?? 0, $row['pack_size'] ?? 1, $row['pack_price'] ?? null);
+                                    $total += ($qty ?? 0) * ($price ?? 0);
+                                }
+
+                                return new HtmlString('<span class="text-lg font-bold">Rp '.number_format($total, 0, ',', '.').'</span> <span class="text-sm text-gray-500">— cocokkan dengan Total pada faktur (sudah termasuk PPN)</span>');
+                            }),
                     ]),
             ]);
     }
 
-    public static function getPurchaseOrder(Get $get, Set $set, $state)
+    /** Opsi centang: item PO yang masih bersisa. */
+    public static function poRemainingOptions($poId): array
     {
-        $purchaseOrderId = $get('purchase_order_id');
-        $purchaseOrderItems = PurchaseOrderItem::where('purchase_order_id', $purchaseOrderId)->get();
-        $filteredItems = [];
-
-        foreach ($purchaseOrderItems as $poItem) {
-            $receiveOrderQty = ReceiveOrderItem::query()
-                ->whereHas('receiveOrder', function ($query) use ($purchaseOrderId) {
-                    $query->where('purchase_order_id', $purchaseOrderId)
-                        ->whereIn('status', ['pending', 'completed']);
-                })
-                ->where('medicine_id', $poItem->medicine_id)
-                ->sum('qty');
-
-            if ($receiveOrderQty < $poItem->qty) {
-                $remainingQty = $poItem->qty - $receiveOrderQty;
-
-                $filteredItems[] = [
-                    'medicine_id' => $poItem->medicine_id,
-                    'medicine_name' => $poItem->medicine->name ?? null,
-                    'qty' => $remainingQty,
-                    'price' => $poItem->price ?? ($poItem->medicine?->latestPurchasePrice() ?? 0),
-                ];
-            }
+        $po = $poId ? PurchaseOrder::with(['items.medicine.unit'])->find($poId) : null;
+        if (! $po) {
+            return [];
         }
 
-        if (!empty($filteredItems)) {
-            $set('items', $filteredItems);
-            $purchaseOrder = PurchaseOrder::find($purchaseOrderId);
-            if ($purchaseOrder) {
-                $set('supplier_id', $purchaseOrder->supplier_id);
-                $set('supplier_name', $purchaseOrder->supplier->name ?? '');
+        $remaining = $po->remainingByMedicine();
+        $options = [];
+
+        foreach ($po->items as $item) {
+            $sisa = $remaining[$item->medicine_id] ?? 0;
+            if ($sisa <= 0) {
+                continue;
             }
-        } else {
-            $set('items', []);
-            if ($purchaseOrderId) {
-                Notification::make()->danger()->title('Tidak ada item yang dapat diterima')->send();
-            }
+            $unit = $item->medicine?->unit?->name ?? '';
+            $options[$item->medicine_id] = sprintf(
+                '%s — dipesan %d, sisa %d %s',
+                $item->medicine?->name,
+                $item->qty,
+                $sisa,
+                $unit,
+            );
         }
+
+        return $options;
     }
 
-    public static function getValidateStock(Get $get, Set $set)
+    /** Bangun/buang baris dari centang PO; baris di luar PO tidak disentuh. */
+    public static function syncItemsFromPo(Get $get, Set $set, array $checked): void
     {
-        $poId = $get('../../purchase_order_id');
-        $items = $get('../../items') ?? [];
-
-        if (!$poId) {
+        $poId = $get('purchase_order_id');
+        $po = $poId ? PurchaseOrder::with(['items.medicine'])->find($poId) : null;
+        if (! $po) {
             return;
         }
 
-        $poItems = PurchaseOrderItem::where('purchase_order_id', $poId)
-            ->get()
-            ->keyBy('medicine_id');
+        $checked = array_map('intval', $checked);
+        $remaining = $po->remainingByMedicine();
+        $items = $get('items') ?? [];
 
-        foreach ($items as $key => $item) {
-            $medicineId = $item['medicine_id'] ?? null;
-            $inputQty = (int) ($item['qty'] ?? 0);
+        // Buang baris PO yang tidak lagi dicentang.
+        $items = array_filter($items, fn ($row) => empty($row['from_po']) || in_array((int) ($row['medicine_id'] ?? 0), $checked, true));
+        $present = array_map(fn ($row) => (int) ($row['medicine_id'] ?? 0), array_filter($items, fn ($row) => ! empty($row['from_po'])));
 
-            // Validasi 1: cek apakah item ada di PO
-            $poItem = $poItems[$medicineId] ?? null;
-            if (!$poItem) {
+        foreach ($po->items as $poItem) {
+            $mid = (int) $poItem->medicine_id;
+            if (! in_array($mid, $checked, true) || in_array($mid, $present, true)) {
                 continue;
             }
 
-            if (!$medicineId || $inputQty <= 0) {
-                $set("../../items.{$key}.qty", $poItem->qty);
+            $sisa = (int) ($remaining[$mid] ?? 0);
+            $packSize = max(1, (int) $poItem->pack_size);
+            $medicineUnitId = (int) $poItem->medicine?->unit_id;
 
-                Notification::make()
-                    ->warning()
-                    ->title('Qty tidak valid')
-                    ->body('Jumlah barang harus lebih dari 0')
-                    ->send();
-                continue;
+            // Sisa habis dibagi isi kemasan PO → tampil dalam kemasan; kalau tidak → eceran (satuan jual).
+            if ($sisa % $packSize === 0) {
+                $packUnitId = $poItem->pack_unit_id;
+                $packQty = intdiv($sisa, $packSize);
+            } else {
+                $packUnitId = $medicineUnitId;
+                $packSize = 1;
+                $packQty = $sisa;
             }
 
-            // Validasi 2: cek qty terhadap sisa PO
-            $receivedQty = ReceiveOrderItem::whereHas('receiveOrder', function ($q) use ($poId) {
-                $q->where('purchase_order_id', $poId);
-            })
-                ->where('medicine_id', $medicineId)
-                ->sum('qty');
-
-            $remainingQty = max(0, $poItem->qty - $receivedQty);
-
-            if ($inputQty > $remainingQty) {
-                $set("../../items.{$key}.qty", $remainingQty);
-
-                Notification::make()
-                    ->danger()
-                    ->title('Qty melebihi sisa PO')
-                    ->body("Sisa {$poItem->medicine->name} yang belum diterima: {$remainingQty}")
-                    ->send();
-                continue;
-            }
-
-            // Validasi 3: cek qty terhadap total PO
-            if ($inputQty > $poItem->qty) {
-                $set("../../items.{$key}.qty", $poItem->qty);
-
-                Notification::make()
-                    ->danger()
-                    ->title('Qty melebihi PO')
-                    ->body("Jumlah {$poItem->medicine->name} pada PO hanya {$poItem->qty}")
-                    ->send();
-                continue;
-            }
+            $items[] = [
+                'from_po' => true,
+                'po_max_qty' => $sisa,
+                'medicine_id' => $mid,
+                'medicine_name' => $poItem->medicine?->name,
+                'pack_unit_id' => $packUnitId,
+                'pack_size' => $packSize,
+                'pack_qty' => $packQty,
+                'pack_price' => round((float) $poItem->price * $packSize, 2),
+                'batch_number' => null,
+                'expired_month' => null,
+            ];
         }
+
+        $set('items', array_values($items));
+    }
+
+    public static function parseExpiredMonth(?string $value): ?Carbon
+    {
+        if (! $value || ! preg_match('/^(0[1-9]|1[0-2])-(\d{4})$/', $value, $m)) {
+            return null;
+        }
+
+        return Carbon::create((int) $m[2], (int) $m[1], 1)->startOfDay();
+    }
+
+    public static function dehydrateItem(array $data): array
+    {
+        $data = PackLine::dehydrate($data);
+        $data['expired_date'] = self::parseExpiredMonth($data['expired_month'] ?? null)?->toDateString();
+        $data['medicine_name'] = $data['medicine_name']
+            ?? Medicine::query()->whereKey($data['medicine_id'] ?? null)->value('name');
+        unset($data['expired_month'], $data['from_po'], $data['po_max_qty']);
+
+        return $data;
+    }
+
+    public static function hydrateItem(array $data): array
+    {
+        $data = PackLine::hydrate($data);
+        $data['expired_month'] = isset($data['expired_date']) ? Carbon::parse($data['expired_date'])->format('m-Y') : null;
+
+        return $data;
     }
 }

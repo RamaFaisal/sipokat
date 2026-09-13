@@ -72,7 +72,6 @@ function makePurchaseOrder(): PurchaseOrder
         'po_number' => sprintf('PO-FIX-%04d', $seq),
         'supplier_id' => test()->supplier->id,
         'po_date' => now()->toDateString(),
-        'status' => 'approved',
     ]);
 }
 
@@ -91,18 +90,21 @@ function makeReceiveOrder(
         'receive_order_number' => sprintf('RO-FIX-%04d', $seq),
         'purchase_order_id' => $purchaseOrder?->id,
         'supplier_id' => test()->supplier->id,
+        'invoice_number' => sprintf('INV-FIX-%04d', $seq),
         'receive_date' => now()->toDateString(),
-        'status' => 'completed',
     ]);
 
     ReceiveOrderItem::create([
         'receive_order_id' => $receiveOrder->id,
         'medicine_id' => $medicine->id,
         'medicine_name' => $medicine->name,
+        'pack_unit_id' => $medicine->unit_id,
+        'pack_size' => 1,
+        'pack_qty' => $qty,
         'qty' => $qty,
         'price' => FIXTURE_PURCHASE_PRICE,
         'batch_number' => $batch,
-        'expired_date' => $expiredDate,
+        'expired_date' => $expiredDate ?? now()->addYear()->startOfMonth()->toDateString(),
     ]);
 
     return $receiveOrder;

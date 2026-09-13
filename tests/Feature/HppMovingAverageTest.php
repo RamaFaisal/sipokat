@@ -28,13 +28,16 @@ function receiveOn(string $date, $medicine, int $qty, int $price, string $batch 
     $ro = ReceiveOrder::create([
         'receive_order_number' => sprintf('RO-HPP-%04d', $seq),
         'supplier_id' => test()->supplier->id,
+        'invoice_number' => sprintf('INV-HPP-%04d', $seq),
         'receive_date' => $date,
-        'status' => 'completed',
     ]);
     ReceiveOrderItem::create([
         'receive_order_id' => $ro->id,
         'medicine_id' => $medicine->id,
         'medicine_name' => $medicine->name,
+        'pack_unit_id' => $medicine->unit_id,
+        'pack_size' => 1,
+        'pack_qty' => $qty,
         'qty' => $qty,
         'price' => $price,
         'batch_number' => $batch,

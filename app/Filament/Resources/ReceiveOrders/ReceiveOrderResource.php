@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ReceiveOrders;
 
 use App\Filament\Resources\ReceiveOrders\Pages\CreateReceiveOrder;
+use App\Filament\Resources\ReceiveOrders\Pages\EditReceiveOrder;
 use App\Filament\Resources\ReceiveOrders\Pages\ListReceiveOrders;
 use App\Filament\Resources\ReceiveOrders\Schemas\ReceiveOrderForm;
 use App\Filament\Resources\ReceiveOrders\Tables\ReceiveOrdersTable;
@@ -50,6 +51,7 @@ class ReceiveOrderResource extends Resource
         return [
             'index' => ListReceiveOrders::route('/'),
             'create' => CreateReceiveOrder::route('/create'),
+            'edit' => EditReceiveOrder::route('/{record}/edit'),
         ];
     }
 

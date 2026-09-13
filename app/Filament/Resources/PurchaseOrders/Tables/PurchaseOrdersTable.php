@@ -3,180 +3,113 @@
 namespace App\Filament\Resources\PurchaseOrders\Tables;
 
 use App\Models\PurchaseOrder;
-use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Collection;
 
 class PurchaseOrdersTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with(['supplier', 'items'])->withCount('items'))
+            ->defaultSort('po_date', 'desc')
             ->columns([
                 TextColumn::make('po_number')
                     ->label('Nomor PO')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('po_date')
-                    ->label('Tanggal PO')
+                    ->label('Tanggal pesan')
                     ->date('d-m-Y')
                     ->sortable(),
                 TextColumn::make('supplier.name')
-                    ->label('Supplier')
-                    ->sortable(),
-                TextColumn::make('grand_total')
-                    ->label('Total')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('status')
-                    ->label('Status')
+                    ->label('PBF')
                     ->sortable()
-                    ->badge()
-                    ->color(fn(string $state): string => match ($state) {
-                        'draft' => 'warning',
-                        'approved' => 'info',
-                        'cancelled' => 'danger',
-                        'completed' => 'success',
-                    })
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'draft' => 'Draft',
-                        'approved' => 'Disetujui',
-                        'cancelled' => 'Dibatalkan',
-                        'completed' => 'Selesai',
-                    }),
-                TextColumn::make('status_payment')
-                    ->label('Status Pembayaran')
-                    ->sortable()
-                    ->badge()
-                    ->color(fn(string $state): string => match ($state) {
-                        'paid' => 'success',
-                        'unpaid' => 'warning',
-                        'partial' => 'danger',
-                    })
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'paid' => 'Lunas',
-                        'unpaid' => 'Belum Bayar',
-                        'partial' => 'Sebagian',
-                    }),
+                    ->searchable(),
+                TextColumn::make('items_count')
+                    ->label('Item')
+                    ->alignCenter(),
+                TextColumn::make('estimated_total')
+                    ->label('Perkiraan total')
+                    ->state(fn (PurchaseOrder $record) => $record->estimatedTotal())
+                    ->money('IDR')
+                    ->alignEnd(),
                 TextColumn::make('status_receive_order')
-                    ->label('Status Penerimaan')
+                    ->label('Penerimaan')
                     ->sortable()
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
-                        'received' => 'success',
-                        'pending' => 'danger',
-                        'partial' => 'warning',
+                    ->color(fn (string $state): string => match ($state) {
+                        PurchaseOrder::STATUS_RECEIVED => 'success',
+                        PurchaseOrder::STATUS_PARTIAL => 'warning',
+                        PurchaseOrder::STATUS_CLOSED => 'gray',
+                        default => 'danger',
                     })
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'pending' => 'Belum Diterima',
-                        'partial' => 'Sebagian Diterima',
-                        'received' => 'Diterima',
-                    }),
+                    ->formatStateUsing(fn (string $state): string => self::statusLabel($state)),
             ])
             ->filters([
-                //
+                SelectFilter::make('status_receive_order')
+                    ->label('Penerimaan')
+                    ->options([
+                        PurchaseOrder::STATUS_PENDING => 'Belum diterima',
+                        PurchaseOrder::STATUS_PARTIAL => 'Sebagian diterima',
+                        PurchaseOrder::STATUS_RECEIVED => 'Diterima lengkap',
+                        PurchaseOrder::STATUS_CLOSED => 'Ditutup',
+                    ]),
             ])
             ->recordActions([
-                Action::make('pay')
-                    ->label('Bayar')
-                    ->badge()
-                    ->color('success')
-                    ->icon('heroicon-o-credit-card')
-                    ->requiresConfirmation()
-                    ->disabled(fn($record) => $record->status_payment === 'paid')
-                    ->modalHeading('Pembayaran Purchase Order')
-                    ->form([
-                        Placeholder::make('po_number')
-                            ->label('Nomor PO')
-                            ->content(fn($record) => $record->po_number),
-
-                        Placeholder::make('grand_total')
-                            ->label('Total Pembayaran')
-                            ->content(fn($record) => 'Rp ' . number_format($record->grand_total, 0, ',', '.')),
-                    ])
-                    ->action(function (array $data, $record) {
-                        self::payAction($data, $record);
-                    }),
-                ActionGroup::make([
-                    EditAction::make()
-                        ->label('Edit')
-                        ->disabled(fn($record) => $record->status_payment === 'paid'),
-                    DeleteAction::make()
-                        ->label('Hapus')
-                        ->disabled(fn($record) => $record->status_payment === 'paid'),
-                    Action::make('preview')
-                        ->label('Cetak')
-                        ->icon('heroicon-o-printer')
-                        ->color('secondary')
-                        ->modalContent(function ($record) {
-                            $pdf = (new \App\Filament\Resources\PurchaseOrders\Tables\PurchaseOrdersTable)->previewProgressReportPdf($record);
-
-                            return view('filament.modals.pdf-view', ['pdf' => $pdf, 'downloadUrl' => ''])
-                                ->with('style', 'max-height: 90vh; overflow-y: auto;');
-                        })
-                        ->modalCancelAction(false)
-                        ->modalSubmitAction(false),
-                ]),
+                EditAction::make()
+                    ->label('Edit')
+                    // Setelah ada penerimaan, jumlah pesanan tidak diubah lagi — sisa PO harus tetap bermakna.
+                    ->disabled(fn (PurchaseOrder $record) => $record->status_receive_order !== PurchaseOrder::STATUS_PENDING),
+                DeleteAction::make()
+                    ->label('Hapus')
+                    ->disabled(fn (PurchaseOrder $record) => $record->status_receive_order !== PurchaseOrder::STATUS_PENDING),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('close')
+                        ->label('Tutup PO')
+                        ->icon('heroicon-o-lock-closed')
+                        ->color('gray')
+                        ->requiresConfirmation()
+                        ->modalHeading('Tutup PO')
+                        ->modalDescription('Sisa pesanan yang belum diterima dicatat sebagai tidak terpenuhi. PO yang sudah ditutup tidak muncul lagi di daftar sisa saat membuat penerimaan.')
+                        ->action(function (Collection $records) {
+                            $closed = 0;
+                            foreach ($records as $record) {
+                                if ($record->isOpen()) {
+                                    $record->forceFill(['status_receive_order' => PurchaseOrder::STATUS_CLOSED])->save();
+                                    $closed++;
+                                }
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title("{$closed} PO ditutup")
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                 ]),
             ]);
     }
 
-    public function previewProgressReportPdf($record)
+    public static function statusLabel(string $state): string
     {
-        $record->load([
-            'supplier',
-            'items.medicine',
-        ]);
-        $numberPo = $record->po_number;
-
-        $pdf = Pdf::loadView(
-            'print.print-purchase-order',
-            compact('record', 'numberPo')
-        );
-        $pdf->setPaper('letter', 'portrait');
-
-        return $pdf->stream();
-    }
-
-    public static function payAction(array $data, $record)
-    {
-        if ($record->status_payment === 'paid') {
-            Notification::make()
-                ->title('Purchase Order sudah lunas')
-                ->warning()
-                ->send();
-            return;
-        }
-
-        try {
-            DB::transaction(function () use ($data, $record) {
-                $record->update([
-                    'status_payment' => 'paid',
-                ]);
-            });
-            Notification::make()
-                ->title('Pembayaran berhasil')
-                ->success()
-                ->send();
-        } catch (\Throwable $e) {
-            report($e);
-            Notification::make()
-                ->title('Pembayaran gagal')
-                ->danger()
-                ->send();
-            throw $e;
-        }
+        return match ($state) {
+            PurchaseOrder::STATUS_PENDING => 'Belum diterima',
+            PurchaseOrder::STATUS_PARTIAL => 'Sebagian diterima',
+            PurchaseOrder::STATUS_RECEIVED => 'Diterima lengkap',
+            PurchaseOrder::STATUS_CLOSED => 'Ditutup',
+            default => $state,
+        };
     }
 }
