@@ -892,8 +892,8 @@ seluruh kode selesai (T1).
 | E8 | **Sinkronisasi dokumen** (D10): CLAUDE.md (§5.1, §5.4, §12, §13, §14), PRD, README (MySQL), `update-dari-wawancara.md` §3/§4.1, `IMPROVEMENT.md` ditutup; bersihkan permission Shield yang basi | E7 | — |
 | E9 | **Deploy VPS MySQL** + cron (D6, D8); roles via Shield oleh peneliti (D7) | E8 | — |
 
-
 **Status eksekusi (2026-09-14):** E0 `21b6218`/`2ab4b5a` · E1 `e5b89a4` (+ `f92a5b7` FilamentUser) · E2 `20e64cb` · E3 `932d259` · E4 `bb45654` · E5 `434729d` · E6 `70687e1` · E7 `5f6c7d6` (uji ujung-ke-ujung otomatis lewat halaman Filament; menemukan & memperbaiki 4 cacat) · E8 `8c7f6e8` · E9 `10c6558` (jalur migrasi dari nol diverifikasi di MySQL kosong; eksekusi di server oleh peneliti mengikuti `docs/deploy-vps.md`). Tambahan di luar rencana: `DemoApotekSeeder` dipensiunkan karena menulis ledger tanpa lapisan; permission Shield diperiksa, tidak ada yang basi.
+
 Yang bisa berjalan paralel: E6 template Excel (bukan seedernya) sejak E1; E8 dicicil per bagian
 tapi dikunci di akhir.
 
