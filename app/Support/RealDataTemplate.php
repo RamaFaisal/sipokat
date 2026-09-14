@@ -19,10 +19,10 @@ class RealDataTemplate
         'Obat' => [
             'nama' => 'Persis seperti tercetak di faktur PBF, termasuk kekuatan & merek',
             'kategori' => 'Obat Bebas / Obat Keras',
-            'satuan_jual' => 'Satuan kartu stok & jual: Strip, Flask, Tube, Pcs, Sachet, Ampul, Kaleng, Box',
-            'kemasan' => 'Satuan yang tertulis di faktur PBF: Box, Flask, Tube, ...',
+            'satuan_jual' => 'Satuan kartu stok & jual (nama atau alias): Tablet, Kaplet, Kapsul, Strip, Botol, Tube, Vial, Ampul, Pasang, Pcs, Sachet',
+            'kemasan' => 'Kemasan di faktur PBF (nama atau alias): BOX, STRIP, FLS, TUBE, KLG, AMP, ...',
             'isi_kemasan' => '1 kemasan = berapa satuan jual (1 bila sama)',
-            'min_stock' => 'Batas waspada dalam satuan jual (kosong = bawaan: Strip 20, lainnya isi kemasan)',
+            'min_stock' => 'Batas waspada dalam satuan jual, mis. 200 atau "200 Tablet" (kosong = bawaan: Strip 20, lainnya isi kemasan)',
         ],
         'SaldoAwal' => [
             'nama_obat' => 'Harus ada di sheet Obat',
@@ -54,7 +54,7 @@ class RealDataTemplate
     public const EXAMPLES = [
         'Obat' => [
             ['CALORTUSIN KAPLET', 'Obat Keras', 'Strip', 'Box', 10, 20],
-            ['LOSTACEF 125MG DRY SYR', 'Obat Keras', 'Flask', 'Flask', 1, 6],
+            ['LOSTACEF 125MG DRY SYR', 'Obat Keras', 'Botol', 'Botol', 1, 6],
             ['ACIFAR CR', 'Obat Bebas', 'Tube', 'Tube', 1, 5],
         ],
         'SaldoAwal' => [
@@ -63,7 +63,7 @@ class RealDataTemplate
         ],
         'Faktur' => [
             ['02028/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'CALORTUSIN KAPLET', 'Box', 10, 10, 41000, 'T10088BC', '10-2026'],
-            ['02026/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'LOSTACEF 125MG DRY SYR', 'Flask', 1, 60, 8500, '31232', '12-2026'],
+            ['02026/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'LOSTACEF 125MG DRY SYR', 'Botol', 1, 60, 8500, '31232', '12-2026'],
             ['02027/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'ACIFAR CR', 'Tube', 1, 20, 5900, '40423', '03-2027'],
         ],
         'Penjualan' => [

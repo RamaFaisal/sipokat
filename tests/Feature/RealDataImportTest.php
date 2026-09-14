@@ -12,7 +12,7 @@ use App\Support\RealDataTemplate;
  */
 beforeEach(function () {
     seedMasterFixtures();
-    foreach ([['Flask', 'FLS'], ['Tube', 'TUB'], ['Box', 'BOX']] as [$n, $a]) {
+    foreach ([['Botol', 'FLS'], ['Tube', 'TUB'], ['Box', 'BOX']] as [$n, $a]) {
         \App\Models\Unit::create(['name' => $n, 'alias' => $a]);
     }
     \App\Models\MedicineCategories::create(['name' => 'Obat Keras', 'alias' => 'OBK']);

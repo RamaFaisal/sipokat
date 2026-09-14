@@ -141,7 +141,12 @@ class RealDataImporter
     /** @return array<string, int> nama ternormalisasi => id */
     protected function importMedicines(array $rows): array
     {
-        $units = Unit::all()->keyBy(fn (Unit $u) => strtolower($u->name));
+        // Satuan dikenali lewat nama maupun alias (faktur PBF menulis FLS/KLG/AMP/TUBE).
+        $units = [];
+        foreach (Unit::all() as $u) {
+            $units[strtolower($u->name)] = $u;
+            $units[strtolower($u->alias)] = $u;
+        }
         $categories = MedicineCategories::all()->keyBy(fn ($c) => strtolower($c->name));
         $map = [];
 
@@ -162,6 +167,18 @@ class RealDataImporter
             }
             $packSize = max(1, (int) $row['isi_kemasan']);
 
+            // min_stock boleh ditulis "200 Tablet"; satuannya (bila ada) harus = satuan jual.
+            $minStock = (int) $row['min_stock'];
+            if (preg_match('/^\s*(\d+)\s*([A-Za-z]+)\s*$/', (string) $row['min_stock'], $m)) {
+                $minStock = (int) $m[1];
+                $suffix = $units[strtolower($m[2])] ?? null;
+                if (! $suffix || $suffix->id !== $unit->id) {
+                    $this->errors[] = "Obat baris {$row['_row']} ({$name}): satuan stok minimum '{$m[2]}' tidak sama dengan satuan jual '{$unit->name}'.";
+
+                    continue;
+                }
+            }
+
             $medicine = Medicine::firstOrNew(['name' => $name]);
             $medicine->fill([
                 'name' => $name,
@@ -169,7 +186,7 @@ class RealDataImporter
                 'unit_id' => $unit->id,
                 'pack_unit_id' => $pack->id,
                 'pack_size' => $packSize,
-                'min_stock' => (int) $row['min_stock'] > 0 ? (int) $row['min_stock'] : ($medicine->exists ? $medicine->min_stock : 0),
+                'min_stock' => $minStock > 0 ? $minStock : ($medicine->exists ? $medicine->min_stock : 0),
                 'status' => 'active',
             ]);
             if (! $medicine->exists) {

@@ -69,7 +69,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 ## 5. Scope
 
 ### In Scope ✅
-- Master data: obat (satuan jual, kemasan beli + isi, batas minimum), PBF, satuan; kategori dikunci Obat Bebas/Obat Keras
+- Master data: obat (satuan jual, kemasan beli + isi, batas minimum), PBF, satuan; kategori dikunci 4 golongan (Obat Bebas, Obat Bebas Terbatas, Obat Keras, Alat Kesehatan)
 - Procurement: PO per PBF (manual atau dari ranking SAW) + RO **satu per faktur** dengan input kemasan → konversi otomatis, penerimaan bertahap, batch + ED wajib
 - Inventory: kartu stok per batch via `MedicineStock` (baris D = lapisan, baris C menunjuk lapisan), HPP rata-rata bergerak, stock opname per batch, status otomatis
 - Sales: penjualan dengan alokasi **FEFO** otomatis, harga ≥ HPP, qty ≤ stok tersedia; tanpa edit (hapus → buat ulang)
@@ -261,7 +261,7 @@ medicine_stock_opnames ── medicine_stock_opname_items (layer_stock_id | batc
 
 saw_criteria ── saw_calculations (period, trigger_type, criteria_snapshot, total_alternatives, excluded_count) ── saw_calculation_results
 
-medicine_categories (2 golongan), units (master lookup)   ·   general_settings (app_name, kontak, ppn_rate)
+medicine_categories (4 golongan), units (master lookup)   ·   general_settings (app_name, kontak, ppn_rate)
 
 users ── (FK calculated_by, created_by, received_by di tabel transaksional)
 ```

@@ -136,8 +136,8 @@ class SpkTestDataSeeder extends Seeder
     /** @return Collection<string, Unit> keyed by lower name */
     protected function ensureUnits(): Collection
     {
-        foreach ([['Pcs', 'PCS'], ['Strip', 'STR'], ['Flask', 'FLS'], ['Sachet', 'SCH'], ['Box', 'BOX'], ['Tube', 'TUB'], ['Ampul', 'AMP'], ['Kaleng', 'KLG']] as [$n, $a]) {
-            Unit::updateOrCreate(['name' => $n], ['name' => $n, 'alias' => $a]);
+        foreach ([['Pcs', 'PCS'], ['Strip', 'STR'], ['Botol', 'FLS'], ['Sachet', 'SCH'], ['Box', 'BOX'], ['Tube', 'TUB'], ['Ampul', 'AMP'], ['Kaleng', 'KLG']] as [$n, $a]) {
+            Unit::updateOrCreate(['alias' => $a], ['name' => $n, 'alias' => $a]);
         }
         foreach ([['Obat Bebas', 'OBB'], ['Obat Keras', 'OBK']] as [$n, $a]) {
             MedicineCategories::updateOrCreate(['name' => $n], ['name' => $n, 'alias' => $a]);
@@ -154,7 +154,7 @@ class SpkTestDataSeeder extends Seeder
     {
         return [
             ['strip', 'box', 10, [20, 20, 20, 30, 10], 50],
-            ['flask', 'flask', 1, [6, 6, 10, 4], 18],
+            ['botol', 'botol', 1, [6, 6, 10, 4], 18],
             ['tube', 'box', 20, [5, 5, 8], 12],
             ['sachet', 'box', 30, [30, 60], 6],
             ['pcs', 'box', 100, [50, 100], 8],

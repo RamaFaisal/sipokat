@@ -12,7 +12,7 @@ bulan, sisa kedaluwarsa, dan harga pokok persediaan.
 
 ### Fitur Utama
 
-- **Master Data**: obat (satuan jual, kemasan beli + isi, batas minimum; kode `OBT-####` otomatis), PBF, satuan. Kategori dikunci Obat Bebas / Obat Keras.
+- **Master Data**: obat (satuan jual, kemasan beli + isi, batas minimum; kode `OBT-####` otomatis), PBF, satuan. Kategori dikunci 4 golongan (Obat Bebas, Obat Bebas Terbatas, Obat Keras, Alat Kesehatan) sesuai data apotek.
 - **Pengadaan**: Purchase Order per PBF (bisa dibuat dari ranking SAW) dan Receive Order **satu per faktur** dengan input dalam kemasan yang otomatis dikonversi ke satuan jual; status PO (pending/sebagian/lengkap/ditutup) turun dari penerimaan.
 - **Kartu stok per batch**: setiap penerimaan menjadi lapisan dengan nomor batch, ED, dan harga beli; **HPP rata-rata bergerak** dihitung per obat.
 - **Penjualan FEFO**: stok keluar otomatis dari batch dengan ED terdekat (bisa memecah ke beberapa batch); harga jual ≥ HPP; jumlah ≤ stok tersedia. Salah input → hapus dan buat ulang.

@@ -37,7 +37,7 @@ it('mengisi min_stock bawaan 20 untuk satuan jual Strip', function () {
 });
 
 it('mengisi min_stock bawaan = isi kemasan untuk satuan jual selain Strip', function () {
-    $flask = Unit::create(['name' => 'Flask', 'alias' => 'FLS']);
+    $flask = Unit::create(['name' => 'Botol', 'alias' => 'FLS']);
     $box = Unit::create(['name' => 'Box', 'alias' => 'BOX']);
 
     $m = makeMedicine([

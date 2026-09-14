@@ -12,7 +12,7 @@
 
 | Aspek | Status | Catatan |
 |-------|--------|---------|
-| Master Data (obat, PBF, satuan) | ✅ | Obat: 5 isian (nama, kategori, satuan jual, kemasan beli + isi, batas minimum). Kode `OBT-####` otomatis. Tanpa harga, dosis, foto, deskripsi (Bagian 1 rencana) |
+| Master Data (obat, PBF, satuan) | ✅ | Master riil 127 obat dimuat 2026-09-14 dari `storage/app/import/master-data-obat.xlsx`. Obat: 5 isian (nama, kategori, satuan jual, kemasan beli + isi, batas minimum). Kode `OBT-####` otomatis. Tanpa harga, dosis, foto, deskripsi (Bagian 1 rencana) |
 | Kartu stok per batch + HPP | ✅ | `medicine_stocks` = ledger lapisan: baris D membawa batch/ED, baris C menunjuk lapisan asalnya. HPP rata-rata bergerak per obat (Bagian 4) |
 | Procurement (PO → RO per faktur) | ✅ | PO = catatan internal per PBF setelah konfirmasi WA; satu RO = satu faktur; input dalam kemasan, tersimpan dalam satuan jual (Bagian 2–3) |
 | Penjualan FEFO | ✅ | Alokasi otomatis dari batch ED terdekat, bisa memecah ke beberapa lapisan; harga ≥ HPP; qty ≤ stok tersedia; tanpa edit (hapus → buat ulang) (Bagian 5) |
@@ -167,5 +167,5 @@ sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → ta
 > `C:\laragon\bin\php\php-8.4.25-nts-Win32-vs17-x64\php.exe`. `pdo_sqlite` tidak aktif di php.ini, jadi tes
 > dijalankan dengan `php -d extension=pdo_sqlite -d extension=sqlite3 vendor/pestphp/pest/bin/pest`
 > (bukan `artisan test`). `artisan tinker` tersangkut prompt interaktif — jangan dipakai.
-> Riwayat rencana sebelum revisi (Section 12–14 lama: rak obat dihapus, kategori 2 golongan, satuan
+> Riwayat rencana sebelum revisi (Section 12–14 lama: rak obat dihapus, kategori dikunci tanpa CRUD — kini 4 golongan sesuai data apotek, satuan
 > kemasan) tetap berlaku dan sudah tercermin di kode; dokumentasinya ada di git history.
