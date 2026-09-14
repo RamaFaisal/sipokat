@@ -21,7 +21,7 @@
 | Notifikasi stok & ED | ✅ | `sipokat:check-stock-and-expiry` harian 08:00 (Filament DB notification) |
 | Dashboard & widget | ✅ | Top-10 SAW, stok kritis, PO terbuka, batch mendekati ED, grafik penjualan |
 | Laporan | ✅ | Kartu stok per obat (per batch + HPP), Rekap penjualan/pembelian, Fast/slow moving — Excel & PDF |
-| Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat lewat jalur service) + template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
+| Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat sintetis) · `FakturNpmSeeder` (14 faktur asli NPM Mei 2024 → bulan berjalan, 137 lapisan untuk 127 obat riil) · template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
 | Pengujian | ✅ | 84 tes Pest / 826 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament |
 | Roles & Permissions | ⏸️ | Ditangani peneliti via Filament Shield (D7). Permission di DB sudah bersih dari halaman yang dihapus |
 | Deploy VPS (MySQL) + cron | 🔜 | E9 — jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |

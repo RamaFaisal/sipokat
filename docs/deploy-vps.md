@@ -34,6 +34,7 @@ Akun awal ada di `database/seeders/UserSeeder.php` — **ganti password** lewat 
 Susun role Admin / Petugas / Pemilik di menu **Roles** (Tabel 3.2).
 
 Data demo hanya bila diperlukan untuk peragaan: `php artisan db:seed --class=SpkTestDataSeeder --force`.
+Faktur asli PBF (14 faktur NPM, digeser ke bulan berjalan) setelah master riil dimuat: `php artisan db:seed --class=FakturNpmSeeder --force`.
 Data riil: `sipokat:data-riil:template` → isi → `sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → tanpa `--dry-run` → `sipokat:recalculate-saw`.
 
 ## 4. Nginx (ringkas)
