@@ -74,7 +74,7 @@ class MedicineForm
                                 ->default(1)
                                 ->live(onBlur: true)
                                 ->suffix(fn (callable $get) => self::unitName($get('unit_id')))
-                                ->helperText('1 kemasan pembelian = berapa satuan jual. Isi 1 bila kemasan sama dengan satuan jual.')
+                                ->helperText('1 kemasan pembelian = berapa satuan jual.')
                                 ->afterStateUpdated(function (callable $set, callable $get) {
                                     self::refreshDefaultMinStock($set, $get);
                                 }),

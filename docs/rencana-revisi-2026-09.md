@@ -385,6 +385,7 @@ banyak RO yang memenuhinya.
 | P10 | Di tabel ranking: penanda **"sudah dipesan"** untuk obat yang ada di PO terbuka (belum lengkap, belum ditutup) | Mencegah pesan dua kali; memperlihatkan lingkaran berjalan |
 | P11 | **Tidak** ada `saw_calculation_id` di PO | Keputusan peneliti. Konsekuensi: Bab IV tidak bisa menautkan PO ke snapshot perhitungan tertentu secara langsung |
 | P12 | Satu PO → banyak RO (satu per faktur); RO boleh menambah baris di luar PO (R11) | Lihat R9–R11 |
+| P13 | **Obat eksklusif PBF: tidak ada filter obat per PBF di form PO** (diputuskan 2026-09-14). Dropdown obat menampilkan semua obat aktif; apoteker sudah tahu item eksklusif yang jumlahnya sedikit (wawancara §4.1: PBF tidak melekat pada obat). Pemetaan obat–PBF tetap saran Bab 5.2 | Tidak ada perubahan kode |
 
 **Batasan yang harus ditulis di Bab 1.4**: SAW menentukan **urutan** restock, bukan **jumlah**. Jumlah
 pesanan di luar metode; Bab 5.2 boleh menyarankan EOQ atau permintaan × lead time.
