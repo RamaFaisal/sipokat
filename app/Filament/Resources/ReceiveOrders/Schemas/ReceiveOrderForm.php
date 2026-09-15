@@ -137,7 +137,6 @@ class ReceiveOrderForm
                                         $set('medicine_name', $state ? Medicine::query()->whereKey($state)->value('name') : null);
                                     }),
                                 PackLine::packUnitSelect()->columnSpan(2),
-                                PackLine::packSizeInput()->columnSpan(2),
                                 PackLine::packQtyInput('Jumlah')
                                     ->columnSpan(2)
                                     ->rules([
@@ -153,7 +152,8 @@ class ReceiveOrderForm
                                             }
                                         },
                                     ]),
-                                PackLine::packPriceInput('Harga / satuan input')->columnSpan(2),
+                                PackLine::packSizeInput()->columnSpan(2),
+                                PackLine::packPriceInput('Harga per kemasan')->columnSpan(2),
                                 TextInput::make('batch_number')
                                     ->label('No. batch')
                                     ->required()
@@ -176,7 +176,7 @@ class ReceiveOrderForm
                                         },
                                     ])
                                     ->columnSpan(3),
-                                PackLine::conversionPreview()->columnSpan(6),
+                                PackLine::subtotalPreview()->columnSpan(6),
                             ])
                             ->columns(12)
                             ->columnSpanFull()

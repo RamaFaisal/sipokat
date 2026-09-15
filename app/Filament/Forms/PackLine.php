@@ -53,10 +53,11 @@ class PackLine
             });
     }
 
+    /** Isi per kemasan: bawaan dari master obat, boleh diubah per baris. Di bawahnya tampil total dalam satuan jual. */
     public static function packSizeInput(): TextInput
     {
         return TextInput::make('pack_size')
-            ->label('Isi')
+            ->label('Isi per kemasan')
             ->numeric()
             ->integer()
             ->minValue(1)
@@ -65,7 +66,13 @@ class PackLine
             ->live(onBlur: true)
             ->disabled(fn (Get $get) => $get('pack_unit_id') && (int) $get('pack_unit_id') === self::medicineUnitId($get))
             ->dehydrated()
-            ->suffix(fn (Get $get) => self::medicineUnitName($get));
+            ->suffix(fn (Get $get) => self::medicineUnitName($get))
+            ->helperText(function (Get $get) {
+                [$qty] = self::convert($get('pack_qty'), $get('pack_size'), null);
+                $unit = self::medicineUnitName($get) ?: 'satuan jual';
+
+                return $qty === null ? null : new HtmlString('= <b>'.number_format($qty, 0, ',', '.').' '.e($unit).'</b>');
+            });
     }
 
     public static function packQtyInput(string $label = 'Jumlah'): TextInput
@@ -91,27 +98,32 @@ class PackLine
             ->live(onBlur: true);
     }
 
-    /** "= 50 Strip @ Rp 4.100 · Subtotal Rp 205.000" — dihitung saat tampil, tidak disimpan. */
-    public static function conversionPreview(): Placeholder
+    /** Subtotal baris (jumlah kemasan × harga per kemasan) di kanan; di bawahnya harga per satuan jual. Tidak disimpan. */
+    public static function subtotalPreview(): Placeholder
     {
         return Placeholder::make('conversion_preview')
-            ->label('Dalam satuan jual')
+            ->label('Subtotal')
             ->content(function (Get $get) {
                 [$qty, $price] = self::convert($get('pack_qty'), $get('pack_size'), $get('pack_price'));
                 $unit = self::medicineUnitName($get) ?: 'satuan jual';
 
-                if ($qty === null) {
-                    return new HtmlString('<span class="text-gray-400">—</span>');
+                if ($qty === null || $price === null) {
+                    return new HtmlString('<div class="text-right text-gray-400">—</div>');
                 }
 
-                $priceText = $price === null ? '—' : 'Rp '.number_format($price, 2, ',', '.');
-                $subtotal = $price === null ? '—' : 'Rp '.number_format($qty * $price, 0, ',', '.');
-
                 return new HtmlString(sprintf(
-                    '<span class="font-semibold">%s %s</span> @ %s &middot; Subtotal <span class="font-semibold">%s</span>',
-                    number_format($qty, 0, ',', '.'), e($unit), $priceText, $subtotal
+                    '<div class="text-right"><div class="font-semibold text-lg">Rp %s</div><div class="text-xs text-gray-500">@ Rp %s / %s</div></div>',
+                    number_format($qty * $price, 0, ',', '.'),
+                    number_format($price, 2, ',', '.'),
+                    e($unit)
                 ));
             });
+    }
+
+    /** @deprecated pakai subtotalPreview(); dipertahankan untuk pemanggil lama. */
+    public static function conversionPreview(): Placeholder
+    {
+        return self::subtotalPreview();
     }
 
     /**

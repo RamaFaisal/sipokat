@@ -58,17 +58,20 @@ class PurchaseOrderForm
                             ->schema([
                                 Select::make('medicine_id')
                                     ->label('Obat')
-                                    ->columnSpan(4)
+                                    ->columnSpan(3)
                                     ->options(fn () => Medicine::query()->where('status', 'active')->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(fn (Set $set, $state) => PackLine::applyMedicineDefaults($set, $state ? (int) $state : null)),
+                                    // Jumlah kemasan bawaan 1; ⌈min_stock ÷ isi⌉ hanya untuk PO dari ranking SAW (P5).
+                                    ->afterStateUpdated(fn (Set $set, $state) => PackLine::applyMedicineDefaults($set, $state ? (int) $state : null, defaultPackQty: 1)),
+                                // Urutan isian mengikuti cara petugas berpikir: satuan → jumlah kemasan → isi (sistem
+                                // menampilkan totalnya dalam satuan jual) → harga per kemasan → subtotal di kanan.
                                 PackLine::packUnitSelect()->columnSpan(2),
+                                PackLine::packQtyInput('Jumlah kemasan')->columnSpan(1),
                                 PackLine::packSizeInput()->columnSpan(2),
-                                PackLine::packQtyInput('Jumlah kemasan')->columnSpan(2),
-                                PackLine::packPriceInput('Harga perkemasan')->columnSpan(2),
-                                PackLine::conversionPreview()->columnSpanFull(),
+                                PackLine::packPriceInput('Harga per kemasan')->columnSpan(2),
+                                PackLine::subtotalPreview()->columnSpan(2),
                             ])
                             ->columns(12)
                             ->columnSpanFull()
