@@ -68,12 +68,12 @@ class PurchaseOrderForm
                                 // Urutan isian mengikuti cara petugas berpikir: satuan → jumlah kemasan → isi (sistem
                                 // menampilkan totalnya dalam satuan jual) → harga per kemasan → subtotal di kanan.
                                 PackLine::packUnitSelect()->columnSpan(2),
-                                PackLine::packQtyInput('Jumlah kemasan')->columnSpan(1),
+                                PackLine::packQtyInput('Jumlah kemasan')->columnSpan(2),
                                 PackLine::packSizeInput()->columnSpan(2),
-                                PackLine::packPriceInput('Harga per kemasan')->columnSpan(2),
-                                PackLine::subtotalInput()->columnSpan(2),
+                                PackLine::packPriceInput('Harga per kemasan')->columnSpan(3),
+                                PackLine::subtotalInput()->columnSpan(4),
                             ])
-                            ->columns(12)
+                            ->columns(16)
                             ->columnSpanFull()
                             ->addActionLabel('Tambah obat')
                             ->mutateRelationshipDataBeforeCreateUsing(fn (array $data) => PackLine::dehydrate($data))

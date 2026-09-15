@@ -8,6 +8,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Support\RawJs;
 use Illuminate\Support\HtmlString;
 
 /**
@@ -99,8 +100,11 @@ class PackLine
 
     public static function packPriceInput(string $label = 'Harga per kemasan'): TextInput
     {
+        // Masking rupiah: tampil 41.000 (pemisah ribuan titik), tersimpan 41000.
         return TextInput::make('pack_price')
             ->label($label)
+            ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+            ->stripCharacters('.')
             ->numeric()
             ->minValue(0)
             ->prefix('Rp')
