@@ -162,7 +162,7 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
     $rows = $ro2->get('data.items');
     expect($rows)->toHaveCount(1);
     $key = array_key_first($rows);
-    expect((int) $rows[$key]['pack_qty'])->toBe(2)->and((int) $rows[$key]['pack_size'])->toBe(10);
+    expect((int) $rows[$key]['pack_qty'])->toBe(2)->and((int) $rows[$key]['pack_size'])->toBe(10)->and($rows[$key]['subtotal'])->toBe('80.000');
 
     // Melebihi sisa PO ditolak (Q6).
     $ro2->fillForm(["items.{$key}.pack_qty" => 3, "items.{$key}.batch_number" => 'B2', "items.{$key}.expired_month" => $edFar->format('m-Y')])

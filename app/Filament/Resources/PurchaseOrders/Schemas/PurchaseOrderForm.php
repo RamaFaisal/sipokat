@@ -71,7 +71,7 @@ class PurchaseOrderForm
                                 PackLine::packQtyInput('Jumlah kemasan')->columnSpan(1),
                                 PackLine::packSizeInput()->columnSpan(2),
                                 PackLine::packPriceInput('Harga per kemasan')->columnSpan(2),
-                                PackLine::subtotalPreview()->columnSpan(2),
+                                PackLine::subtotalInput()->columnSpan(2),
                             ])
                             ->columns(12)
                             ->columnSpanFull()

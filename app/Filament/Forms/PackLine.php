@@ -4,7 +4,6 @@ namespace App\Filament\Forms;
 
 use App\Models\Medicine;
 use App\Models\Unit;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
@@ -14,9 +13,10 @@ use Illuminate\Support\HtmlString;
 /**
  * Baris pesanan/penerimaan dalam kemasan (rencana-revisi-2026-09 R1, P4, §1.5).
  *
- * Petugas mengetik apa yang tercetak di faktur — kemasan, isi, jumlah kemasan, harga per
+ * Petugas mengetik apa yang tercetak di faktur — kemasan, jumlah kemasan, isi, harga per
  * kemasan — dan sistem yang mengalikan. Yang tersimpan: qty dan price dalam satuan jual,
  * plus jejak konversi (pack_unit_id, pack_size, pack_qty). Master obat tidak ditulis balik (M11).
+ * Subtotal hanya tampilan (TextInput baca-saja), diperbarui lewat $set setiap isian berubah.
  */
 class PackLine
 {
@@ -31,11 +31,14 @@ class PackLine
 
         $packSize = max(1, (int) $medicine->pack_size);
         $unitPrice = $medicine->latestPurchasePrice();
+        $packQty = $defaultPackQty ?? (int) ceil(max(1, (int) $medicine->min_stock) / $packSize);
+        $packPrice = $unitPrice === null ? null : round($unitPrice * $packSize, 2);
 
         $set('pack_unit_id', $medicine->pack_unit_id);
         $set('pack_size', $packSize);
-        $set('pack_qty', $defaultPackQty ?? (int) ceil(max(1, (int) $medicine->min_stock) / $packSize));
-        $set('pack_price', $unitPrice === null ? null : round($unitPrice * $packSize, 2));
+        $set('pack_qty', $packQty);
+        $set('pack_price', $packPrice);
+        $set('subtotal', self::subtotal($packQty, $packPrice));
     }
 
     public static function packUnitSelect(): Select
@@ -50,28 +53,7 @@ class PackLine
                 if ($state && (int) $state === self::medicineUnitId($get)) {
                     $set('pack_size', 1);
                 }
-            });
-    }
-
-    /** Isi per kemasan: bawaan dari master obat, boleh diubah per baris. Di bawahnya tampil total dalam satuan jual. */
-    public static function packSizeInput(): TextInput
-    {
-        return TextInput::make('pack_size')
-            ->label('Isi per kemasan')
-            ->numeric()
-            ->integer()
-            ->minValue(1)
-            ->default(1)
-            ->required()
-            ->live(onBlur: true)
-            ->disabled(fn (Get $get) => $get('pack_unit_id') && (int) $get('pack_unit_id') === self::medicineUnitId($get))
-            ->dehydrated()
-            ->suffix(fn (Get $get) => self::medicineUnitName($get))
-            ->helperText(function (Get $get) {
-                [$qty] = self::convert($get('pack_qty'), $get('pack_size'), null);
-                $unit = self::medicineUnitName($get) ?: 'satuan jual';
-
-                return $qty === null ? null : new HtmlString('= <b>'.number_format($qty, 0, ',', '.').' '.e($unit).'</b>');
+                self::syncSubtotal($get, $set);
             });
     }
 
@@ -84,10 +66,38 @@ class PackLine
             ->minValue(1)
             ->default(1)
             ->required()
-            ->live(onBlur: true);
+            ->live(onBlur: true)
+            ->afterStateUpdated(fn (Get $get, Set $set) => self::syncSubtotal($get, $set));
     }
 
-    public static function packPriceInput(string $label = 'Harga per satuan input'): TextInput
+    /**
+     * Isi per kemasan dalam satuan jual: angka + nama satuan jual obat sebagai akhiran
+     * ("100 | Tablet"). Bawaan dari master obat, boleh diubah per baris; di bawahnya total baris
+     * dalam satuan jual.
+     */
+    public static function packSizeInput(): TextInput
+    {
+        return TextInput::make('pack_size')
+            ->label('Isi per kemasan')
+            ->numeric()
+            ->integer()
+            ->minValue(1)
+            ->default(1)
+            ->required()
+            ->live(onBlur: true)
+            ->disabled(fn (Get $get) => $get('pack_unit_id') && (int) $get('pack_unit_id') === self::medicineUnitId($get))
+            ->dehydrated()
+            ->suffix(fn (Get $get) => self::medicineUnitName($get) ?: 'satuan jual')
+            ->helperText(function (Get $get) {
+                [$qty] = self::convert($get('pack_qty'), $get('pack_size'), null);
+                $unit = self::medicineUnitName($get) ?: 'satuan jual';
+
+                return $qty === null ? null : new HtmlString('= <b>'.number_format($qty, 0, ',', '.').' '.e($unit).'</b>');
+            })
+            ->afterStateUpdated(fn (Get $get, Set $set) => self::syncSubtotal($get, $set));
+    }
+
+    public static function packPriceInput(string $label = 'Harga per kemasan'): TextInput
     {
         return TextInput::make('pack_price')
             ->label($label)
@@ -95,35 +105,41 @@ class PackLine
             ->minValue(0)
             ->prefix('Rp')
             ->required()
-            ->live(onBlur: true);
+            ->live(onBlur: true)
+            ->afterStateUpdated(fn (Get $get, Set $set) => self::syncSubtotal($get, $set));
     }
 
-    /** Subtotal baris (jumlah kemasan × harga per kemasan) di kanan; di bawahnya harga per satuan jual. Tidak disimpan. */
-    public static function subtotalPreview(): Placeholder
+    /** Subtotal = jumlah kemasan × harga per kemasan; kotak baca-saja, tidak disimpan. */
+    public static function subtotalInput(): TextInput
     {
-        return Placeholder::make('conversion_preview')
+        return TextInput::make('subtotal')
             ->label('Subtotal')
-            ->content(function (Get $get) {
-                [$qty, $price] = self::convert($get('pack_qty'), $get('pack_size'), $get('pack_price'));
+            ->prefix('Rp')
+            ->readOnly()
+            ->dehydrated(false)
+            ->extraInputAttributes(['class' => 'text-right font-semibold'])
+            ->helperText(function (Get $get) {
+                [, $price] = self::convert($get('pack_qty'), $get('pack_size'), $get('pack_price'));
                 $unit = self::medicineUnitName($get) ?: 'satuan jual';
 
-                if ($qty === null || $price === null) {
-                    return new HtmlString('<div class="text-right text-gray-400">—</div>');
-                }
-
-                return new HtmlString(sprintf(
-                    '<div class="text-right"><div class="font-semibold text-lg">Rp %s</div><div class="text-xs text-gray-500">@ Rp %s / %s</div></div>',
-                    number_format($qty * $price, 0, ',', '.'),
-                    number_format($price, 2, ',', '.'),
-                    e($unit)
-                ));
+                return $price === null ? null : '@ Rp '.number_format($price, 2, ',', '.').' / '.$unit;
             });
     }
 
-    /** @deprecated pakai subtotalPreview(); dipertahankan untuk pemanggil lama. */
-    public static function conversionPreview(): Placeholder
+    protected static function syncSubtotal(Get $get, Set $set): void
     {
-        return self::subtotalPreview();
+        $set('subtotal', self::subtotal($get('pack_qty'), $get('pack_price')));
+    }
+
+    /** Subtotal rupiah bulat berformat (jumlah kemasan × harga per kemasan); null bila belum lengkap. */
+    public static function subtotal($packQty, $packPrice): ?string
+    {
+        $packQty = (int) $packQty;
+        if ($packQty <= 0 || $packPrice === null || $packPrice === '') {
+            return null;
+        }
+
+        return number_format($packQty * (float) $packPrice, 0, ',', '.');
     }
 
     /**
@@ -155,16 +171,17 @@ class PackLine
         $data['pack_qty'] = (int) ($data['pack_qty'] ?? 0);
         $data['qty'] = $qty ?? 0;
         $data['price'] = $price ?? 0;
-        unset($data['pack_price'], $data['conversion_preview']);
+        unset($data['pack_price'], $data['subtotal'], $data['conversion_preview']);
 
         return $data;
     }
 
-    /** Saat form diisi dari DB: kembalikan harga per kemasan supaya petugas melihat angka faktur. */
+    /** Saat form diisi dari DB: kembalikan harga per kemasan & subtotal supaya petugas melihat angka faktur. */
     public static function hydrate(array $data): array
     {
         $packSize = max(1, (int) ($data['pack_size'] ?? 1));
         $data['pack_price'] = isset($data['price']) ? round((float) $data['price'] * $packSize, 2) : null;
+        $data['subtotal'] = self::subtotal($data['pack_qty'] ?? 0, $data['pack_price']);
 
         return $data;
     }

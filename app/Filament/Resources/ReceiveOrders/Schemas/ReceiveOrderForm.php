@@ -176,7 +176,7 @@ class ReceiveOrderForm
                                         },
                                     ])
                                     ->columnSpan(3),
-                                PackLine::subtotalPreview()->columnSpan(6),
+                                PackLine::subtotalInput()->columnSpan(6),
                             ])
                             ->columns(12)
                             ->columnSpanFull()
@@ -278,6 +278,7 @@ class ReceiveOrderForm
                 'pack_size' => $packSize,
                 'pack_qty' => $packQty,
                 'pack_price' => round((float) $poItem->price * $packSize, 2),
+                'subtotal' => PackLine::subtotal($packQty, round((float) $poItem->price * $packSize, 2)),
                 'batch_number' => null,
                 'expired_month' => null,
             ];
