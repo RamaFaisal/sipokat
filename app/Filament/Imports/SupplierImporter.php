@@ -7,6 +7,10 @@ use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
 
+/**
+ * Import master PBF. Tanpa kolom kode: kode dibuat model dari inisial nama saat
+ * creating. PBF dikenali dari nama (dedup, tidak peka huruf besar).
+ */
 class SupplierImporter extends Importer
 {
     protected static ?string $model = Supplier::class;
@@ -14,13 +18,6 @@ class SupplierImporter extends Importer
     public static function getColumns(): array
     {
         return [
-            ImportColumn::make('code')
-                ->label('Kode')
-                ->exampleHeader('Kode')
-                ->guess(['Kode', 'code'])
-                ->example('SUP001')
-                ->requiredMapping()
-                ->rules(['required', 'string', 'max:255']),
             ImportColumn::make('name')
                 ->label('Nama Supplier')
                 ->exampleHeader('Nama Supplier')
@@ -32,26 +29,20 @@ class SupplierImporter extends Importer
                 ->label('Alamat')
                 ->exampleHeader('Alamat')
                 ->guess(['Alamat', 'address'])
-                ->example('Jl. Veteran No. 9, Jakarta Pusat')
+                ->example('Jl. Tambak Aji No. 1A, Ngaliyan, Semarang')
                 ->rules(['nullable', 'string']),
             ImportColumn::make('phone')
-                ->label('Telepon')
-                ->exampleHeader('Telepon')
-                ->guess(['Telepon', 'phone', 'No HP'])
-                ->example('021-3441234')
+                ->label('Telp')
+                ->exampleHeader('Telp')
+                ->guess(['Telp', 'Telepon', 'phone', 'No HP'])
+                ->example('(024) 8664117')
                 ->rules(['nullable', 'string', 'max:50']),
-            ImportColumn::make('email')
-                ->label('Email')
-                ->exampleHeader('Email')
-                ->guess(['Email', 'email'])
-                ->example('cs@kimiafarma.co.id')
-                ->rules(['nullable', 'email', 'max:255']),
-            ImportColumn::make('pic')
-                ->label('PIC')
-                ->exampleHeader('PIC')
-                ->guess(['PIC', 'pic', 'Penanggung Jawab'])
-                ->example('Budi Santoso')
-                ->rules(['nullable', 'string', 'max:255']),
+            ImportColumn::make('fax')
+                ->label('Fax')
+                ->exampleHeader('Fax')
+                ->guess(['Fax', 'fax'])
+                ->example('(024) 8664123')
+                ->rules(['nullable', 'string', 'max:50']),
             ImportColumn::make('status')
                 ->label('Status (active/inactive)')
                 ->exampleHeader('Status')
@@ -64,9 +55,12 @@ class SupplierImporter extends Importer
 
     public function resolveRecord(): ?Supplier
     {
-        return Supplier::firstOrNew([
-            'code' => $this->data['code'],
-        ]);
+        $name = trim((string) ($this->data['name'] ?? ''));
+
+        return Supplier::query()
+            ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+            ->first()
+            ?? new Supplier(['name' => $name]);
     }
 
     public static function getCompletedNotificationBody(Import $import): string

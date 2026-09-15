@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Medicines\Tables;
 
 use App\Models\Medicine;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
@@ -75,7 +77,10 @@ class MedicinesTable
                     ->options(['active' => 'Aktif', 'inactive' => 'Tidak Aktif']),
             ])
             ->recordActions([
-                EditAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

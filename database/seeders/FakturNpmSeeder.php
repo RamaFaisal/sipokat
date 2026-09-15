@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\DB;
  */
 class FakturNpmSeeder extends Seeder
 {
-    public const SUPPLIER = ['code' => 'NPM', 'name' => 'PT. Nisa Permata Mulia', 'address' => 'Jl. Demak–Jepara, Dukuh Genting, Desa Sedo, Kec. Demak, Kab. Demak', 'phone' => '085640778829'];
+    public const SUPPLIER = PbfJatengSeeder::NPM;
 
     /** Bulan-tahun asal faktur; offset dihitung ke bulan berjalan. */
     public const ORIGIN = '2024-05';
@@ -240,7 +240,7 @@ class FakturNpmSeeder extends Seeder
     {
         $this->monthOffset = (int) Carbon::parse(self::ORIGIN.'-01')->startOfDay()->diffInMonths(Carbon::today()->startOfMonth());
 
-        $supplier = Supplier::firstOrCreate(['code' => self::SUPPLIER['code']], self::SUPPLIER + ['status' => 'active']);
+        $supplier = Supplier::firstOrCreate(['name' => self::SUPPLIER['name']], self::SUPPLIER + ['status' => 'active']); // kode otomatis: NPM
         $userId = User::query()->orderBy('id')->value('id');
         $units = [];
         foreach (Unit::all() as $u) {

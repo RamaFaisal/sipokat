@@ -78,7 +78,7 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
         ->assertHasNoFormErrors();
 
     $obat = Medicine::where('name', 'OBAT ALUR 500MG')->firstOrFail();
-    expect($obat->code)->toMatch('/^OBT-\d{4}$/');
+    expect($obat->code)->toMatch('/^OBT\d{4}$/');
 
     // Pembanding: obat kedua dengan stok melimpah supaya ranking bermakna.
     $lain = makeMedicine(['min_stock' => 10]);

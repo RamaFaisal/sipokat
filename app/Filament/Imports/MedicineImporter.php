@@ -81,6 +81,10 @@ class MedicineImporter extends Importer
         $unitName = trim((string) ($this->data['unit_name'] ?? ''));
         $packUnitName = trim((string) ($this->data['pack_unit_name'] ?? ''));
 
+        // Golongan lama di berkas apotek: "Obat Bebas Terbatas" dilebur ke Obat Bebas.
+        if (strtolower($categoryName) === 'obat bebas terbatas') {
+            $categoryName = 'Obat Bebas';
+        }
         $category = MedicineCategories::whereRaw('LOWER(name) = ?', [strtolower($categoryName)])->first();
         if (! $category) {
             throw ValidationException::withMessages([
@@ -114,14 +118,23 @@ class MedicineImporter extends Importer
             $medicine->stock_status = 'empty';
         }
 
+        return $medicine;
+    }
+
+    /**
+     * Dipanggil setelah validasi, sebelum fillRecord(). Kolom yang sudah diterjemahkan
+     * ke relasi di resolveRecord() dibuang di sini — bukan di resolveRecord(), karena
+     * Filament menjalankan resolveRecord() sebelum validasi dan `required` akan
+     * menganggap kolomnya kosong.
+     */
+    protected function beforeFill(): void
+    {
         // min_stock kosong → biarkan model mengisi bawaan per satuan saat creating.
         if (blank($this->data['min_stock'] ?? null)) {
             unset($this->data['min_stock']);
         }
 
         unset($this->data['name'], $this->data['category_name'], $this->data['unit_name'], $this->data['pack_unit_name']);
-
-        return $medicine;
     }
 
     public static function getCompletedNotificationBody(Import $import): string

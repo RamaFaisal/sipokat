@@ -148,6 +148,10 @@ class RealDataImporter
             $units[strtolower($u->alias)] = $u;
         }
         $categories = MedicineCategories::all()->keyBy(fn ($c) => strtolower($c->name));
+        // Golongan lama di berkas apotek: "Obat Bebas Terbatas" dilebur ke Obat Bebas.
+        if (isset($categories['obat bebas'])) {
+            $categories['obat bebas terbatas'] = $categories['obat bebas'];
+        }
         $map = [];
 
         foreach ($rows as $row) {
@@ -298,10 +302,8 @@ class RealDataImporter
                 continue;
             }
 
-            $supplier = Supplier::firstOrCreate(
-                ['name' => $pbfName],
-                ['code' => 'PBF-'.strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $pbfName), 0, 8)).'-'.mt_rand(100, 999), 'status' => 'active'],
-            );
+            // Kode PBF dibuat model dari inisial nama (Supplier::nextCode).
+            $supplier = Supplier::firstOrCreate(['name' => $pbfName], ['status' => 'active']);
 
             if (ReceiveOrder::where('supplier_id', $supplier->id)->where('invoice_number', $invoice)->exists()) {
                 $this->errors[] = "Faktur {$invoice} ({$pbfName}) sudah pernah diimpor.";

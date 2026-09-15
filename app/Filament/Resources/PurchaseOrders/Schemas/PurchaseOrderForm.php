@@ -46,8 +46,7 @@ class PurchaseOrderForm
                         DatePicker::make('po_date')
                             ->label('Tanggal pesan')
                             ->default(now())
-                            ->required()
-                            ->helperText('Tanggal konfirmasi ke sales.'),
+                            ->required(),
                     ]),
 
                 Section::make('Daftar Obat')
@@ -68,7 +67,7 @@ class PurchaseOrderForm
                                 PackLine::packUnitSelect()->columnSpan(2),
                                 PackLine::packSizeInput()->columnSpan(2),
                                 PackLine::packQtyInput('Jumlah kemasan')->columnSpan(2),
-                                PackLine::packPriceInput('Harga perkiraan / kemasan')->columnSpan(2),
+                                PackLine::packPriceInput('Harga perkemasan')->columnSpan(2),
                                 PackLine::conversionPreview()->columnSpanFull(),
                             ])
                             ->columns(12)

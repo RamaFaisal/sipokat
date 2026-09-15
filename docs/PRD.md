@@ -69,7 +69,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 ## 5. Scope
 
 ### In Scope ✅
-- Master data: obat (satuan jual, kemasan beli + isi, batas minimum), PBF, satuan; kategori dikunci 4 golongan (Obat Bebas, Obat Bebas Terbatas, Obat Keras, Alat Kesehatan)
+- Master data: obat (satuan jual, kemasan beli + isi, batas minimum), PBF, satuan; kategori dikunci 3 golongan (Obat Bebas, Obat Keras, Alat Kesehatan)
 - Procurement: PO per PBF (manual atau dari ranking SAW) + RO **satu per faktur** dengan input kemasan → konversi otomatis, penerimaan bertahap, batch + ED wajib
 - Inventory: kartu stok per batch via `MedicineStock` (baris D = lapisan, baris C menunjuk lapisan), HPP rata-rata bergerak, stock opname per batch, status otomatis
 - Sales: penjualan dengan alokasi **FEFO** otomatis, harga ≥ HPP, qty ≤ stok tersedia; tanpa edit (hapus → buat ulang)
@@ -106,7 +106,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 
 ### F-02 — Kelola Data Obat (CRUD)
 **As an** admin, **I want to** mengelola master obat lengkap dengan kode auto-generate.
-- Field: kode (auto `OBT-####`, tidak diubah), nama (uppercase, memuat kekuatan & merek seperti di faktur), kategori, **satuan jual** (= satuan kartu stok), **kemasan pembelian + isi** (1 Box = N satuan jual), min_stock (bawaan Strip 20, lainnya = isi kemasan), status
+- Field: kode (auto `OBT####`, tidak diubah), nama (uppercase, memuat kekuatan & merek seperti di faktur), kategori, **satuan jual** (= satuan kartu stok), **kemasan pembelian + isi** (1 Box = N satuan jual), min_stock (bawaan Strip 20, lainnya = isi kemasan), status
 - Tidak ada harga di master: harga beli dari RO, HPP dihitung; tidak ada dosis/foto/deskripsi
 - Validasi unik berdasarkan nama (dinormalkan) — di aplikasi, karena soft-delete
 - Import via Excel/CSV template (`MedicineImporter`) dengan download template otomatis (`ImporterTemplate`)
@@ -243,7 +243,7 @@ database/
 
 ### Data Model (17 model)
 ```
-medicines (code OBT-####, unit_id = satuan jual, pack_unit_id + pack_size = kemasan beli, min_stock)
+medicines (code OBT####, unit_id = satuan jual, pack_unit_id + pack_size = kemasan beli, min_stock)
    ├─ purchase_order_items (pack_unit_id, pack_size, pack_qty, price/satuan jual, qty)
    ├─ receive_order_items  (jejak kemasan + batch_number, expired_date)
    ├─ order_items (qty, price)
@@ -261,7 +261,7 @@ medicine_stock_opnames ── medicine_stock_opname_items (layer_stock_id | batc
 
 saw_criteria ── saw_calculations (period, trigger_type, criteria_snapshot, total_alternatives, excluded_count) ── saw_calculation_results
 
-medicine_categories (4 golongan), units (master lookup)   ·   general_settings (app_name, kontak, ppn_rate)
+medicine_categories (3 golongan), units (master lookup)   ·   general_settings (app_name, kontak, ppn_rate)
 
 users ── (FK calculated_by, created_by, received_by di tabel transaksional)
 ```
@@ -422,7 +422,7 @@ Tabel 3.10 draf proposal memuat konversi terbalik dari Tabel 3.5–3.8. Sistem m
 ## 13. Demo Data
 
 Seeder `SpkTestDataSeeder` (idempotent, lewat `StockMovementService` — jalur yang sama dengan UI) generate:
-- 150 obat dengan profil satuan/kemasan/min_stock bervariasi, kode `OBT-####`
+- 150 obat dengan profil satuan/kemasan/min_stock bervariasi, kode `OBT####`
 - 1 PBF "PT. Distributor SPK Test"; faktur ≤ 14 baris (seperti faktur asli)
 - Rencana per obat untuk semua bracket C1–C4: ~35% punya dua batch, ~8% sisa kedaluwarsa, ~10% stok tersedia 0
 - Penjualan 30 hari terakhir (FEFO), HPP terbentuk dari harga faktur

@@ -38,7 +38,7 @@ use Illuminate\Support\Str;
  */
 class SpkTestDataSeeder extends Seeder
 {
-    protected const SUPPLIER_CODE = 'SPK-DIST-TEST';
+    protected const SUPPLIER_NAME = 'PT. Distributor SPK Test'; // kode otomatis: DST
 
     protected const TOTAL_MEDICINES = 150;
 
@@ -122,10 +122,8 @@ class SpkTestDataSeeder extends Seeder
     protected function ensureSupplier(): Supplier
     {
         return Supplier::updateOrCreate(
-            ['code' => self::SUPPLIER_CODE],
+            ['name' => self::SUPPLIER_NAME],
             [
-                'name' => 'PT. Distributor SPK Test',
-                'pic' => 'Tester SPK',
                 'phone' => '081200000000',
                 'address' => 'Jl. Testing No. 1, Demak',
                 'status' => 'active',

@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\MedicineCategories;
-use App\Models\Supplier;
 use App\Models\Unit;
 use Illuminate\Database\Seeder;
 
@@ -15,7 +14,7 @@ class MasterDataSeeder extends Seeder
         $units = [
             ['alias' => 'PCS', 'name' => 'Pcs'],
             ['alias' => 'STR', 'name' => 'Strip'],
-            ['alias' => 'FLS', 'name' => 'Botol'],
+            ['alias' => 'FLS', 'name' => 'Flask'],
             ['alias' => 'SCH', 'name' => 'Sachet'],
             ['alias' => 'BOX', 'name' => 'Box'],
             ['alias' => 'TUB', 'name' => 'Tube'],
@@ -31,10 +30,9 @@ class MasterDataSeeder extends Seeder
             Unit::updateOrCreate(['alias' => $unit['alias']], $unit);
         }
 
-        // Seed Categories - golongan sesuai data apotek, tidak dikelola lewat CRUD
+        // Seed Categories - 3 golongan sesuai data apotek, tidak dikelola lewat CRUD (Obat Bebas Terbatas dilebur ke Obat Bebas)
         $categories = [
             ['name' => 'Obat Bebas', 'alias' => 'OBB', 'description' => 'Obat yang dapat dibeli bebas tanpa resep dokter'],
-            ['name' => 'Obat Bebas Terbatas', 'alias' => 'OBT', 'description' => 'Obat bebas dengan tanda peringatan, dijual tanpa resep dalam batas tertentu'],
             ['name' => 'Obat Keras', 'alias' => 'OBK', 'description' => 'Obat yang penyerahannya harus dengan resep dokter'],
             ['name' => 'Alat Kesehatan', 'alias' => 'ALK', 'description' => 'Alat kesehatan dan perbekalan non-obat'],
         ];
@@ -42,29 +40,6 @@ class MasterDataSeeder extends Seeder
             MedicineCategories::updateOrCreate(['name' => $cat['name']], $cat);
         }
 
-        // Seed Suppliers
-        $suppliers = [
-            [
-                'code' => 'SUP001',
-                'name' => 'Kimia Farma TD',
-                'address' => 'Jakarta',
-                'phone' => '021-123456',
-                'email' => 'contact@kimiafarma.id',
-                'pic' => 'Budi',
-                'status' => 'active',
-            ],
-            [
-                'code' => 'SUP002',
-                'name' => 'Enseval',
-                'address' => 'Bekasi',
-                'phone' => '021-987654',
-                'email' => 'info@enseval.com',
-                'pic' => 'Siti',
-                'status' => 'active',
-            ],
-        ];
-        foreach ($suppliers as $sup) {
-            Supplier::updateOrCreate(['name' => $sup['name']], $sup);
-        }
+        // PBF: lihat PbfJatengSeeder (daftar alamat PBF Dinkes Jawa Tengah).
     }
 }

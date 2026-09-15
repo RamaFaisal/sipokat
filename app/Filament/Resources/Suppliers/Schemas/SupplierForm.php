@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\Suppliers\Schemas;
 
+use App\Models\Supplier;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
 
 class SupplierForm
@@ -14,46 +16,32 @@ class SupplierForm
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->afterStateUpdated(function (TextInput $component, ?string $state, callable $set) {
-                        $excludedWords = ['PT', 'CV', 'UD', 'PD', 'FIRMA', 'KOPERASI', 'YAYASAN'];
-                        if (!empty($state)) {
-                            $words = preg_split("/\s+/", trim($state));
-                            $filtered = array_values(array_filter($words, function ($word) use ($excludedWords) {
-                                return !in_array(strtoupper($word), $excludedWords);
-                            }));
-                            if (empty($filtered)) {
-                                $filtered = $words;
-                            }
-                            $filtered = array_slice($filtered, 0, 3);
-                            $kode = strtoupper(implode('', array_map(function ($word) {
-                                return substr($word, 0, 1);
-                            }, $filtered)));
-                            if (count($filtered) === 1) {
-                                $kode = strtoupper(substr($filtered[0], 0, 3));
-                            }
-                            $set('code', substr($kode, 0, 3));
+                    ->label('Nama Supplier')
+                    ->afterStateUpdated(function (?string $state, callable $set, ?Supplier $record) {
+                        if ($record === null && filled($state)) {
+                            $set('code', Supplier::nextCode($state));
                         }
                     })
                     ->live(debounce: 1000)
                     ->required(),
                 TextInput::make('code')
                     ->label('Kode Supplier')
-                    ->reactive()
-                    ->required()
-                    ->readOnly(),
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->placeholder('Otomatis dari inisial nama'),
                 Textarea::make('address')
                     ->label('Alamat')
                     ->required()
                     ->columnSpanFull(),
-                TextInput::make('email')
-                    ->label('Email')
-                    ->email(),
-                TextInput::make('phone')
-                    ->label('Nomor Telepon')
-                    ->tel(),
-                TextInput::make('pic')
-                    ->label('Nama PIC')
-                    ->required(),
+                Grid::make(2)->schema([
+                    TextInput::make('phone')
+                        ->label('Telp')
+                        ->placeholder('(024) 8664117'),
+                    TextInput::make('fax')
+                        ->label('Fax')
+                        ->placeholder('(024) 8664123'),
+                ])
+                    ->columnSpanFull(),
                 Hidden::make('status')
                     ->label('Status')
                     ->default('active')

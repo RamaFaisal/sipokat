@@ -17,21 +17,26 @@ class SuppliersTable
     {
         return $table
             ->columns([
+                // Urutan kolom mengikuti daftar alamat PBF Dinkes: ID, Nama, Alamat, Telp, Fax.
+                TextColumn::make('code')
+                    ->label('Kode')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('name')
                     ->label('Nama Supplier')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('code')
-                    ->label('Kode Supplier')
-                    ->searchable(),
-                TextColumn::make('pic')
-                    ->label('PIC')
-                    ->searchable(),
                 TextColumn::make('address')
                     ->label('Alamat')
                     ->searchable()
-                    ->sortable()
-                    ->limit(20),
+                    ->wrap(),
+                TextColumn::make('phone')
+                    ->label('Telp')
+                    ->searchable()
+                    ->placeholder('—'),
+                TextColumn::make('fax')
+                    ->label('Fax')
+                    ->placeholder('—'),
                 TextColumn::make('status')
                     ->label('Status')
                     ->searchable()
@@ -46,8 +51,8 @@ class SuppliersTable
                 //
             ])
             ->recordActions([
-                EditAction::make(),
                 ActionGroup::make([
+                    EditAction::make(),
                     Action::make('Activate')
                         ->label('Aktifkan')
                         ->icon('heroicon-o-check-circle')

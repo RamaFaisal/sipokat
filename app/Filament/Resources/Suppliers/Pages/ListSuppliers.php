@@ -21,17 +21,7 @@ class ListSuppliers extends ListRecords
         return [
             ImportAction::make()
                 ->label('Import Supplier')
-                ->importer(SupplierImporter::class)
-                ->extraModalFooterActions([
-                    Action::make('downloadXlsxTemplate')
-                        ->label('Unduh contoh berkas XLSX')
-                        ->icon('heroicon-o-arrow-down-tray')
-                        ->color('gray')
-                        ->action(fn () => ImporterTemplate::xlsx(
-                            SupplierImporter::class,
-                            'template-import-supplier.xlsx'
-                        )),
-                ]),
+                ->importer(SupplierImporter::class),
             CreateAction::make()
                 ->label('Tambah Supplier Obat'),
         ];

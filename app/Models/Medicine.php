@@ -15,7 +15,7 @@ class Medicine extends Model
     /** Batas waspada bawaan untuk satuan jual Strip (batas waspada wawancara). */
     public const DEFAULT_MIN_STOCK_STRIP = 20;
 
-    public const CODE_PREFIX = 'OBT-';
+    public const CODE_PREFIX = 'OBT';
 
     protected $fillable = [
         'code',
@@ -55,24 +55,39 @@ class Medicine extends Model
     }
 
     /**
-     * Kode sekuensial OBT-0001, dibuat sekali dan tidak pernah dihitung ulang.
+     * Kode sekuensial OBT0001, dibuat sekali dan tidak pernah dihitung ulang.
      * Termasuk baris soft-deleted supaya nomor tidak terpakai dua kali. Transaksi +
      * lockForUpdate menyerialkan dua pembuatan obat yang bersamaan (di SQLite lock diabaikan,
      * tidak masalah untuk test).
      */
     public static function nextCode(): string
     {
-        return DB::transaction(function () {
-            $last = static::withTrashed()
-                ->where('code', 'like', self::CODE_PREFIX.'%')
-                ->orderByDesc('code')
-                ->lockForUpdate()
-                ->value('code');
+        return DB::transaction(fn () => self::computeNextCode(lock: true));
+    }
 
-            $next = $last ? ((int) substr($last, strlen(self::CODE_PREFIX))) + 1 : 1;
+    /**
+     * Pratinjau kode berikutnya untuk ditampilkan di form tambah — tanpa lock, jadi
+     * nomornya baru pasti saat disimpan (creating memanggil nextCode()).
+     */
+    public static function peekNextCode(): string
+    {
+        return self::computeNextCode(lock: false);
+    }
 
-            return sprintf('%s%04d', self::CODE_PREFIX, $next);
-        });
+    private static function computeNextCode(bool $lock): string
+    {
+        $query = static::withTrashed()
+            ->where('code', 'like', self::CODE_PREFIX.'%')
+            ->orderByDesc('code');
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        $last = $query->value('code');
+        $next = $last ? ((int) substr($last, strlen(self::CODE_PREFIX))) + 1 : 1;
+
+        return sprintf('%s%04d', self::CODE_PREFIX, $next);
     }
 
     /** Bawaan batas waspada: Strip 20, satuan lain = isi satu kemasan (M9, B6). */

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Medicine;
 use App\Models\Unit;
 
 /**
@@ -11,23 +12,23 @@ beforeEach(function () {
     seedMasterFixtures();
 });
 
-it('membuat kode OBT-#### berurutan dan tidak memakai ulang nomor obat yang dihapus', function () {
+it('membuat kode OBT#### berurutan dan tidak memakai ulang nomor obat yang dihapus', function () {
     $a = makeMedicine();
     $b = makeMedicine();
 
-    expect($a->code)->toBe('OBT-0001')
-        ->and($b->code)->toBe('OBT-0002');
+    expect($a->code)->toBe('OBT0001')
+        ->and($b->code)->toBe('OBT0002');
 
     $b->delete(); // soft delete
 
-    expect(makeMedicine()->code)->toBe('OBT-0003');
+    expect(makeMedicine()->code)->toBe('OBT0003');
 });
 
 it('tidak menghitung ulang kode saat obat diubah', function () {
     $m = makeMedicine();
     $m->update(['name' => 'NAMA BARU 10MG']);
 
-    expect($m->fresh()->code)->toBe('OBT-0001');
+    expect($m->fresh()->code)->toBe('OBT0001');
 });
 
 it('mengisi min_stock bawaan 20 untuk satuan jual Strip', function () {
@@ -76,4 +77,34 @@ it('mengabaikan RO yang sudah dihapus saat mencari harga terakhir', function () 
     $ro->delete();
 
     expect($m->latestPurchasePrice())->toBeNull();
+});
+
+it('menampilkan pratinjau kode di form tambah, menetapkannya saat simpan, dan tidak bisa diubah dari form edit', function () {
+    \Illuminate\Support\Facades\Gate::before(fn () => true);
+    $this->actingAs(\App\Models\User::factory()->create());
+    makeMedicine(); // OBT0001 sudah terpakai
+
+    $create = \Livewire\Livewire::test(\App\Filament\Resources\Medicines\Pages\CreateMedicine::class)
+        ->assertSchemaStateSet(['code' => 'OBT0002']);
+
+    $create->fillForm([
+        'name' => 'obat baru 10mg',
+        'category_id' => $this->category->id,
+        'unit_id' => $this->unit->id,
+        'pack_unit_id' => $this->unit->id,
+        'pack_size' => 1,
+        'min_stock' => 20,
+        'status' => 'active',
+    ])->call('create')->assertHasNoFormErrors();
+
+    $m = Medicine::where('name', 'OBAT BARU 10MG')->firstOrFail();
+    expect($m->code)->toBe('OBT0002');
+
+    \Livewire\Livewire::test(\App\Filament\Resources\Medicines\Pages\EditMedicine::class, ['record' => $m->getRouteKey()])
+        ->assertSchemaStateSet(['code' => 'OBT0002'])
+        ->fillForm(['code' => 'OBT9999', 'name' => 'OBAT BARU 10MG'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($m->fresh()->code)->toBe('OBT0002');
 });

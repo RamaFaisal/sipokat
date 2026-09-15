@@ -18,7 +18,7 @@ class RealDataTemplate
     public const SHEETS = [
         'Obat' => [
             'nama' => 'Persis seperti tercetak di faktur PBF, termasuk kekuatan & merek',
-            'kategori' => 'Obat Bebas / Obat Keras',
+            'kategori' => 'Obat Bebas / Obat Keras / Alat Kesehatan ("Obat Bebas Terbatas" dianggap Obat Bebas)',
             'satuan_jual' => 'Satuan kartu stok & jual (nama atau alias): Tablet, Kaplet, Kapsul, Strip, Botol, Tube, Vial, Ampul, Pasang, Pcs, Sachet',
             'kemasan' => 'Kemasan di faktur PBF (nama atau alias): BOX, STRIP, FLS, TUBE, KLG, AMP, ...',
             'isi_kemasan' => '1 kemasan = berapa satuan jual (1 bila sama)',

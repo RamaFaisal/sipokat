@@ -29,7 +29,7 @@ class MedicineForm
                                 ->required()
                                 ->maxLength(255)
                                 ->placeholder('Contoh: ALLOPURINOL 100MG IFI')
-                                ->helperText('Tulis persis seperti tercetak di faktur PBF, termasuk kekuatan dan merek.')
+                                ->helperText('Tulis persis seperti tercetak di faktur PBF')
                                 ->extraInputAttributes(['style' => 'text-transform: uppercase'])
                                 ->dehydrateStateUsing(fn ($state) => Medicine::normalizeName($state))
                                 ->unique(
@@ -91,8 +91,7 @@ class MedicineForm
                                 ->numeric()
                                 ->integer()
                                 ->minValue(1)
-                                ->suffix(fn (callable $get) => self::unitName($get('unit_id')))
-                                ->helperText('Bawaan: Strip 20, satuan lain = isi satu kemasan. Dipakai notifikasi dan sebagai pembanding stok pada perhitungan prioritas.'),
+                                ->suffix(fn (callable $get) => self::unitName($get('unit_id'))),
                             Select::make('status')
                                 ->label('Status')
                                 ->required()
@@ -101,11 +100,11 @@ class MedicineForm
                                     'inactive' => 'Tidak Aktif',
                                 ])
                                 ->default('active'),
-                            TextInput::make('code')
+                                TextInput::make('code')
                                 ->label('Kode')
+                                ->default(fn () => Medicine::peekNextCode())
                                 ->disabled()
-                                ->dehydrated(false)
-                                ->placeholder('Otomatis saat disimpan'),
+                                ->dehydrated(false),
                         ]),
                     ])
                     ->columnSpanFull(),

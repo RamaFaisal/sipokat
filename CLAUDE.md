@@ -12,7 +12,7 @@
 
 | Aspek | Status | Catatan |
 |-------|--------|---------|
-| Master Data (obat, PBF, satuan) | ✅ | Master riil 127 obat dimuat 2026-09-14 dari `storage/app/import/master-data-obat.xlsx`. Obat: 5 isian (nama, kategori, satuan jual, kemasan beli + isi, batas minimum). Kode `OBT-####` otomatis. Tanpa harga, dosis, foto, deskripsi (Bagian 1 rencana) |
+| Master Data (obat, PBF, satuan) | ✅ | Master riil 127 obat dimuat 2026-09-14 dari `storage/app/import/master-data-obat.xlsx`. Obat: 5 isian (nama, kategori, satuan jual, kemasan beli + isi, batas minimum). Kode `OBT####` otomatis. Tanpa harga, dosis, foto, deskripsi (Bagian 1 rencana). PBF: kolom seperti daftar alamat PBF Dinkes (kode, nama, alamat, telp, fax); `PbfJatengSeeder` 8 PBF Semarang/Demak/Kudus (termasuk NPM) |
 | Kartu stok per batch + HPP | ✅ | `medicine_stocks` = ledger lapisan: baris D membawa batch/ED, baris C menunjuk lapisan asalnya. HPP rata-rata bergerak per obat (Bagian 4) |
 | Procurement (PO → RO per faktur) | ✅ | PO = catatan internal per PBF setelah konfirmasi WA; satu RO = satu faktur; input dalam kemasan, tersimpan dalam satuan jual (Bagian 2–3) |
 | Penjualan FEFO | ✅ | Alokasi otomatis dari batch ED terdekat, bisa memecah ke beberapa lapisan; harga ≥ HPP; qty ≤ stok tersedia; tanpa edit (hapus → buat ulang) (Bagian 5) |
@@ -48,7 +48,8 @@ Rincian dan alasannya: `docs/rencana-revisi-2026-09.md`. Ini yang harus dipatuhi
 
 **Master obat (M1–M12)**
 - `unit_id` = **satuan jual = satuan kartu stok**. `pack_unit_id` + `pack_size` = kemasan beli dari PBF (1 Box = N satuan jual). Isi kemasan milik obat, bukan milik satuan.
-- Nama unik (dinormalkan huruf besar; aplikasi, bukan indeks DB karena soft-delete). Kode `OBT-####` berurutan, tidak diubah.
+- Nama unik (dinormalkan huruf besar; aplikasi, bukan indeks DB karena soft-delete). Kode `OBT####` berurutan, tidak diubah; form tambah menampilkan pratinjau (`peekNextCode`), nomor pasti ditetapkan saat `creating`.
+- PBF: kode dari inisial nama (`Supplier::nextCode`: "PT. Nisa Permata Mulia" → NPM, tabrakan → NPM2), otomatis saat `creating`; tidak diketik di form maupun berkas import.
 - `min_stock` bawaan: Strip → 20, lainnya = `pack_size`; harus > 0.
 
 **Kartu stok & HPP (S3, F1–F7, B5)**
@@ -167,5 +168,12 @@ sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → ta
 > `C:\laragon\bin\php\php-8.4.25-nts-Win32-vs17-x64\php.exe`. `pdo_sqlite` tidak aktif di php.ini, jadi tes
 > dijalankan dengan `php -d extension=pdo_sqlite -d extension=sqlite3 vendor/pestphp/pest/bin/pest`
 > (bukan `artisan test`). `artisan tinker` tersangkut prompt interaktif — jangan dipakai.
-> Riwayat rencana sebelum revisi (Section 12–14 lama: rak obat dihapus, kategori dikunci tanpa CRUD — kini 4 golongan sesuai data apotek, satuan
+> Riwayat rencana sebelum revisi (Section 12–14 lama: rak obat dihapus, kategori dikunci tanpa CRUD — kini 3 golongan: Obat Bebas, Obat Keras, Alat Kesehatan, satuan
 > kemasan) tetap berlaku dan sudah tercermin di kode; dokumentasinya ada di git history.
+
+## 9. Aturan Commit (wajib, permintaan peneliti 2026-09-15)
+
+- Format **Conventional Commits** satu baris: `type(scope): ringkasan` — `feat`, `fix`, `docs`, `test`, `chore`, `refactor`.
+- **Tanpa body**, **tanpa trailer/atribusi Claude** (tidak ada `Co-Authored-By`, tidak ada tanda "generated with").
+- Ringkasan berbahasa Indonesia, konsisten dengan riwayat commit yang ada.
+- Sebelum commit: suite tes hijau. Setelah commit, **push** ke `origin` cabang aktif.

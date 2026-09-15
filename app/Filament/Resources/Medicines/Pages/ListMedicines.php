@@ -21,17 +21,7 @@ class ListMedicines extends ListRecords
         return [
             ImportAction::make()
                 ->label('Import Obat')
-                ->importer(MedicineImporter::class)
-                ->extraModalFooterActions([
-                    Action::make('downloadXlsxTemplate')
-                        ->label('Unduh contoh berkas XLSX')
-                        ->icon('heroicon-o-arrow-down-tray')
-                        ->color('gray')
-                        ->action(fn () => ImporterTemplate::xlsx(
-                            MedicineImporter::class,
-                            'template-import-obat.xlsx'
-                        )),
-                ]),
+                ->importer(MedicineImporter::class),
             CreateAction::make()
                 ->label('Tambah Obat'),
         ];
