@@ -37,17 +37,20 @@ class ReceiveOrderForm
         return $schema
             ->components([
                 Section::make('Faktur')
-                    ->columns(4)
+                    // Baris 1: Nomor RO · Dari PO (2 kolom); baris 2: PBF · Nomor faktur · Tanggal terima (3 kolom).
+                    ->columns(6)
                     ->columnSpanFull()
                     ->schema([
                         TextInput::make('receive_order_number')
                             ->label('Nomor RO')
+                            ->columnSpan(3)
                             ->default(fn () => ReceiveOrder::nextNumber())
                             ->readOnly()
                             ->dehydrated()
                             ->required(),
                         Select::make('purchase_order_id')
-                            ->label('Dari PO')
+                            ->label('Dari PO (Opsional)')
+                            ->columnSpan(3)
                             ->options(fn () => PurchaseOrder::query()
                                 ->whereIn('status_receive_order', [PurchaseOrder::STATUS_PENDING, PurchaseOrder::STATUS_PARTIAL])
                                 ->with('supplier')
@@ -58,7 +61,6 @@ class ReceiveOrderForm
                             ->live()
                             ->disabled(fn (?ReceiveOrder $record) => $record !== null)
                             ->dehydrated()
-                            ->helperText('Opsional. Satu PO bisa dipenuhi banyak faktur.')
                             ->afterStateUpdated(function (Get $get, Set $set, $state) {
                                 $po = $state ? PurchaseOrder::find($state) : null;
                                 if ($po) {
@@ -69,6 +71,7 @@ class ReceiveOrderForm
                             }),
                         Select::make('supplier_id')
                             ->label('PBF')
+                            ->columnSpan(2)
                             ->relationship('supplier', 'name', fn ($query) => $query->where('status', 'active')->orderBy('name'))
                             ->searchable()
                             ->preload()
@@ -78,6 +81,7 @@ class ReceiveOrderForm
                             ->dehydrated(),
                         TextInput::make('invoice_number')
                             ->label('Nomor faktur PBF')
+                            ->columnSpan(2)
                             ->required()
                             ->maxLength(100)
                             ->placeholder('02028/NPM/5/24')
@@ -92,6 +96,7 @@ class ReceiveOrderForm
                             ]),
                         DatePicker::make('receive_date')
                             ->label('Tanggal terima')
+                            ->columnSpan(2)
                             ->default(now())
                             ->required()
                             ->live(onBlur: true),
