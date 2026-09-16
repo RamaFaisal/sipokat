@@ -100,13 +100,15 @@ class PackLine
 
     public static function packPriceInput(string $label = 'Harga per kemasan'): TextInput
     {
-        // Masking rupiah: tampil 41.000 (pemisah ribuan titik), tersimpan 41000.
+        // Masking rupiah: tampil 41.000 (pemisah ribuan titik), tersimpan 41000. Tanpa numeric():
+        // cast angkanya membaca "41.000" sebagai 41 dan menulis balik ke kotak; validasi lewat rules
+        // pada nilai yang sudah dibuang titiknya (mutateStateForValidation).
         return TextInput::make('pack_price')
             ->label($label)
             ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
             ->stripCharacters('.')
-            ->numeric()
-            ->minValue(0)
+            ->inputMode('numeric')
+            ->rules(['numeric', 'min:0'])
             ->prefix('Rp')
             ->required()
             ->live(onBlur: true)
@@ -139,11 +141,35 @@ class PackLine
     public static function subtotal($packQty, $packPrice): ?string
     {
         $packQty = (int) $packQty;
-        if ($packQty <= 0 || $packPrice === null || $packPrice === '') {
+        $packPrice = self::toNumber($packPrice);
+        if ($packQty <= 0 || $packPrice === null) {
             return null;
         }
 
-        return number_format($packQty * (float) $packPrice, 0, ',', '.');
+        return number_format($packQty * $packPrice, 0, ',', '.');
+    }
+
+    /**
+     * Harga dari kotak bertopeng: "41.000" → 41000, "7.053,57" → 7053.57, 41000 → 41000.
+     * Sebelum dehydrate, state masih berbentuk teks bertopeng (Alpine mengirim apa adanya).
+     */
+    public static function toNumber($value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+        $s = trim((string) $value);
+        if (str_contains($s, ',')) {
+            $s = str_replace('.', '', $s);
+            $s = str_replace(',', '.', $s);
+        } elseif (preg_match('/^\d{1,3}(\.\d{3})+$/', $s)) {
+            $s = str_replace('.', '', $s);
+        }
+
+        return is_numeric($s) ? (float) $s : null;
     }
 
     /**
@@ -161,7 +187,8 @@ class PackLine
         }
 
         $qty = $packQty * $packSize;
-        $price = ($packPrice === null || $packPrice === '') ? null : round((float) $packPrice / $packSize, 2);
+        $packPrice = self::toNumber($packPrice);
+        $price = $packPrice === null ? null : round($packPrice / $packSize, 2);
 
         return [$qty, $price];
     }

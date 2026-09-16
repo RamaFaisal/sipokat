@@ -96,7 +96,7 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
             'pack_unit_id' => $this->box->id,
             'pack_size' => 10,
             'pack_qty' => 2,
-            'pack_price' => 40000,
+            'pack_price' => '40.000', // teks bertopeng seperti yang dikirim browser
             'batch_number' => 'B1',
             'expired_month' => $edNear->format('m-Y'),
         ]))
