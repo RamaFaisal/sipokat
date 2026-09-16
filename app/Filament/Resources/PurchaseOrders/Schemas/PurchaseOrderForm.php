@@ -58,22 +58,21 @@ class PurchaseOrderForm
                             ->schema([
                                 Select::make('medicine_id')
                                     ->label('Obat')
-                                    ->columnSpan(3)
+                                    ->columnSpan(1)
                                     ->options(fn () => Medicine::query()->where('status', 'active')->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->required()
                                     ->live()
                                     // Jumlah kemasan bawaan 1; ⌈min_stock ÷ isi⌉ hanya untuk PO dari ranking SAW (P5).
                                     ->afterStateUpdated(fn (Set $set, $state) => PackLine::applyMedicineDefaults($set, $state ? (int) $state : null, defaultPackQty: 1)),
-                                // Urutan isian mengikuti cara petugas berpikir: satuan → jumlah kemasan → isi (sistem
-                                // menampilkan totalnya dalam satuan jual) → harga per kemasan → subtotal di kanan.
-                                PackLine::packUnitSelect()->columnSpan(2),
-                                PackLine::packQtyInput('Jumlah kemasan')->columnSpan(2),
-                                PackLine::packSizeInput()->columnSpan(2),
-                                PackLine::packPriceInput('Harga per kemasan')->columnSpan(3),
-                                PackLine::subtotalInput()->columnSpan(4),
+                                // Dua baris × 3 kolom: Obat · Satuan input · Jumlah kemasan / Isi per kemasan · Harga per kemasan · Subtotal.
+                                PackLine::packUnitSelect()->columnSpan(1),
+                                PackLine::packQtyInput('Jumlah kemasan')->columnSpan(1),
+                                PackLine::packSizeInput()->columnSpan(1),
+                                PackLine::packPriceInput('Harga per kemasan')->columnSpan(1),
+                                PackLine::subtotalInput()->columnSpan(1),
                             ])
-                            ->columns(16)
+                            ->columns(3)
                             ->columnSpanFull()
                             ->addActionLabel('Tambah obat')
                             ->mutateRelationshipDataBeforeCreateUsing(fn (array $data) => PackLine::dehydrate($data))
