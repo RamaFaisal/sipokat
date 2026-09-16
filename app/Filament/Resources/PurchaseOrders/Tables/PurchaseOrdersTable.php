@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PurchaseOrders\Tables;
 
 use App\Models\PurchaseOrder;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -65,13 +66,14 @@ class PurchaseOrdersTable
                     ]),
             ])
             ->recordActions([
-                EditAction::make()
-                    ->label('Edit')
-                    // Setelah ada penerimaan, jumlah pesanan tidak diubah lagi — sisa PO harus tetap bermakna.
-                    ->disabled(fn (PurchaseOrder $record) => $record->status_receive_order !== PurchaseOrder::STATUS_PENDING),
-                DeleteAction::make()
-                    ->label('Hapus')
-                    ->disabled(fn (PurchaseOrder $record) => $record->status_receive_order !== PurchaseOrder::STATUS_PENDING),
+                ActionGroup::make([
+                    EditAction::make()
+                        ->label('Edit')
+                        ->disabled(fn (PurchaseOrder $record) => $record->status_receive_order !== PurchaseOrder::STATUS_PENDING),
+                    DeleteAction::make()
+                        ->label('Hapus')
+                        ->disabled(fn (PurchaseOrder $record) => $record->status_receive_order !== PurchaseOrder::STATUS_PENDING),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
