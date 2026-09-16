@@ -303,3 +303,20 @@ it('menampilkan perkiraan total PO dari subtotal baris, ikut berubah saat baris 
     $page->call('create')->assertHasNoFormErrors();
     expect((int) PurchaseOrder::first()->estimatedTotal())->toBe(120000);
 });
+
+it('menampilkan total RO di section ringkasan, ikut berubah saat baris dari PO dicentang dan diubah', function () {
+    $obat = makeMedicine(['pack_unit_id' => $this->box->id, 'pack_size' => 10, 'min_stock' => 20]);
+    $po = makePurchaseOrder();
+    \App\Models\PurchaseOrderItem::create([
+        'purchase_order_id' => $po->id, 'medicine_id' => $obat->id, 'pack_unit_id' => $this->box->id,
+        'pack_size' => 10, 'pack_qty' => 2, 'qty' => 20, 'price' => 4000,
+    ]);
+
+    $page = Livewire::test(\App\Filament\Resources\ReceiveOrders\Pages\CreateReceiveOrder::class)
+        ->fillForm(['purchase_order_id' => $po->id, 'invoice_number' => 'F-T1', 'receive_date' => today()->toDateString(), 'po_pick' => [$obat->id]]);
+    expect($page->get('data.estimated_total'))->toBe('80.000');
+
+    $key = firstRowKey($page, 'items');
+    $page->fillForm(["items.{$key}.pack_price" => '45.000']);
+    expect($page->get('data.estimated_total'))->toBe('90.000');
+});

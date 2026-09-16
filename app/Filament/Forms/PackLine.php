@@ -162,17 +162,20 @@ class PackLine
         return number_format($total, 0, ',', '.');
     }
 
-    /** Kotak baca-saja Σ subtotal baris untuk form PO (harga perkiraan, tidak disimpan). */
-    public static function estimatedTotalInput(string $itemsField = 'items'): TextInput
-    {
+    /** Kotak baca-saja Σ subtotal baris (PO: perkiraan total; RO: total faktur). Tidak disimpan. */
+    public static function estimatedTotalInput(
+        string $itemsField = 'items',
+        string $label = 'Perkiraan total',
+        string $helper = 'Dari harga perkiraan; harga sebenarnya mengikuti faktur saat penerimaan.',
+    ): TextInput {
         return TextInput::make('estimated_total')
-            ->label('Perkiraan total')
+            ->label($label)
             ->prefix('Rp')
             ->readOnly()
             ->dehydrated(false)
             ->default('0')
             ->extraInputAttributes(['class' => 'text-right font-semibold'])
-            ->helperText('Dari harga perkiraan; harga sebenarnya mengikuti faktur saat penerimaan.')
+            ->helperText($helper)
             ->afterStateHydrated(fn (Get $get, Set $set) => $set('estimated_total', self::estimatedTotal($get($itemsField) ?? [])));
     }
 

@@ -11,7 +11,6 @@ use Closure;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -19,7 +18,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rule;
 
 /**
@@ -68,6 +66,7 @@ class ReceiveOrderForm
                                 }
                                 $set('po_pick', []);
                                 $set('items', array_values(array_filter($get('items') ?? [], fn ($row) => empty($row['from_po']))));
+                                $set('estimated_total', PackLine::estimatedTotal($get('items') ?? []));
                             }),
                         Select::make('supplier_id')
                             ->label('PBF')
@@ -137,8 +136,8 @@ class ReceiveOrderForm
                                     ->live()
                                     ->disabled(fn (Get $get) => (bool) $get('from_po'))
                                     ->dehydrated()
-                                    ->afterStateUpdated(function (Set $set, $state) {
-                                        PackLine::applyMedicineDefaults($set, $state ? (int) $state : null, defaultPackQty: 1);
+                                    ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                        PackLine::applyMedicineDefaults($set, $state ? (int) $state : null, defaultPackQty: 1, get: $get);
                                         $set('medicine_name', $state ? Medicine::query()->whereKey($state)->value('name') : null);
                                     }),
                                 PackLine::packUnitSelect()->columnSpan(2),
@@ -170,7 +169,6 @@ class ReceiveOrderForm
                                     ->required()
                                     ->regex('/^(0[1-9]|1[0-2])-\d{4}$/')
                                     ->validationMessages(['regex' => 'Tulis bulan-tahun, mis. 10-2026.'])
-                                    ->helperText('Seperti tercetak di faktur. Obat dianggap kedaluwarsa sejak tanggal 1 bulan itu.')
                                     ->rules([
                                         fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
                                             $ed = self::parseExpiredMonth($value);
@@ -189,19 +187,20 @@ class ReceiveOrderForm
                             ->minItems(1)
                             ->mutateRelationshipDataBeforeCreateUsing(fn (array $data) => self::dehydrateItem($data))
                             ->mutateRelationshipDataBeforeSaveUsing(fn (array $data) => self::dehydrateItem($data))
-                            ->mutateRelationshipDataBeforeFillUsing(fn (array $data) => self::hydrateItem($data)),
+                            ->mutateRelationshipDataBeforeFillUsing(fn (array $data) => self::hydrateItem($data))
+                            // Tambah/hapus baris → hitung ulang total (perubahan di dalam baris ditangani PackLine).
+                            ->live()
+                            ->afterStateUpdated(fn (Get $get, Set $set) => $set('estimated_total', PackLine::estimatedTotal($get('items') ?? []))),
+                    ]),
 
-                        Placeholder::make('total_preview')
-                            ->label('Total RO')
-                            ->content(function (Get $get) {
-                                $total = 0;
-                                foreach ($get('items') ?? [] as $row) {
-                                    [$qty, $price] = PackLine::convert($row['pack_qty'] ?? 0, $row['pack_size'] ?? 1, $row['pack_price'] ?? null);
-                                    $total += ($qty ?? 0) * ($price ?? 0);
-                                }
-
-                                return new HtmlString('<span class="text-lg font-bold">Rp '.number_format($total, 0, ',', '.').'</span> <span class="text-sm text-gray-500">— cocokkan dengan Total pada faktur (sudah termasuk PPN)</span>');
-                            }),
+                Section::make('Ringkasan')
+                    ->columnSpanFull()
+                    ->columns(3)
+                    ->schema([
+                        PackLine::estimatedTotalInput(
+                            label: 'Total RO',
+                            helper: 'Cocokkan dengan Total pada faktur (sudah termasuk PPN).',
+                        )->columnStart(3),
                     ]),
             ]);
     }
@@ -290,6 +289,7 @@ class ReceiveOrderForm
         }
 
         $set('items', array_values($items));
+        $set('estimated_total', PackLine::estimatedTotal(array_values($items)));
     }
 
     public static function parseExpiredMonth(?string $value): ?Carbon
