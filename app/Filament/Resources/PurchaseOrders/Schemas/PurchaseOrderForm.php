@@ -83,10 +83,14 @@ class PurchaseOrderForm
                             // Tambah/hapus baris → hitung ulang perkiraan total (perubahan di dalam baris ditangani PackLine).
                             ->live()
                             ->afterStateUpdated(fn (Get $get, Set $set) => $set('estimated_total', PackLine::estimatedTotal($get('items') ?? []))),
+                    ]),
 
+                Section::make('Ringkasan')
+                    ->columnSpanFull()
+                    ->columns(3)
+                    ->schema([
                         PackLine::estimatedTotalInput()->columnStart(3),
-                    ])
-                    ->columns(3),
+                    ]),
 
                 Hidden::make('created_by')
                     ->default(fn () => Auth::id()),
