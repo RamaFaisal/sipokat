@@ -12,6 +12,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
@@ -64,7 +65,7 @@ class PurchaseOrderForm
                                     ->required()
                                     ->live()
                                     // Jumlah kemasan bawaan 1; ⌈min_stock ÷ isi⌉ hanya untuk PO dari ranking SAW (P5).
-                                    ->afterStateUpdated(fn (Set $set, $state) => PackLine::applyMedicineDefaults($set, $state ? (int) $state : null, defaultPackQty: 1)),
+                                    ->afterStateUpdated(fn (Set $set, Get $get, $state) => PackLine::applyMedicineDefaults($set, $state ? (int) $state : null, defaultPackQty: 1, get: $get)),
                                 // Dua baris × 3 kolom: Obat · Satuan input · Jumlah kemasan / Isi per kemasan · Harga per kemasan · Subtotal.
                                 PackLine::packUnitSelect()->columnSpan(1),
                                 PackLine::packQtyInput('Jumlah kemasan')->columnSpan(1),
@@ -78,8 +79,14 @@ class PurchaseOrderForm
                             ->mutateRelationshipDataBeforeCreateUsing(fn (array $data) => PackLine::dehydrate($data))
                             ->mutateRelationshipDataBeforeSaveUsing(fn (array $data) => PackLine::dehydrate($data))
                             ->mutateRelationshipDataBeforeFillUsing(fn (array $data) => PackLine::hydrate($data))
-                            ->minItems(1),
-                    ]),
+                            ->minItems(1)
+                            // Tambah/hapus baris → hitung ulang perkiraan total (perubahan di dalam baris ditangani PackLine).
+                            ->live()
+                            ->afterStateUpdated(fn (Get $get, Set $set) => $set('estimated_total', PackLine::estimatedTotal($get('items') ?? []))),
+
+                        PackLine::estimatedTotalInput()->columnStart(3),
+                    ])
+                    ->columns(3),
 
                 Hidden::make('created_by')
                     ->default(fn () => Auth::id()),

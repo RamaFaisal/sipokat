@@ -284,3 +284,22 @@ it('merender kartu stok, laporan rekap/moving, dan cetak RO dengan data berlapis
     $pdf = (new \App\Filament\Resources\ReceiveOrders\Tables\ReceiveOrdersTable)->previewProgressReportPdf($ro);
     expect($pdf->getContent())->toStartWith('%PDF');
 });
+
+it('menampilkan perkiraan total PO dari subtotal baris, ikut berubah saat baris ditambah', function () {
+    $obat = makeMedicine(['pack_unit_id' => $this->box->id, 'pack_size' => 10, 'min_stock' => 20]);
+    receiveInto($obat, 20, today()->addYear()->toDateString()); // harga terakhir 5.000/strip → 50.000/box
+
+    $page = Livewire::test(\App\Filament\Resources\PurchaseOrders\Pages\CreatePurchaseOrder::class);
+    $page->fillForm(['supplier_id' => $this->supplier->id] + firstRow($page, 'items', ['medicine_id' => $obat->id]));
+    expect($page->get('data.estimated_total'))->toBe('50.000');
+
+    $key = firstRowKey($page, 'items');
+    $page->fillForm(["items.{$key}.pack_qty" => 3]);
+    expect($page->get('data.estimated_total'))->toBe('150.000');
+
+    $page->fillForm(["items.{$key}.pack_price" => '40.000']);
+    expect($page->get('data.estimated_total'))->toBe('120.000');
+
+    $page->call('create')->assertHasNoFormErrors();
+    expect((int) PurchaseOrder::first()->estimatedTotal())->toBe(120000);
+});

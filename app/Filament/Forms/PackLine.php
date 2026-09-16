@@ -22,7 +22,7 @@ use Illuminate\Support\HtmlString;
 class PackLine
 {
     /** Isi bawaan dari master saat obat dipilih. */
-    public static function applyMedicineDefaults(Set $set, ?int $medicineId, ?int $defaultPackQty = null): void
+    public static function applyMedicineDefaults(Set $set, ?int $medicineId, ?int $defaultPackQty = null, ?Get $get = null): void
     {
         $medicine = $medicineId ? Medicine::with(['unit', 'packUnit'])->find($medicineId) : null;
 
@@ -39,7 +39,12 @@ class PackLine
         $set('pack_size', $packSize);
         $set('pack_qty', $packQty);
         $set('pack_price', $packPrice);
-        $set('subtotal', self::subtotal($packQty, $packPrice));
+
+        if ($get) {
+            self::syncSubtotal($get, $set);
+        } else {
+            $set('subtotal', self::subtotal($packQty, $packPrice));
+        }
     }
 
     public static function packUnitSelect(): Select
@@ -135,6 +140,40 @@ class PackLine
     protected static function syncSubtotal(Get $get, Set $set): void
     {
         $set('subtotal', self::subtotal($get('pack_qty'), $get('pack_price')));
+
+        // Form induk yang punya kotak perkiraan total (PO) ikut diperbarui; form tanpa kotak itu (RO) dilewati.
+        if ($get('../../estimated_total') !== null) {
+            $set('../../estimated_total', self::estimatedTotal($get('../../items') ?? []));
+        }
+    }
+
+    /** Σ (jumlah kemasan × harga per kemasan) semua baris, berformat rupiah bulat. */
+    public static function estimatedTotal(array $rows): string
+    {
+        $total = 0.0;
+        foreach ($rows as $row) {
+            $qty = (int) ($row['pack_qty'] ?? 0);
+            $price = self::toNumber($row['pack_price'] ?? null);
+            if ($qty > 0 && $price !== null) {
+                $total += $qty * $price;
+            }
+        }
+
+        return number_format($total, 0, ',', '.');
+    }
+
+    /** Kotak baca-saja Σ subtotal baris untuk form PO (harga perkiraan, tidak disimpan). */
+    public static function estimatedTotalInput(string $itemsField = 'items'): TextInput
+    {
+        return TextInput::make('estimated_total')
+            ->label('Perkiraan total')
+            ->prefix('Rp')
+            ->readOnly()
+            ->dehydrated(false)
+            ->default('0')
+            ->extraInputAttributes(['class' => 'text-right font-semibold'])
+            ->helperText('Dari harga perkiraan; harga sebenarnya mengikuti faktur saat penerimaan.')
+            ->afterStateHydrated(fn (Get $get, Set $set) => $set('estimated_total', self::estimatedTotal($get($itemsField) ?? [])));
     }
 
     /** Subtotal rupiah bulat berformat (jumlah kemasan × harga per kemasan); null bila belum lengkap. */
