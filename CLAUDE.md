@@ -173,7 +173,7 @@ sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → ta
 
 ## 9. Aturan Commit (wajib, permintaan peneliti 2026-09-15)
 
-- Format **Conventional Commits** satu baris: `type(scope): ringkasan` — `feat`, `fix`, `docs`, `test`, `chore`, `refactor`.
+- Format **Conventional Commits** satu baris **tanpa scope**: `type: summary` — contoh `feat: add rupiah mask to pack price input`. Tipe: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`.
+- Ringkasan **berbahasa Inggris**, huruf kecil, kalimat imperatif, tanpa titik di akhir (diperbarui 2026-09-16).
 - **Tanpa body**, **tanpa trailer/atribusi Claude** (tidak ada `Co-Authored-By`, tidak ada tanda "generated with").
-- Ringkasan berbahasa Indonesia, konsisten dengan riwayat commit yang ada.
 - Sebelum commit: suite tes hijau. Setelah commit, **push** ke `origin` cabang aktif.
