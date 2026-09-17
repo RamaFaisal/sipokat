@@ -176,4 +176,4 @@ sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → ta
 - Format **Conventional Commits** satu baris **tanpa scope**: `type: summary` — contoh `feat: add rupiah mask to pack price input`. Tipe: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`.
 - Ringkasan **berbahasa Inggris**, huruf kecil, kalimat imperatif, tanpa titik di akhir (diperbarui 2026-09-16).
 - **Tanpa body**, **tanpa trailer/atribusi Claude** (tidak ada `Co-Authored-By`, tidak ada tanda "generated with").
-- Sebelum commit: suite tes hijau. Commit dibuat lokal saja; **push hanya setelah peneliti menyatakan "oke push"** (diperbarui 2026-09-17).
+- Alur: kerjakan → suite tes hijau → laporkan. **Commit dan push keduanya ditahan** sampai peneliti menyatakan "oke commit" / "oke push" (diperbarui 2026-09-17). Perubahan dibiarkan di working tree; sebutkan berkas yang menunggu di laporan.
