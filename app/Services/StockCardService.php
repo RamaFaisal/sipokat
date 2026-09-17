@@ -305,6 +305,7 @@ class StockCardService
     public function currentHpp(int $medicineId): ?int
     {
         $avg = MedicineStock::where('medicine_id', $medicineId)
+            ->whereNotNull('hpp_avg') // baris yang belum di-replay (baru ditulis dalam transaksi) dilewati
             ->orderByDesc('date')
             ->orderByDesc('id')
             ->value('hpp_avg');

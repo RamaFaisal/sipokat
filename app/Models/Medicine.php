@@ -175,7 +175,7 @@ class Medicine extends Model
     /** HPP rata-rata bergerak saat ini (rencana §4.3); null bila belum ada baris kartu stok. */
     public function currentHpp(): ?int
     {
-        $avg = $this->stockEntries()->orderByDesc('date')->orderByDesc('id')->value('hpp_avg');
+        $avg = $this->stockEntries()->whereNotNull('hpp_avg')->orderByDesc('date')->orderByDesc('id')->value('hpp_avg');
 
         return $avg === null ? null : (int) $avg;
     }

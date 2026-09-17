@@ -168,9 +168,10 @@ class StockMovementService
     public function recordSale(Order $order): array
     {
         $affected = [];
+        $hppByMedicine = []; // dibaca sebelum baris C obat itu ditulis (lihat recordOpname)
 
         foreach ($order->items()->get() as $item) {
-            $hpp = $this->stockCard->currentHpp($item->medicine_id) ?? 0;
+            $hpp = ($hppByMedicine[$item->medicine_id] ??= $this->stockCard->currentHpp($item->medicine_id)) ?? 0;
 
             foreach ($this->allocateFefo((int) $item->medicine_id, (int) $item->qty) as [$layer, $take]) {
                 MedicineStock::create([
@@ -323,9 +324,12 @@ class StockMovementService
     public function recordOpname(MedicineStockOpname $opname): array
     {
         $affected = [];
+        // HPP dibaca sekali per obat SEBELUM baris ditulis: baris yang baru dibuat belum punya hpp_avg
+        // (di-replay setelah loop) dan akan terbaca sebagai "belum punya HPP" bila dibaca di dalam loop.
+        $hppByMedicine = [];
 
         foreach ($opname->medicineStockOpnameItems()->get() as $item) {
-            $hpp = $this->stockCard->currentHpp($item->medicine_id);
+            $hpp = $hppByMedicine[$item->medicine_id] ??= $this->stockCard->currentHpp($item->medicine_id);
 
             // Penambahan hanya untuk obat yang sudah punya HPP; stok awal obat baru lewat RO (§7.3).
             if ($item->type_account === 'D' && $hpp === null) {
