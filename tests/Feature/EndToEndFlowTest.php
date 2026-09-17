@@ -270,7 +270,7 @@ it('merender kartu stok, laporan rekap/moving, dan cetak RO dengan data berlapis
     $this->get('/admin/medicine-stocks')->assertOk();
     $this->get('/admin/medicine-stock-detail?record='.$obat->id)
         ->assertOk()
-        ->assertSee('B1')->assertSee('B2')->assertSee('HPP');
+        ->assertSee('B1')->assertSee('B2')->assertSee('HPP')->assertSee($obat->name);
 
     Livewire::test(\App\Filament\Pages\LaporanRekap::class)
         ->fillForm(['period_start' => today()->subDays(29)->toDateString(), 'period_end' => today()->toDateString(), 'tipe' => 'penjualan'])

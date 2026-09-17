@@ -7,6 +7,7 @@ use App\Models\MedicineStock;
 use App\Models\ReceiveOrder;
 use App\Models\Supplier;
 use App\Services\StockCardService;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
@@ -16,16 +17,17 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class MedicineStockDetail extends Page implements HasTable
 {
-    use InteractsWithTable;
     use HasPageShield;
+    use InteractsWithTable;
 
     protected string $view = 'filament.pages.medicine-stock-detail';
+
     protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $title = 'Kartu Stok Obat Detail';
 
     public $stocks;
@@ -62,14 +64,17 @@ class MedicineStockDetail extends Page implements HasTable
 
     public $month;
 
+    public ?Medicine $medicine = null;
+
     public function mount()
     {
         $requestId = request()->query('record');
-        if (!$requestId) {
+        if (! $requestId) {
             abort(404, 'Record not found');
         }
 
         $medicine = Medicine::findOrFail($requestId);
+        $this->medicine = $medicine;
 
         $supplierByMedicine = ReceiveOrder::whereHas('items', function ($query) use ($medicine) {
             $query->where('medicine_id', $medicine->id);
@@ -78,11 +83,31 @@ class MedicineStockDetail extends Page implements HasTable
         $this->medicines = Medicine::where('code', $medicine->code)->get();
         $this->suppliers = Supplier::whereIn('id', $supplierByMedicine)->orderBy('name')->get();
 
-        $this->year  = now()->year;
+        $this->year = now()->year;
         $this->month = now()->month;
 
         $this->loadStockCard();
         $this->applyFilters();
+    }
+
+    public function getHeading(): string
+    {
+        return 'Kartu Stok Obat';
+    }
+
+    /** Subjudul: obat yang sedang dilihat, supaya jelas tanpa menengok filter. */
+    public function getSubheading(): ?string
+    {
+        if (! $this->medicine) {
+            return null;
+        }
+
+        return 'Detail : '.$this->medicine->name;
+    }
+
+    public function getTitle(): string
+    {
+        return $this->medicine ? 'Kartu Stok · '.$this->medicine->name : 'Kartu Stok Obat';
     }
 
     public function exportAction(): Action
@@ -94,7 +119,7 @@ class MedicineStockDetail extends Page implements HasTable
             ->action(function () {
                 $this->applyFilters();
 
-                $spreadsheet = new Spreadsheet();
+                $spreadsheet = new Spreadsheet;
                 $sheet = $spreadsheet->getActiveSheet();
 
                 $headers = [
@@ -110,8 +135,8 @@ class MedicineStockDetail extends Page implements HasTable
 
                 $rowIndex = 2;
 
-                $sheet->setCellValue('A' . $rowIndex, 'Saldo Awal');
-                $sheet->setCellValue('G' . $rowIndex, $this->firstStock);
+                $sheet->setCellValue('A'.$rowIndex, 'Saldo Awal');
+                $sheet->setCellValue('G'.$rowIndex, $this->firstStock);
                 $sheet->getStyle("A$rowIndex:G$rowIndex")->applyFromArray([
                     'font' => [
                         'bold' => true,
@@ -130,25 +155,25 @@ class MedicineStockDetail extends Page implements HasTable
                 $rowIndex++;
 
                 foreach ($this->stocks as $stock) {
-                    $sheet->setCellValue('A' . $rowIndex, $stock['reference_number']);
-                    $sheet->setCellValue('B' . $rowIndex, $stock['supplier']);
-                    $sheet->setCellValue('C' . $rowIndex, $stock['date']);
-                    $sheet->setCellValue('D' . $rowIndex, $stock['refer_table']);
-                    $sheet->setCellValue('E' . $rowIndex, $stock['debit']);
-                    $sheet->setCellValue('F' . $rowIndex, $stock['credit']);
-                    $sheet->setCellValue('G' . $rowIndex, $stock['current_stock']);
+                    $sheet->setCellValue('A'.$rowIndex, $stock['reference_number']);
+                    $sheet->setCellValue('B'.$rowIndex, $stock['supplier']);
+                    $sheet->setCellValue('C'.$rowIndex, $stock['date']);
+                    $sheet->setCellValue('D'.$rowIndex, $stock['refer_table']);
+                    $sheet->setCellValue('E'.$rowIndex, $stock['debit']);
+                    $sheet->setCellValue('F'.$rowIndex, $stock['credit']);
+                    $sheet->setCellValue('G'.$rowIndex, $stock['current_stock']);
                     $rowIndex++;
                 }
 
-                $sheet->setCellValue('A' . $rowIndex, 'Saldo Akhir');
-                $sheet->setCellValue('G' . $rowIndex, $this->lastStock);
+                $sheet->setCellValue('A'.$rowIndex, 'Saldo Akhir');
+                $sheet->setCellValue('G'.$rowIndex, $this->lastStock);
                 $sheet->getStyle("A$rowIndex:G$rowIndex")->applyFromArray([
                     'font' => [
                         'bold' => true,
                     ],
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['argb' => 'FF00FF00',],
+                        'startColor' => ['argb' => 'FF00FF00'],
                     ],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_RIGHT,
@@ -162,7 +187,7 @@ class MedicineStockDetail extends Page implements HasTable
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
 
-                $sheet->getStyle('A2:G' . $rowIndex)->applyFromArray([
+                $sheet->getStyle('A2:G'.$rowIndex)->applyFromArray([
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
@@ -175,14 +200,14 @@ class MedicineStockDetail extends Page implements HasTable
 
                 return response()->streamDownload(function () use ($writer) {
                     $writer->save('php://output');
-                }, 'laporan_stok_' . now()->format('Ymd_His') . '.xlsx');
+                }, 'laporan_stok_'.now()->format('Ymd_His').'.xlsx');
             });
     }
 
     public function applyFilters()
     {
         $startDate = Carbon::create($this->year, $this->month, 1)->startOfMonth();
-        $endDate   = Carbon::create($this->year, $this->month, 1)->endOfMonth();
+        $endDate = Carbon::create($this->year, $this->month, 1)->endOfMonth();
 
         $this->recordId = MedicineStock::query()
             ->whereBetween('date', [$startDate, $endDate])
@@ -198,7 +223,7 @@ class MedicineStockDetail extends Page implements HasTable
     public function loadStockCard()
     {
         $startDate = Carbon::create($this->year, $this->month, 1)->startOfMonth();
-        $endDate   = Carbon::create($this->year, $this->month, 1)->endOfMonth();
+        $endDate = Carbon::create($this->year, $this->month, 1)->endOfMonth();
 
         $selectedSupplier = $this->selectedSupplier === 'all'
             ? null
@@ -212,8 +237,8 @@ class MedicineStockDetail extends Page implements HasTable
         );
 
         $this->firstStock = $data['opening_stock'];
-        $this->stocks     = $data['transactions'];
-        $this->lastStock  = $data['closing_stock'];
+        $this->stocks = $data['transactions'];
+        $this->lastStock = $data['closing_stock'];
     }
 
     public function updated($property)
