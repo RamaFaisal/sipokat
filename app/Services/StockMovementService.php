@@ -351,7 +351,7 @@ class StockMovementService
                 'date' => $opname->opname_date,
                 'hpp' => $hpp ?? 0,
                 'medicine_stock_opname_id' => $opname->id,
-                'description' => 'opname dari '.$opname->opname_number,
+                'description' => 'opname dari '.$opname->opname_number.($item->note ? ' — '.$item->note : ''),
                 'created_by' => auth()->id(),
             ]);
 

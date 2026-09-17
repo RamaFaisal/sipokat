@@ -107,6 +107,10 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
                         'C' => 'Kredit (Keluar)',
                         default => $state,
                     }),
+                TextColumn::make('note')
+                    ->label('Keterangan')
+                    ->placeholder('-')
+                    ->wrap(),
                 TextColumn::make('hpp')
                     ->label('HPP')
                     ->money('IDR')

@@ -54,6 +54,7 @@ class CreateMedicineStockOpname extends CreateRecord
                     'qty' => abs($diff),
                     'type_account' => $diff < 0 ? 'C' : 'D',
                     'hpp' => $hpp,
+                    'note' => $row['note'] ?? null,
                 ]);
                 $created++;
             }
@@ -71,6 +72,7 @@ class CreateMedicineStockOpname extends CreateRecord
                     'qty' => $qty,
                     'type_account' => 'D',
                     'hpp' => $hpp,
+                    'note' => $row['note'] ?? null,
                 ]);
                 $created++;
             }

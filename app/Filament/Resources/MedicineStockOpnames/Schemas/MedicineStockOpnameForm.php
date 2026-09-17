@@ -34,7 +34,7 @@ class MedicineStockOpnameForm
         return $schema
             ->components([
                 Section::make('Informasi')
-                    ->columns(3)
+                    ->columns(2)
                     ->columnSpanFull()
                     ->schema([
                         TextInput::make('opname_number')
@@ -89,11 +89,11 @@ class MedicineStockOpnameForm
                                             ->content(fn (Get $get) => new HtmlString(
                                                 '<b>'.e($get('batch_label')).'</b>'.($get('expired_label') ? ' · ED '.e($get('expired_label')) : '')
                                             ))
-                                            ->columnSpan(5),
+                                            ->columnSpan(3),
                                         Placeholder::make('system_info')
                                             ->label('Sisa sistem')
                                             ->content(fn (Get $get) => (string) (int) $get('system_qty'))
-                                            ->columnSpan(2),
+                                            ->columnSpan(1),
                                         TextInput::make('physical_qty')
                                             ->label('Fisik')
                                             ->numeric()
@@ -113,7 +113,10 @@ class MedicineStockOpnameForm
                                                     default => '<span class="text-gray-400">0</span>',
                                                 });
                                             })
-                                            ->columnSpan(3),
+                                            ->columnSpan(2),
+                                        self::noteInput()
+                                            ->required(fn (Get $get) => (int) $get('physical_qty') !== (int) $get('system_qty'))
+                                            ->columnSpan(4),
                                     ])
                                     ->columns(12)
                                     ->columnSpanFull()
@@ -151,6 +154,7 @@ class MedicineStockOpnameForm
                                                     }
                                                 },
                                             ]),
+                                        self::noteInput()->required()->columnSpan(12),
                                     ])
                                     ->columns(12)
                                     ->columnSpanFull()
@@ -180,6 +184,16 @@ class MedicineStockOpnameForm
     }
 
     /** Baris lapisan untuk satu obat: semua batch (termasuk kedaluwarsa) dengan sisa sistem > 0. */
+    /** Keterangan per batch: alasan selisih, ikut ke item opname dan deskripsi kartu stok. */
+    public static function noteInput(): TextInput
+    {
+        return TextInput::make('note')
+            ->label('Keterangan')
+            ->placeholder('mis. rusak / kedaluwarsa dimusnahkan / retur PBF / salah hitung')
+            ->maxLength(200)
+            ->datalist(['Rusak', 'Kedaluwarsa dimusnahkan', 'Retur ke PBF', 'Salah hitung sebelumnya', 'Ditemukan saat hitung fisik']);
+    }
+
     public static function layerRows(?int $medicineId): array
     {
         if (! $medicineId) {

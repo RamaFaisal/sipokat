@@ -202,13 +202,17 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
     $lk = array_key_first($layers);
     expect($layers[$lk]['batch_label'])->toBe('B2')->and((int) $layers[$lk]['system_qty'])->toBe(3);
 
-    $opname->fillForm(["lines.{$lineKey}.layers.{$lk}.physical_qty" => 1])
+    // Selisih tanpa keterangan ditolak; dengan keterangan tersimpan sampai ke deskripsi kartu stok.
+    $opname->fillForm(["lines.{$lineKey}.layers.{$lk}.physical_qty" => 1])->call('create')->assertHasFormErrors(["lines.{$lineKey}.layers.{$lk}.note"]);
+    $opname->fillForm(["lines.{$lineKey}.layers.{$lk}.note" => 'Rusak'])
         ->call('create')
         ->assertHasNoFormErrors();
 
     expect($stockCard->availableStock($obat->id))->toBe(1)
         ->and($stockCard->physicalStock($obat->id))->toBe(1)
-        ->and(MedicineStock::where('type_account', 'C')->whereNotNull('medicine_stock_opname_id')->value('qty'))->toBe(2);
+        ->and(MedicineStock::where('type_account', 'C')->whereNotNull('medicine_stock_opname_id')->value('qty'))->toBe(2)
+        ->and(MedicineStock::where('type_account', 'C')->whereNotNull('medicine_stock_opname_id')->value('description'))->toContain('Rusak')
+        ->and(\App\Models\MedicineStockOpnameItem::first()->note)->toBe('Rusak');
 
     // 9. SAW ulang: PO sudah lengkap → tidak ada PO terbuka; obat alur tetap tingkat 1,
     //    C3 = ED batch B2 (terjauh yang bersisa), permintaan 37/30 hari.
