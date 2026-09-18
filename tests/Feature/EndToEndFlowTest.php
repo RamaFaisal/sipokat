@@ -183,7 +183,14 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
     $tooMany = newOrder($obat, 26, 6000);
     $tooMany->assertHasFormErrors(['items.'.firstRowKey($tooMany, 'items').'.qty']);
 
-    newOrder($obat, 22, 6000)->assertHasNoFormErrors();
+    // Sebelum simpan, baris sudah menampilkan subtotal dan chip batch FEFO (B1 lalu B2), tanpa bisa dipilih.
+    $salePage = Livewire::test(CreateOrder::class);
+    $saleKey = firstRowKey($salePage, 'items');
+    $salePage->fillForm(['order_date' => today()->toDateString()] + firstRow($salePage, 'items', ['medicine_id' => $obat->id, 'qty' => 22, 'price' => 6000]));
+    $layerIds = $stockCard->layers($obat->id)->pluck('id')->all();
+    expect($salePage->get("data.items.{$saleKey}.subtotal"))->toBe('132.000')
+        ->and($salePage->get("data.items.{$saleKey}.fefo_batches"))->toBe([$layerIds[0].':5', $layerIds[1].':17']);
+    $salePage->call('create')->assertHasNoFormErrors();
 
     $order2 = Order::latest('id')->firstOrFail();
     $consumptions = MedicineStock::where('order_id', $order2->id)->where('type_account', 'C')->get()->keyBy(fn ($c) => $c->layer->batch_number);

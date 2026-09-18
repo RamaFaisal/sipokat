@@ -2,13 +2,13 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Filament\Forms\PackLine;
 use App\Models\Medicine;
 use App\Models\Order;
 use App\Services\StockCardService;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -17,7 +17,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Illuminate\Support\HtmlString;
+use Filament\Support\RawJs;
 
 /**
  * Penjualan (rencana-revisi-2026-09 §4.2, §5.2): kasir mengetik obat, jumlah (satuan jual),
@@ -31,7 +31,7 @@ class OrderForm
         return $schema
             ->components([
                 Section::make('Penjualan')
-                    ->columns(3)
+                    ->columns(2)
                     ->columnSpanFull()
                     ->schema([
                         TextInput::make('order_code')
@@ -45,7 +45,7 @@ class OrderForm
                             ->required()
                             ->default(now())
                             ->maxDate(now())
-                            ->helperText('Boleh mundur untuk menyusulkan penjualan kemarin. Alokasi batch selalu dari stok saat ini.'),
+                            ->helperText('Alokasi batch selalu dari stok saat ini.'),
                         Hidden::make('created_by')->default(fn () => auth()->id()),
                     ]),
 
@@ -56,19 +56,25 @@ class OrderForm
                             ->relationship()
                             ->hiddenLabel()
                             ->schema([
+                                // Satu baris: Obat · Jumlah · Harga jual · Subtotal (baca-saja) · Batch (FEFO, baca-saja).
                                 Hidden::make('medicine_name'),
                                 Select::make('medicine_id')
                                     ->label('Obat')
-                                    ->columnSpan(5)
+                                    ->columnSpan(3)
                                     ->options(fn () => Medicine::query()->where('status', 'active')->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(function ($state, Set $set) {
+                                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                         $set('medicine_name', $state ? Medicine::query()->whereKey($state)->value('name') : null);
+                                        // Harga jual bawaan = HPP saat ini (batas minimum); kasir menaikkannya bila perlu.
+                                        $hpp = $state ? app(StockCardService::class)->currentHpp((int) $state) : null;
+                                        $set('price', $hpp);
+                                        self::syncRow($get, $set);
                                     }),
                                 TextInput::make('qty')
-                                    ->label(fn (Get $get) => 'Jumlah'.self::unitSuffix($get))
+                                    ->label('Jumlah')
+                                    ->suffix(fn (Get $get) => self::unitName($get) ?: 'satuan jual')
                                     ->columnSpan(2)
                                     ->numeric()
                                     ->integer()
@@ -76,6 +82,7 @@ class OrderForm
                                     ->default(1)
                                     ->required()
                                     ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::syncRow($get, $set))
                                     ->rules([
                                         fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
                                             $medicineId = $get('medicine_id');
@@ -88,14 +95,18 @@ class OrderForm
                                             }
                                         },
                                     ]),
+                                // Masking rupiah seperti PO/RO (tanpa numeric(): cast-nya membaca "5.900" sebagai 5,9).
                                 TextInput::make('price')
                                     ->label('Harga jual')
-                                    ->columnSpan(3)
-                                    ->numeric()
-                                    ->minValue(0)
+                                    ->columnSpan(2)
+                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                    ->stripCharacters('.')
+                                    ->inputMode('numeric')
+                                    ->rules(['numeric', 'min:0'])
                                     ->prefix('Rp')
                                     ->required()
                                     ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::syncRow($get, $set))
                                     ->helperText(fn (Get $get) => self::hppHint($get))
                                     ->rules([
                                         fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
@@ -104,25 +115,37 @@ class OrderForm
                                                 return;
                                             }
                                             $hpp = app(StockCardService::class)->currentHpp((int) $medicineId);
-                                            if ($hpp !== null && (float) $value < $hpp) {
+                                            if ($hpp !== null && (PackLine::toNumber($value) ?? 0) < $hpp) {
                                                 $fail('Harga jual tidak boleh di bawah HPP (Rp '.number_format($hpp, 0, ',', '.').').');
                                             }
                                         },
                                     ]),
-                                Placeholder::make('subtotal_preview')
+                                TextInput::make('subtotal')
                                     ->label('Subtotal')
                                     ->columnSpan(2)
-                                    ->content(fn (Get $get) => 'Rp '.number_format(((int) $get('qty')) * ((float) $get('price')), 0, ',', '.')),
-                                Placeholder::make('allocation_preview')
-                                    ->label('Diambil dari batch (FEFO)')
-                                    ->columnSpanFull()
-                                    ->content(fn (Get $get) => self::allocationPreview($get)),
+                                    ->prefix('Rp')
+                                    ->readOnly()
+                                    ->dehydrated(false)
+                                    ->extraInputAttributes(['class' => 'text-right font-semibold']),
+                                // Batch yang akan dipakai, ditentukan sistem secara FEFO (F0/F1) — ditampilkan sebagai
+                                // pilihan ganda yang dinonaktifkan supaya batch + ED + jumlah per batch terlihat, tanpa bisa diubah.
+                                // Tidak disimpan: alokasi sesungguhnya dihitung ulang StockMovementService saat simpan.
+                                Select::make('fefo_batches')
+                                    ->label('Batch (otomatis FEFO)')
+                                    ->columnSpan(3)
+                                    ->multiple()
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->options(fn (Get $get) => self::fefoAllocation($get)['options'])
+                                    ->helperText(fn (Get $get) => self::fefoAllocation($get)['hint']),
                             ])
                             ->columns(12)
                             ->columnSpanFull()
                             ->addActionLabel('Tambah obat')
                             ->minItems(1)
-                            ->live(),
+                            ->live()
+                            // Tambah/hapus baris → total ikut; perubahan di dalam baris ditangani syncRow().
+                            ->afterStateUpdated(fn (Get $get, Set $set) => $set('grand_total_display', self::grandTotal($get('items') ?? []))),
                     ]),
 
                 Section::make('Ringkasan')
@@ -132,16 +155,13 @@ class OrderForm
                         Textarea::make('note')
                             ->label('Catatan')
                             ->rows(2),
-                        Placeholder::make('grand_total_preview')
+                        TextInput::make('grand_total_display')
                             ->label('Total')
-                            ->content(function (Get $get) {
-                                $total = 0;
-                                foreach ($get('items') ?? [] as $row) {
-                                    $total += ((int) ($row['qty'] ?? 0)) * ((float) ($row['price'] ?? 0));
-                                }
-
-                                return new HtmlString('<span class="text-lg font-bold">Rp '.number_format($total, 0, ',', '.').'</span>');
-                            }),
+                            ->prefix('Rp')
+                            ->readOnly()
+                            ->dehydrated(false)
+                            ->default('0')
+                            ->extraInputAttributes(['class' => 'text-right font-semibold']),
                         Hidden::make('grand_total')->default(0),
                     ]),
             ]);
@@ -162,17 +182,6 @@ class OrderForm
         return $prefix.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
     }
 
-    protected static function unitSuffix(Get $get): string
-    {
-        $medicineId = $get('medicine_id');
-        if (! $medicineId) {
-            return '';
-        }
-        $unit = Medicine::query()->whereKey($medicineId)->with('unit')->first()?->unit?->name;
-
-        return $unit ? " ({$unit})" : '';
-    }
-
     protected static function hppHint(Get $get): ?string
     {
         $medicineId = $get('medicine_id');
@@ -181,46 +190,82 @@ class OrderForm
         }
         $hpp = app(StockCardService::class)->currentHpp((int) $medicineId);
 
-        return $hpp === null ? 'Obat ini belum punya HPP.' : 'HPP saat ini Rp '.number_format($hpp, 0, ',', '.').' — harga jual minimal sebesar itu.';
+        return $hpp === null ? 'Belum punya HPP.' : 'Min. Rp '.number_format($hpp, 0, ',', '.').' (HPP)';
     }
 
-    /** Pratinjau alokasi FEFO: kasir melihat batch, ED, dan sisa hari — tidak memilih. */
-    protected static function allocationPreview(Get $get): HtmlString
+    /** Setiap obat/jumlah/harga berubah: isi ulang subtotal, chip batch FEFO, dan total penjualan. */
+    public static function syncRow(Get $get, Set $set): void
+    {
+        $qty = (int) $get('qty');
+        $price = PackLine::toNumber($get('price'));
+        $set('subtotal', ($qty > 0 && $price !== null) ? number_format($qty * $price, 0, ',', '.') : null);
+        $set('fefo_batches', self::fefoAllocation($get)['selected']);
+        $set('../../grand_total_display', self::grandTotal($get('../../items') ?? []));
+    }
+
+    /** Σ jumlah × harga semua baris, berformat rupiah bulat. */
+    public static function grandTotal(array $rows): string
+    {
+        $total = 0.0;
+        foreach ($rows as $row) {
+            $total += ((int) ($row['qty'] ?? 0)) * (PackLine::toNumber($row['price'] ?? null) ?? 0);
+        }
+
+        return number_format($total, 0, ',', '.');
+    }
+
+    protected static function unitName(Get $get): string
+    {
+        $medicineId = $get('medicine_id');
+
+        return $medicineId ? (string) (Medicine::query()->whereKey($medicineId)->with('unit')->first()?->unit?->name ?? '') : '';
+    }
+
+    /**
+     * Alokasi FEFO untuk pratinjau (kasir melihat, tidak memilih): opsi = batch yang akan dipakai
+     * dengan jumlah yang diambil dari masing-masing, selected = id lapisannya, hint = ringkasan/peringatan.
+     *
+     * @return array{options: array<int,string>, selected: array<int,int>, hint: ?string}
+     */
+    public static function fefoAllocation(Get $get): array
     {
         $medicineId = $get('medicine_id');
         $qty = (int) $get('qty');
         if (! $medicineId || $qty <= 0) {
-            return new HtmlString('<span class="text-gray-400">—</span>');
+            return ['options' => [], 'selected' => [], 'hint' => null];
         }
 
         $layers = app(StockCardService::class)->sellableLayers((int) $medicineId);
-        $available = $layers->sum('remaining');
+        $available = (int) $layers->sum('remaining');
 
         if ($available <= 0) {
-            return new HtmlString('<span class="text-danger-600">Tidak ada stok yang belum kedaluwarsa.</span>');
+            return ['options' => [], 'selected' => [], 'hint' => 'Tidak ada stok yang belum kedaluwarsa.'];
         }
 
-        $lines = [];
+        $options = [];
         $left = $qty;
         foreach ($layers as $layer) {
             if ($left <= 0) {
                 break;
             }
             $take = min($left, (int) $layer->remaining);
-            $days = $layer->expired_date ? (int) today()->diffInDays($layer->expired_date->copy()->startOfDay(), false) : null;
-            $lines[] = sprintf(
-                '→ Ambil <b>%d</b> dari batch <b>%s</b>%s',
+            // Kunci menyertakan jumlah yang diambil: nilai chip berubah setiap alokasi berubah, sehingga
+            // label di browser ikut dirender ulang (nilai yang sama tidak memicu gambar ulang chip).
+            $options[$layer->id.':'.$take] = sprintf(
+                '%s%s · %d dari %d',
+                $layer->batch_number ?? 'tanpa batch',
+                $layer->expired_date ? ' · ED '.$layer->expired_date->format('m-Y') : '',
                 $take,
-                e($layer->batch_number ?? 'tanpa batch'),
-                $layer->expired_date ? ' ED '.$layer->expired_date->format('m-Y').' ('.$days.' hari)' : '',
+                (int) $layer->remaining,
             );
             $left -= $take;
         }
 
+        $hint = 'Tersedia '.$available.' dalam '.$layers->count().' batch, ED terdekat dipakai lebih dulu.';
         if ($left > 0) {
-            $lines[] = '<span class="text-danger-600">Kurang '.$left.' — stok tersedia '.$available.'.</span>';
+            $hint = 'Kurang '.$left.' — stok tersedia hanya '.$available.'.';
         }
 
-        return new HtmlString('<span class="text-sm">Sisa tersedia: '.$available.' dalam '.$layers->count().' batch</span><br>'.implode('<br>', $lines));
+        return ['options' => $options, 'selected' => array_keys($options), 'hint' => $hint];
     }
 }

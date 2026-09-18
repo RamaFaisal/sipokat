@@ -17,7 +17,7 @@ class CreateOrder extends CreateRecord
     {
         $data['created_by'] = auth()->id();
         $data['grand_total'] = collect($this->data['items'] ?? [])
-            ->sum(fn ($row) => ((int) ($row['qty'] ?? 0)) * ((float) ($row['price'] ?? 0)));
+            ->sum(fn ($row) => ((int) ($row['qty'] ?? 0)) * (\App\Filament\Forms\PackLine::toNumber($row['price'] ?? null) ?? 0));
 
         return $data;
     }
