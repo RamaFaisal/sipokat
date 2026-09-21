@@ -32,6 +32,11 @@ class SawCriteriaTable
                         'benefit' => 'Benefit',
                         default => $state,
                     }),
+                TextColumn::make('description')
+                    ->label('Deskripsi')
+                    ->placeholder('-')
+                    ->wrap()
+                    ->width('40%'),
                 TextColumn::make('weight')
                     ->label('Bobot')
                     ->numeric(decimalPlaces: 3)
