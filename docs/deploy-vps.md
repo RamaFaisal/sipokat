@@ -24,7 +24,7 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 cp .env.example .env && php artisan key:generate
 # .env: APP_ENV=production APP_DEBUG=false APP_URL=https://... DB_* sesuai §2
-php artisan migrate --force --seed        # akun awal + master + kriteria SAW (bukan data demo)
+php artisan migrate --force --seed        # akun awal, master, 127 obat riil, faktur RO, contoh PO, simulasi penjualan
 php artisan shield:generate --all          # permission untuk semua resource/halaman/widget
 php artisan optimize
 chown -R www-data:www-data storage bootstrap/cache
@@ -33,9 +33,24 @@ chown -R www-data:www-data storage bootstrap/cache
 Akun awal ada di `database/seeders/UserSeeder.php` — **ganti password** lewat menu Users setelah login pertama.
 Susun role Admin / Petugas / Pemilik di menu **Roles** (Tabel 3.2).
 
-Data demo hanya bila diperlukan untuk peragaan: `php artisan db:seed --class=SpkTestDataSeeder --force`.
-Faktur asli PBF (14 faktur NPM, digeser ke bulan berjalan) setelah master riil dimuat: `php artisan db:seed --class=FakturNpmSeeder --force`.
-Data riil: `sipokat:data-riil:template` → isi → `sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → tanpa `--dry-run` → `sipokat:recalculate-saw`.
+`DatabaseSeeder` sekarang memuat semua menu sekaligus lewat `--seed` di atas — tidak perlu lagi
+memanggil seeder data riil satu-satu: `MedicineDataSeeder` (127 obat, dari
+`database/seeders/data/master-data-obat.csv` yang ikut git, **bukan** dari
+`storage/app/import/*` yang digitignore), `FakturNpmSeeder` (14 faktur NPM asli, digeser ke
+bulan **saat seeder dijalankan**), `PurchaseOrderSeeder` (contoh PO), `SimulasiPenjualanSeeder`
+(penjualan simulasi bertanda `[SIMULASI]` supaya C2 SAW tidak nol — **bukan** data riil, harus
+dinyatakan begitu di naskah). Semua idempoten: mengulang `db:seed` tidak melipatgandakan data.
+
+**Penting untuk konsistensi Bab IV**: karena `FakturNpmSeeder` menggeser tanggal faktur ke bulan
+saat *dijalankan*, hasil seed di server pada tanggal lain akan berbeda dari yang dibekukan di
+lokal. Kalau angka Bab IV sudah dibekukan (lihat `docs/rencana-sidang-2026-10.md` T2), **pindahkan
+data lewat `mysqldump` dari lokal**, bukan `--seed` ulang di server — `--seed` di atas untuk deploy
+awal/percobaan sebelum angka dibekukan, atau untuk instalasi baru di luar keperluan sidang.
+
+Data demo sintetis (150 obat contoh, terpisah dari data riil) hanya bila diperlukan:
+`php artisan db:seed --class=SpkTestDataSeeder --force`.
+Data riil dari berkas Excel lain (bukan CSV bawaan di atas):
+`sipokat:data-riil:template` → isi → `sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → tanpa `--dry-run` → `sipokat:recalculate-saw`.
 
 ## 4. Nginx (ringkas)
 
