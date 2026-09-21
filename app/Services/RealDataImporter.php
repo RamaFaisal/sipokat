@@ -138,6 +138,24 @@ class RealDataImporter
     // Obat
     // ---------------------------------------------------------------------
 
+    /**
+     * Muat hanya sheet Obat dari baris siap pakai (bukan berkas Excel) — dipakai
+     * `MedicineDataSeeder` supaya master data riil bisa di-commit sebagai seeder,
+     * tidak bergantung pada berkas lokal di storage/app/import (digitignore).
+     *
+     * @param  array<int, array<string, mixed>>  $rows  kolom sesuai RealDataTemplate::SHEETS['Obat']
+     * @return array{errors: array<int,string>, summary: array<string,int>, medicines: array<string,int>}
+     */
+    public function importMedicinesOnly(array $rows): array
+    {
+        $this->errors = [];
+        $this->summary = ['obat' => 0];
+
+        $medicines = $this->importMedicines($rows);
+
+        return ['errors' => $this->errors, 'summary' => $this->summary, 'medicines' => $medicines];
+    }
+
     /** @return array<string, int> nama ternormalisasi => id */
     protected function importMedicines(array $rows): array
     {

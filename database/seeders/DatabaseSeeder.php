@@ -7,9 +7,12 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Akun awal, master data (kategori, satuan, PBF), dan kriteria SAW.
-     * Data demo obat & transaksi: `php artisan db:seed --class=SpkTestDataSeeder`
-     * (sengaja terpisah supaya basis produksi tidak terisi data contoh).
+     * Akun awal, master data (kategori, satuan, PBF, kriteria SAW), obat riil, faktur
+     * riil (RO), contoh PO, dan simulasi penjualan — supaya `db:seed` di deploy manapun
+     * membuat tiap menu langsung terisi (rencana-sidang-2026-10 §3). Urutan menjaga
+     * dependensi: obat dulu sebelum RO/PO/penjualan yang mengacunya. Data demo sintetis
+     * (`SpkTestDataSeeder`, 150 obat contoh) sengaja **tidak** dipanggil di sini — beda
+     * dari data riil di atas, dan akan bentrok bila dijalankan bersamaan.
      * Tanpa WithoutModelEvents: hook `creating` Medicine (kode OBT####) harus tetap jalan.
      */
     public function run(): void
@@ -19,6 +22,10 @@ class DatabaseSeeder extends Seeder
             MasterDataSeeder::class,
             PbfJatengSeeder::class,
             SawCriteriaSeeder::class,
+            MedicineDataSeeder::class,
+            FakturNpmSeeder::class,
+            PurchaseOrderSeeder::class,
+            SimulasiPenjualanSeeder::class,
         ]);
     }
 }
