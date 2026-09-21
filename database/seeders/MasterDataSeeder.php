@@ -14,7 +14,7 @@ class MasterDataSeeder extends Seeder
         $units = [
             ['alias' => 'PCS', 'name' => 'Pcs'],
             ['alias' => 'STR', 'name' => 'Strip'],
-            ['alias' => 'FLS', 'name' => 'Flask'],
+            ['alias' => 'FLS', 'name' => 'Botol'],
             ['alias' => 'SCH', 'name' => 'Sachet'],
             ['alias' => 'BOX', 'name' => 'Box'],
             ['alias' => 'TUB', 'name' => 'Tube'],
