@@ -22,7 +22,7 @@ use Filament\Support\RawJs;
 /**
  * Penjualan (rencana-revisi-2026-09 §4.2, §5.2): kasir mengetik obat, jumlah (satuan jual),
  * dan harga (≥ HPP). Sistem mengalokasikan FEFO dan menampilkan batch mana yang diambil;
- * kasir tidak memilih batch (F0). Tidak ada edit — salah input dihapus lalu dibuat ulang (S6).
+ * kasir tidak memilih batch (F0). Tidak ada edit salah input dihapus lalu dibuat ulang (S6).
  */
 class OrderForm
 {
@@ -127,7 +127,7 @@ class OrderForm
                                     ->readOnly()
                                     ->dehydrated(false)
                                     ->extraInputAttributes(['class' => 'text-right font-semibold']),
-                                // Batch yang akan dipakai, ditentukan sistem secara FEFO (F0/F1) — ditampilkan sebagai
+                                // Batch yang akan dipakai, ditentukan sistem secara FEFO (F0/F1) ditampilkan sebagai
                                 // pilihan ganda yang dinonaktifkan supaya batch + ED + jumlah per batch terlihat, tanpa bisa diubah.
                                 // Tidak disimpan: alokasi sesungguhnya dihitung ulang StockMovementService saat simpan.
                                 Select::make('fefo_batches')
@@ -263,7 +263,7 @@ class OrderForm
 
         $hint = 'Tersedia '.$available.' dalam '.$layers->count().' batch, ED terdekat dipakai lebih dulu.';
         if ($left > 0) {
-            $hint = 'Kurang '.$left.' — stok tersedia hanya '.$available.'.';
+            $hint = 'Kurang '.$left.' stok tersedia hanya '.$available.'.';
         }
 
         return ['options' => $options, 'selected' => array_keys($options), 'hint' => $hint];

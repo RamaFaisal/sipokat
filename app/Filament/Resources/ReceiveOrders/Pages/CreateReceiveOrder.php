@@ -30,7 +30,7 @@ class CreateReceiveOrder extends CreateRecord
     }
 
     /**
-     * "Simpan & buat lagi" (R12): delapan faktur sehari dari PO dan PBF yang sama —
+     * "Simpan & buat lagi" (R12): delapan faktur sehari dari PO dan PBF yang sama
      * header berikutnya tinggal nomor faktur.
      */
     protected function preserveFormDataWhenCreatingAnother(array $data): array

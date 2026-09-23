@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
  *  1. Kode obat tanpa strip: OBT-0001 → OBT0001. Nomor urut tidak berubah, hanya
  *     formatnya; Medicine::CODE_PREFIX ikut menjadi 'OBT'.
  *  2. Golongan "Obat Bebas Terbatas" dilebur ke "Obat Bebas". Obat (termasuk yang
- *     soft-deleted) di-remap dulu, baru kategorinya dihapus permanen — category_id
+ *     soft-deleted) di-remap dulu, baru kategorinya dihapus permanen category_id
  *     memakai ON DELETE CASCADE, jadi urutan ini penting.
  *
  * down() mengembalikan format kode; kategori yang sudah dilebur tidak dipisah lagi.

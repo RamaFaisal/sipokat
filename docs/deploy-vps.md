@@ -1,4 +1,4 @@
-# Deploy Sipokat ke VPS (MySQL 8) — catatan E9
+# Deploy Sipokat ke VPS (MySQL 8) catatan E9
 
 Dicek 2026-09-14: rantai migrasi dari nol + `--seed` + `SpkTestDataSeeder` + `sipokat:recalculate-saw`
 + `sipokat:check-stock-and-expiry` + `sipokat:data-riil:import` berjalan bersih pada database MySQL kosong.
@@ -30,21 +30,21 @@ php artisan optimize
 chown -R www-data:www-data storage bootstrap/cache
 ```
 
-Akun awal ada di `database/seeders/UserSeeder.php` — **ganti password** lewat menu Users setelah login pertama.
+Akun awal ada di `database/seeders/UserSeeder.php` **ganti password** lewat menu Users setelah login pertama.
 Susun role Admin / Petugas / Pemilik di menu **Roles** (Tabel 3.2).
 
-`DatabaseSeeder` sekarang memuat semua menu sekaligus lewat `--seed` di atas — tidak perlu lagi
+`DatabaseSeeder` sekarang memuat semua menu sekaligus lewat `--seed` di atas tidak perlu lagi
 memanggil seeder data riil satu-satu: `MedicineDataSeeder` (127 obat, dari
 `database/seeders/data/master-data-obat.csv` yang ikut git, **bukan** dari
 `storage/app/import/*` yang digitignore), `FakturNpmSeeder` (14 faktur NPM asli, digeser ke
 bulan **saat seeder dijalankan**), `PurchaseOrderSeeder` (contoh PO), `SimulasiPenjualanSeeder`
-(penjualan simulasi bertanda `[SIMULASI]` supaya C2 SAW tidak nol — **bukan** data riil, harus
+(penjualan simulasi bertanda `[SIMULASI]` supaya C2 SAW tidak nol **bukan** data riil, harus
 dinyatakan begitu di naskah). Semua idempoten: mengulang `db:seed` tidak melipatgandakan data.
 
 **Penting untuk konsistensi Bab IV**: karena `FakturNpmSeeder` menggeser tanggal faktur ke bulan
 saat *dijalankan*, hasil seed di server pada tanggal lain akan berbeda dari yang dibekukan di
 lokal. Kalau angka Bab IV sudah dibekukan (lihat `docs/rencana-sidang-2026-10.md` T2), **pindahkan
-data lewat `mysqldump` dari lokal**, bukan `--seed` ulang di server — `--seed` di atas untuk deploy
+data lewat `mysqldump` dari lokal**, bukan `--seed` ulang di server `--seed` di atas untuk deploy
 awal/percobaan sebelum angka dibekukan, atau untuk instalasi baru di luar keperluan sidang.
 
 Data demo sintetis (150 obat contoh, terpisah dari data riil) hanya bila diperlukan:
@@ -68,7 +68,7 @@ server {
 
 HTTPS: `certbot --nginx`.
 
-## 5. Cron (wajib — tanpa ini SAW terjadwal & notifikasi tidak jalan)
+## 5. Cron (wajib tanpa ini SAW terjadwal & notifikasi tidak jalan)
 
 ```
 * * * * * cd /var/www/sipokat && php artisan schedule:run >> /dev/null 2>&1

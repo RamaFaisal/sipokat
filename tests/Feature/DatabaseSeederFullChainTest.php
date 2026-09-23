@@ -16,7 +16,7 @@ use Database\Seeders\SimulasiPenjualanSeeder;
 /**
  * `DatabaseSeeder::run()` penuh (rencana-sidang-2026-10 §3): pada deploy baru, `db:seed`
  * harus membuat tiap menu langsung terisi tanpa berkas lokal (obat riil, faktur riil,
- * contoh PO, simulasi penjualan) — dan aman dijalankan dua kali (idempoten).
+ * contoh PO, simulasi penjualan) dan aman dijalankan dua kali (idempoten).
  */
 beforeEach(function () {
     User::factory()->create();

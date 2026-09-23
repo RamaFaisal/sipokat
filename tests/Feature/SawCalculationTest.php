@@ -113,7 +113,7 @@ it('memberi C3 = 0 hari (skor 1) dan C4 dari HPP terakhir untuk obat yang stokny
         ->and((float) $row->c1_raw)->toBe(0.0)->and($row->c1_score)->toBe(1);
 });
 
-it('menolak perhitungan bila total bobot bukan 1,000 — juga di jalur service/terjadwal (K7)', function () {
+it('menolak perhitungan bila total bobot bukan 1,000 juga di jalur service/terjadwal (K7)', function () {
     alternative('X', 10, 20, 0, 300, 1000);
     SawCriteria::where('code', 'C4')->update(['weight' => 0.100]);
 

@@ -1,4 +1,4 @@
-# Draft Isi TA — Bab IV & V
+# Draft Isi TA Bab IV & V
 
 > File isi Bab IV dan V. Pendamping: `draft_isi_ta.md` (Bab I–III), `instrumen_pengumpulan_data.md`, `CLAUDE.md` (status sistem).
 > Bagian bertanda `【...】` diisi dari data nyata / screenshot sistem. Jangan dikarang.
@@ -7,7 +7,7 @@
 
 ---
 
-# BAB IV — HASIL DAN PEMBAHASAN
+# BAB IV HASIL DAN PEMBAHASAN
 
 Bab ini memaparkan hasil pembangunan sistem inventory obat berbasis web yang terintegrasi dengan Sistem Pendukung Keputusan metode SAW, hasil perhitungan SAW dengan data aktual Apotek Anugrah Husada, hasil pengujian sistem, serta pembahasan yang menjawab rumusan masalah penelitian.
 
@@ -170,7 +170,7 @@ Berdasarkan hasil implementasi, perhitungan SAW, dan pengujian, berikut pembahas
 
 ---
 
-# BAB V — PENUTUP
+# BAB V PENUTUP
 
 ## 5.1 Kesimpulan
 

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * PO = catatan internal pesanan ke satu PBF, dibuat setelah ketersediaan dikonfirmasi
  * lewat telepon/WA (rencana-revisi-2026-09 P1). Bukan dokumen ke PBF; tidak ada harga
- * final, pajak, atau pembayaran di sini — semua itu ada di faktur → RO.
+ * final, pajak, atau pembayaran di sini semua itu ada di faktur → RO.
  *
  * status_receive_order diturunkan dari sisa (P7): pending → partial → received; closed
  * hanya lewat aksi "Tutup PO" (P8).
@@ -68,7 +68,7 @@ class PurchaseOrder extends Model
         return in_array($this->status_receive_order, [self::STATUS_PENDING, self::STATUS_PARTIAL], true);
     }
 
-    /** Σ baris (satuan jual × harga per satuan jual) — tampil saja, tidak disimpan (P3). */
+    /** Σ baris (satuan jual × harga per satuan jual) tampil saja, tidak disimpan (P3). */
     public function estimatedTotal(): float
     {
         return (float) $this->items->sum(fn (PurchaseOrderItem $i) => $i->qty * (float) $i->price);

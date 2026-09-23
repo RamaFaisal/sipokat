@@ -1,6 +1,6 @@
-# Rencana Diagram UML — Sipokat
+# Rencana Diagram UML Sipokat
 
-Sistem: **Sipokat — Sistem Inventory Obat + SPK SAW (Apotek Anugrah Husada)**
+Sistem: **Sipokat Sistem Inventory Obat + SPK SAW (Apotek Anugrah Husada)**
 
 Dokumen ini memuat **kode Mermaid** untuk setiap diagram yang dibutuhkan pada Bab III, dengan penomoran gambar yang sama seperti pada `draft_isi_ta.md`. Class Diagram tidak digunakan karena struktur data diwakili ERD.
 
@@ -27,9 +27,9 @@ Dokumen ini memuat **kode Mermaid** untuk setiap diagram yang dibutuhkan pada Ba
 
 ---
 
-## Gambar 3.2 — Use Case Diagram Sistem
+## Gambar 3.2 Use Case Diagram Sistem
 
-Use case mengikuti persis 7 kebutuhan fungsional Tabel 3.3 (F-01–F-07) di `draft_isi_ta.md` — tidak ditambah use case lain di luar yang tertulis di naskah. Pemetaan aktor mengikuti kolom "Kebutuhan Fitur dan Fungsi" pada Tabel 3.2.
+Use case mengikuti persis 7 kebutuhan fungsional Tabel 3.3 (F-01–F-07) di `draft_isi_ta.md` tidak ditambah use case lain di luar yang tertulis di naskah. Pemetaan aktor mengikuti kolom "Kebutuhan Fitur dan Fungsi" pada Tabel 3.2.
 
 | Kode | Use Case | Admin | Petugas | Pemilik |
 |---|----------|:---:|:---:|:---:|
@@ -41,7 +41,7 @@ Use case mengikuti persis 7 kebutuhan fungsional Tabel 3.3 (F-01–F-07) di `dra
 | F-06 | Hitung Prioritas Restock (SAW) | ✅ | ✅ | |
 | F-07 | Lihat Hasil Perangkingan | ✅ | ✅ | ✅ |
 
-> **Catatan render:** mengikuti gaya diagram use case klasik (aktor di kiri/kanan, use case dalam satu kolom vertikal di dalam kotak subsistem). Semua use case sengaja **tidak** dihubungkan satu sama lain — hanya diberi edge dari/ke aktor — supaya Mermaid menempatkan mereka pada rank yang sama (satu kolom) dan menyusunnya vertikal secara otomatis. Jangan tambahkan link berantai antar use case (termasuk invisible link `~~~`): pada `flowchart LR`, rank berjalan horizontal, jadi link semacam itu justru mendorong tiap node ke kolom berikutnya alih-alih menyusunnya vertikal.
+> **Catatan render:** mengikuti gaya diagram use case klasik (aktor di kiri/kanan, use case dalam satu kolom vertikal di dalam kotak subsistem). Semua use case sengaja **tidak** dihubungkan satu sama lain hanya diberi edge dari/ke aktor supaya Mermaid menempatkan mereka pada rank yang sama (satu kolom) dan menyusunnya vertikal secara otomatis. Jangan tambahkan link berantai antar use case (termasuk invisible link `~~~`): pada `flowchart LR`, rank berjalan horizontal, jadi link semacam itu justru mendorong tiap node ke kolom berikutnya alih-alih menyusunnya vertikal.
 
 ```mermaid
 ---
@@ -76,7 +76,7 @@ flowchart LR
 
 ---
 
-## Gambar 3.3 — Activity Diagram Login (F-01)
+## Gambar 3.3 Activity Diagram Login (F-01)
 
 ```mermaid
 ---
@@ -112,7 +112,7 @@ flowchart TB
 
 ---
 
-## Gambar 3.4 — Activity Diagram Pencatatan Obat Masuk (F-03)
+## Gambar 3.4 Activity Diagram Pencatatan Obat Masuk (F-03)
 
 ```mermaid
 ---
@@ -156,7 +156,7 @@ flowchart TB
 
 ---
 
-## Gambar 3.5 — Activity Diagram Pencatatan Obat Keluar (F-03)
+## Gambar 3.5 Activity Diagram Pencatatan Obat Keluar (F-03)
 
 ```mermaid
 ---
@@ -198,7 +198,7 @@ flowchart TB
 
 ---
 
-## Gambar 3.6 — Activity Diagram Perhitungan Prioritas Restock (SAW) (F-06/F-07) **(inti)**
+## Gambar 3.6 Activity Diagram Perhitungan Prioritas Restock (SAW) (F-06/F-07) **(inti)**
 
 ```mermaid
 ---
@@ -254,7 +254,7 @@ flowchart TB
 
 ---
 
-## Gambar 3.7 — Entity Relationship Diagram (ERD)
+## Gambar 3.7 Entity Relationship Diagram (ERD)
 
 ```mermaid
 erDiagram
@@ -388,7 +388,7 @@ erDiagram
 
 ---
 
-## Lampiran — ERD Lengkap *(opsional, seluruh atribut sesuai struktur tabel database)*
+## Lampiran ERD Lengkap *(opsional, seluruh atribut sesuai struktur tabel database)*
 
 Dibangun langsung dari struktur migration aktual (18 tabel domain bisnis). Tabel infrastruktur framework (cache, jobs, sessions, permission/roles Spatie, notifications, settings, imports/exports) tidak diikutkan karena bukan bagian dari ERD bisnis inti. Gunakan versi ini kalau pembimbing minta detail penuh; kalau tidak, cukup pakai Gambar 3.7 di atas.
 

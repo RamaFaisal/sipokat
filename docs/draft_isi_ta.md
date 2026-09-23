@@ -1,12 +1,12 @@
 # Draft Isi Tugas Akhir
 
-> Dokumen isi TA versi kerja — disusun bertahap dari judul hingga Bab V, menyesuaikan sistem Sipokat yang sudah dibangun.
+> Dokumen isi TA versi kerja disusun bertahap dari judul hingga Bab V, menyesuaikan sistem Sipokat yang sudah dibangun.
 > Pendamping: `perbaikan_skripsi.md` (checklist revisi) dan `instrumen_pengumpulan_data.md` (alat ambil data lapangan).
 > Terakhir diperbarui: 2026-07-17.
 
 ---
 
-## JUDUL (FINAL — terdaftar di prodi, tidak diubah)
+## JUDUL (FINAL terdaftar di prodi, tidak diubah)
 
 **RANCANG BANGUN SISTEM INVENTORY OBAT BERBASIS WEB DENGAN SISTEM PENDUKUNG KEPUTUSAN METODE *SIMPLE ADDITIVE WEIGHTING* (SAW) PADA APOTEK ANUGRAH HUSADA**
 
@@ -22,33 +22,33 @@
 | Bagian | Status |
 |--------|:------:|
 | Judul | ✅ Final |
-| Bab I — 1.1 Latar Belakang | 🟡 Draft (menunggu data lapangan) |
-| Bab I — 1.2 Rumusan Masalah | ✅ Draft |
-| Bab I — 1.3 Batasan Masalah | ✅ Draft |
-| Bab I — 1.4 Tujuan Penelitian | ✅ Draft |
-| Bab I — 1.5 Manfaat Penelitian | ✅ Draft |
-| Bab II — Tinjauan Pustaka | 🟡 Draft (teori inti + Filament; 2.1/WP/TOPSIS pakai proposal) |
-| Bab III — 3.1 Tahapan Penelitian | ✅ Draft (Prototyping) |
-| Bab III — 3.2 Tahapan Awal | 🟡 Draft (menunggu data lapangan 3.2.2–3.2.4) |
-| Bab III — 3.3 Perencanaan | ✅ Draft |
-| Bab III — 3.4.1 Perancangan Sistem | ✅ Draft (UML + ERD, gambar via UML-plan.md) |
-| Bab III — 3.4.2 Penentuan Kriteria | ✅ Draft (tabel skala arah natural) |
-| Bab III — 3.4.3 Perumusan Model SAW | ✅ Draft (langkah 1–7) |
-| Bab III — 3.4.4 Perhitungan & Prioritas | ✅ Draft (contoh ilustrasi 5 obat; data nyata → Bab IV) |
-| Bab III — 3.5 Implementasi Sistem | ✅ Draft |
-| Bab III — 3.6 Pengujian Sistem | ✅ Draft (blackbox, Tabel 3.17) |
-| Bab IV — Hasil & Pembahasan | ⏳ (tulis dari nol, berbasis sistem aktual) |
-| Bab V — Penutup | ⏳ |
+| Bab I 1.1 Latar Belakang | 🟡 Draft (menunggu data lapangan) |
+| Bab I 1.2 Rumusan Masalah | ✅ Draft |
+| Bab I 1.3 Batasan Masalah | ✅ Draft |
+| Bab I 1.4 Tujuan Penelitian | ✅ Draft |
+| Bab I 1.5 Manfaat Penelitian | ✅ Draft |
+| Bab II Tinjauan Pustaka | 🟡 Draft (teori inti + Filament; 2.1/WP/TOPSIS pakai proposal) |
+| Bab III 3.1 Tahapan Penelitian | ✅ Draft (Prototyping) |
+| Bab III 3.2 Tahapan Awal | 🟡 Draft (menunggu data lapangan 3.2.2–3.2.4) |
+| Bab III 3.3 Perencanaan | ✅ Draft |
+| Bab III 3.4.1 Perancangan Sistem | ✅ Draft (UML + ERD, gambar via UML-plan.md) |
+| Bab III 3.4.2 Penentuan Kriteria | ✅ Draft (tabel skala arah natural) |
+| Bab III 3.4.3 Perumusan Model SAW | ✅ Draft (langkah 1–7) |
+| Bab III 3.4.4 Perhitungan & Prioritas | ✅ Draft (contoh ilustrasi 5 obat; data nyata → Bab IV) |
+| Bab III 3.5 Implementasi Sistem | ✅ Draft |
+| Bab III 3.6 Pengujian Sistem | ✅ Draft (blackbox, Tabel 3.17) |
+| Bab IV Hasil & Pembahasan | ⏳ (tulis dari nol, berbasis sistem aktual) |
+| Bab V Penutup | ⏳ |
 
 ---
 
 <!-- Konten bab akan ditambahkan di bawah ini secara bertahap. -->
 
-# BAB I — PENDAHULUAN
+# BAB I PENDAHULUAN
 
 ## 1.1 Latar Belakang
 
-> **Catatan penyusunan:** bagian bertanda `【ISI DARI WAWANCARA/OBSERVASI: ...】` wajib diisi dengan temuan nyata dari Apotek Anugrah Husada (lihat `instrumen_pengumpulan_data.md`). Jangan dikarang — kalimat di sekitarnya sudah dirancang agar tetap utuh setelah angka dimasukkan.
+> **Catatan penyusunan:** bagian bertanda `【ISI DARI WAWANCARA/OBSERVASI: ...】` wajib diisi dengan temuan nyata dari Apotek Anugrah Husada (lihat `instrumen_pengumpulan_data.md`). Jangan dikarang kalimat di sekitarnya sudah dirancang agar tetap utuh setelah angka dimasukkan.
 
 Apotek memegang peran penting dalam rantai distribusi obat sehingga membutuhkan pengelolaan inventory yang akurat, termasuk pemantauan masa kedaluwarsa untuk mencegah kerugian finansial sekaligus menjamin keamanan obat yang diterima masyarakat (Bangun et al., 2023). Namun pada banyak apotek pengelolaan masih dilakukan secara manual sehingga **otomatisasi dan pengolahan data belum berjalan optimal**. Kondisi ini juga terjadi di Apotek Anugrah Husada, Demak. Berdasarkan observasi dan wawancara awal yang dilakukan peneliti, apotek yang mengelola sekitar 【ISI DARI WAWANCARA: jumlah jenis obat】 jenis obat ini masih mencatat transaksi dan stok melalui buku catatan dan Microsoft Excel, dengan pencatatan obat masuk dan keluar dilakukan 【ISI DARI OBSERVASI: cara/pelaku pencatatan】, sehingga tidak efisien dan rentan kesalahan manusia (*human error*) yang mempersulit pengambilan keputusan pengadaan (Maulana et al., 2025).
 
@@ -109,7 +109,7 @@ Penelitian ini diharapkan memberikan beberapa manfaat kepada pihak-pihak berikut
 
 ---
 
-# BAB II — TINJAUAN PUSTAKA DAN LANDASAN TEORI
+# BAB II TINJAUAN PUSTAKA DAN LANDASAN TEORI
 
 ## 2.1 Tinjauan Studi
 
@@ -147,7 +147,7 @@ Tailwind CSS adalah framework CSS dengan pendekatan utility first yang menyediak
 
 ### 2.2.5 UML (Unified Modeling Language)
 
-> **Catatan penyusunan:** pertahankan naskah proposal (definisi UML sebagai alat perancangan sistem berorientasi objek beserta tabel simbol). Simpan simbol untuk diagram yang benar-benar dipakai di Bab III, yaitu Use Case Diagram (Tabel 2.2) dan Activity Diagram (Tabel 2.4). Class Diagram (Tabel 2.3) dan Sequence Diagram (Tabel 2.5) tidak dipakai di Bab III — boleh dihapus dari Bab II.
+> **Catatan penyusunan:** pertahankan naskah proposal (definisi UML sebagai alat perancangan sistem berorientasi objek beserta tabel simbol). Simpan simbol untuk diagram yang benar-benar dipakai di Bab III, yaitu Use Case Diagram (Tabel 2.2) dan Activity Diagram (Tabel 2.4). Class Diagram (Tabel 2.3) dan Sequence Diagram (Tabel 2.5) tidak dipakai di Bab III boleh dihapus dari Bab II.
 
 ### 2.2.6 Sistem Pendukung Keputusan (SPK)
 
@@ -199,7 +199,7 @@ Namun, hingga saat penelitian ini dilakukan, pengelolaan inventory di Apotek Anu
 
 ---
 
-# BAB III — METODOLOGI PENELITIAN
+# BAB III METODOLOGI PENELITIAN
 
 ## 3.1 Tahapan Penelitian
 
@@ -321,7 +321,7 @@ Tahap pemodelan merupakan bagian dari fase *modeling* yang bertujuan merancang a
 
 Perancangan sistem dilakukan untuk memberikan gambaran menyeluruh mengenai struktur dan alur kerja sistem inventory. Perancangan ini menggunakan diagram *Unified Modeling Language* (UML) untuk menunjukkan interaksi pengguna dengan sistem serta alur prosesnya, dan *Entity Relationship Diagram* (ERD) untuk menggambarkan struktur basis data.
 
-> **Catatan penyusunan:** gambar diagram disusun berdasarkan `docs/UML-plan.md` (berisi rancangan use case, activity, dan ERD beserta diagram Mermaid yang dapat diekspor). Setiap penanda `【Sisipkan gambar di sini】` diganti dengan gambar hasil ekspor. Sequence Diagram sengaja tidak digunakan di Bab III — cukup Use Case, Activity, dan ERD.
+> **Catatan penyusunan:** gambar diagram disusun berdasarkan `docs/UML-plan.md` (berisi rancangan use case, activity, dan ERD beserta diagram Mermaid yang dapat diekspor). Setiap penanda `【Sisipkan gambar di sini】` diganti dengan gambar hasil ekspor. Sequence Diagram sengaja tidak digunakan di Bab III cukup Use Case, Activity, dan ERD.
 
 **1. Use Case Diagram**
 

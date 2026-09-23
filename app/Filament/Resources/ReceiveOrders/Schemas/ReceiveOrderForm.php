@@ -54,7 +54,7 @@ class ReceiveOrderForm
                                 ->with('supplier')
                                 ->orderByDesc('po_date')
                                 ->get()
-                                ->mapWithKeys(fn (PurchaseOrder $po) => [$po->id => $po->po_number.' — '.($po->supplier?->name ?? '')]))
+                                ->mapWithKeys(fn (PurchaseOrder $po) => [$po->id => $po->po_number.' '.($po->supplier?->name ?? '')]))
                             ->searchable()
                             ->live()
                             ->disabled(fn (?ReceiveOrder $record) => $record !== null)
@@ -223,7 +223,7 @@ class ReceiveOrderForm
             }
             $unit = $item->medicine?->unit?->name ?? '';
             $options[$item->medicine_id] = sprintf(
-                '%s — dipesan %d, sisa %d %s',
+                '%s dipesan %d, sisa %d %s',
                 $item->medicine?->name,
                 $item->qty,
                 $sisa,

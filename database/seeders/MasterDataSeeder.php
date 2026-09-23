@@ -10,7 +10,7 @@ class MasterDataSeeder extends Seeder
 {
     public function run(): void
     {
-        // Seed Units — kunci pada alias (kode yang tercetak di faktur PBF); Flask lama diganti nama Botol.
+        // Seed Units kunci pada alias (kode yang tercetak di faktur PBF); Flask lama diganti nama Botol.
         $units = [
             ['alias' => 'PCS', 'name' => 'Pcs'],
             ['alias' => 'STR', 'name' => 'Strip'],

@@ -1,4 +1,4 @@
-# Instrumen Pengumpulan Data — Apotek Anugrah Husada
+# Instrumen Pengumpulan Data Apotek Anugrah Husada
 
 > Alat bantu untuk observasi, wawancara, dan studi dokumentasi (Bab 3.3.2–3.3.4). Bawa saat kunjungan ke apotek. Setiap bagian diberi tanda **[dipakai untuk: ...]** agar jelas datanya masuk ke bagian skripsi mana.
 >
@@ -45,7 +45,7 @@
     - Dampak ke pelanggan:
       ☐ pelanggan pergi ke apotek lain · ☐ pelanggan menunggu/pesan dulu · ☐ kehilangan penjualan · ☐ lainnya: ______
     - Perkiraan kehilangan omzet akibat stock out (per bulan, kalau bisa diperkirakan): ______
-    - Lead time reorder — berapa lama biasanya sampai obat tersedia lagi: ______hampir 1 bulan kosong
+    - Lead time reorder berapa lama biasanya sampai obat tersedia lagi: ______hampir 1 bulan kosong
 7. Pernah ada obat kedaluwarsa yang harus dimusnahkan? Kira-kira berapa banyak/nilainya per periode? kalo Tablet dilarutkan ke air dibuang ke Tanah, Bisa menghubungi Apotek yang mempunyai IPAL
     - Frekuensi pemusnahan (per bulan/tahun): ______ Per 2 Tahun sekali
     - Perkiraan jumlah item/unit yang dimusnahkan per periode: ______ 1500an Obat
@@ -58,17 +58,17 @@
     - Faktor apa yang paling sering jadi pertimbangan saat ini, urutkan kalau bisa: ______ Stok Minimal, 
     - Siapa yang membuat keputusan ini? ______Apoteker yang Order
     - Berapa lama waktu yang dihabiskan untuk menentukan urutan restock per periode (mis. per minggu)? ______
-    - Pernah keputusan reorder-nya keliru prioritas — obat yang dianggap belum urgent ternyata stock out duluan, atau sebaliknya? Contoh kasus konkret: ______
+    - Pernah keputusan reorder-nya keliru prioritas obat yang dianggap belum urgent ternyata stock out duluan, atau sebaliknya? Contoh kasus konkret: ______
 
-### B.3 Kriteria & Bobot SAW — INTI SKRIPSI [dipakai untuk: Bab 3.4.2 Tabel 3.4–3.8]
+### B.3 Kriteria & Bobot SAW INTI SKRIPSI [dipakai untuk: Bab 3.4.2 Tabel 3.4–3.8]
 > Bagian ini yang membuat bobot & ambang skala Anda **berdasar data nyata**, bukan asumsi. Tanyakan pelan & catat persis.
 
 11. Saat memutuskan restock, faktor apa saja yang Bapak/Ibu pertimbangkan? (biarkan menjawab bebas dulu) Stok Minimal
 12. Kami mengusulkan 4 kriteria: **(a) sisa stok, (b) tingkat permintaan/laku-tidaknya, (c) sisa masa kedaluwarsa, (d) harga beli.** Apakah keempatnya relevan? Ada yang kurang/lebih?
-    - Sisa stok relevan? ☐ ya ☐ tidak — alasan: ______ Iya, karena mempengaruhi Stok obat
-    - Tingkat permintaan/laku-tidaknya relevan? ☐ ya ☐ tidak — alasan: ______ Iya, karena tingkat konsumsinya 
-    - Sisa masa kedaluwarsa relevan? ☐ ya ☐ tidak — alasan: ______ Iya, 
-    - Harga beli relevan? ☐ ya ☐ tidak — alasan: ______Iya yang lebih murah
+    - Sisa stok relevan? ☐ ya ☐ tidak alasan: ______ Iya, karena mempengaruhi Stok obat
+    - Tingkat permintaan/laku-tidaknya relevan? ☐ ya ☐ tidak alasan: ______ Iya, karena tingkat konsumsinya 
+    - Sisa masa kedaluwarsa relevan? ☐ ya ☐ tidak alasan: ______ Iya, 
+    - Harga beli relevan? ☐ ya ☐ tidak alasan: ______Iya yang lebih murah
     - Ada kriteria lain yang menurut Bapak/Ibu perlu ditambahkan (mis. supplier tertentu, lokasi rak, dll)? ______
 13. **Urutkan** keempat kriteria dari yang PALING penting sampai paling tidak penting saat memutuskan restock:
     - Peringkat 1 (paling penting): ______Stok
@@ -77,7 +77,7 @@
     - Peringkat 4: ______ Kadaluwarsa
 14. **Beri bobot kepentingan** tiap kriteria (mis. skala 1–10, boleh sama):
     - Stok: ___ · Permintaan: ___ · Kedaluwarsa: ___ · Harga: ___
-    *(nanti dinormalkan jadi total 1,00 — lihat catatan konversi di bawah)*
+    *(nanti dinormalkan jadi total 1,00 lihat catatan konversi di bawah)*
 15. Konfirmasi ambang (untuk Tabel 3.5–3.8):
     - Batas **stok minimum** untuk mulai waspada: ___20 unit
     - Batas **permintaan** yang dianggap "laku/ramai": ___ Ribuan transaksi (atau unit) per bulan
@@ -106,8 +106,8 @@
     - Format yang diinginkan: ☐ lihat di layar · ☐ export Excel · ☐ export PDF · ☐ cetak
     - Frekuensi laporan dibutuhkan: ☐ harian · ☐ mingguan · ☐ bulanan · ☐ sesuai kebutuhan (custom periode)
 
-### B.5 Batch & masa kedaluwarsa — pendalaman C3 [dipakai untuk: Bab 3.4.2 kriteria C3, batasan masalah 1.4, saran 5.2]
-> Jawaban di bagian ini menentukan bagaimana sistem menetapkan nilai kriteria **C3 (sisa kedaluwarsa)** ketika satu obat punya lebih dari satu tanggal kedaluwarsa. Pertanyaan No. 21 juga menjadi dasar pembenaran asumsi **FEFO** (*first expired, first out*) yang dipakai sistem — supaya asumsi itu berdasar praktik nyata, bukan karangan.
+### B.5 Batch & masa kedaluwarsa pendalaman C3 [dipakai untuk: Bab 3.4.2 kriteria C3, batasan masalah 1.4, saran 5.2]
+> Jawaban di bagian ini menentukan bagaimana sistem menetapkan nilai kriteria **C3 (sisa kedaluwarsa)** ketika satu obat punya lebih dari satu tanggal kedaluwarsa. Pertanyaan No. 21 juga menjadi dasar pembenaran asumsi **FEFO** (*first expired, first out*) yang dipakai sistem supaya asumsi itu berdasar praktik nyata, bukan karangan.
 
 20. Kalau obat dipesan ulang, apakah biasanya menunggu stok lama habis dulu, atau dipesan sebelum habis sehingga batch lama dan batch baru bercampur di rak? Sesuai Apoteker
     - ☐ Menunggu habis dulu → dalam satu waktu praktis hanya ada satu tanggal kedaluwarsa per obat
@@ -142,12 +142,12 @@
 
 ## D. Daftar Permintaan Dokumen / Data (Studi Dokumentasi) [dipakai untuk: Bab 3.3.4, input sistem, Bab IV]
 
-Minta salinan/foto seadanya — tidak harus lengkap sempurna, yang penting **nyata**:
+Minta salinan/foto seadanya tidak harus lengkap sempurna, yang penting **nyata**:
 
-1. **Daftar obat** — nama, satuan (strip/botol), kategori, **harga beli**, harga jual, (kalau ada) batas stok minimum & lokasi rak. → jadi master data obat.
-2. **Data penjualan ± 1 bulan terakhir** — obat apa saja & jumlah terjual. → sumber kriteria **C2 (permintaan)**.
-3. **Data pembelian/penerimaan dari PBF** — termasuk **tanggal kedaluwarsa & nomor batch** bila tercantum. → sumber kriteria **C3 (kedaluwarsa)** & stok masuk.
-   > Minta **beberapa penerimaan terakhir per obat**, bukan hanya yang paling akhir. Dari situ bisa dihitung sendiri berapa banyak obat yang punya lebih dari satu batch berlaku pada saat bersamaan — jawaban berbasis data untuk pertanyaan No. 20, tidak bergantung pada ingatan narasumber.
+1. **Daftar obat** nama, satuan (strip/botol), kategori, **harga beli**, harga jual, (kalau ada) batas stok minimum & lokasi rak. → jadi master data obat.
+2. **Data penjualan ± 1 bulan terakhir** obat apa saja & jumlah terjual. → sumber kriteria **C2 (permintaan)**.
+3. **Data pembelian/penerimaan dari PBF** termasuk **tanggal kedaluwarsa & nomor batch** bila tercantum. → sumber kriteria **C3 (kedaluwarsa)** & stok masuk.
+   > Minta **beberapa penerimaan terakhir per obat**, bukan hanya yang paling akhir. Dari situ bisa dihitung sendiri berapa banyak obat yang punya lebih dari satu batch berlaku pada saat bersamaan jawaban berbasis data untuk pertanyaan No. 20, tidak bergantung pada ingatan narasumber.
 4. **Snapshot stok saat ini** untuk beberapa/seluruh obat. → sumber kriteria **C1 (stok)**.
 5. **Daftar supplier/PBF** yang biasa dipakai.
 6. **Foto** buku catatan / screenshot Excel yang dipakai sekarang. → bukti masalah + lampiran.
@@ -159,4 +159,4 @@ Minta salinan/foto seadanya — tidak harus lengkap sempurna, yang penting **nya
 Dari jawaban No. 13–14, ubah jadi bobot berjumlah 1,00. Contoh, bila pemilik memberi nilai kepentingan Stok=9, Permintaan=9, Kedaluwarsa=6, Harga=6 (total 30):
 - Stok = 9/30 = **0,30** · Permintaan = 9/30 = **0,30** · Kedaluwarsa = 6/30 = **0,20** · Harga = 6/30 = **0,20**
 
-Kebetulan ini pas dengan bobot di proposal (0,30/0,30/0,20/0,20). **Kalau hasil wawancara berbeda, itu bukan masalah — justru bagus**: bobot jadi benar-benar berdasar data lapangan. Konsekuensinya: perbarui `database/seeders/SawCriteriaSeeder.php` (field `weight`) lalu jalankan ulang perhitungan SAW, dan sesuaikan Tabel 3.4. (Kita kerjakan bareng nanti bila perlu.)
+Kebetulan ini pas dengan bobot di proposal (0,30/0,30/0,20/0,20). **Kalau hasil wawancara berbeda, itu bukan masalah justru bagus**: bobot jadi benar-benar berdasar data lapangan. Konsekuensinya: perbarui `database/seeders/SawCriteriaSeeder.php` (field `weight`) lalu jalankan ulang perhitungan SAW, dan sesuaikan Tabel 3.4. (Kita kerjakan bareng nanti bila perlu.)

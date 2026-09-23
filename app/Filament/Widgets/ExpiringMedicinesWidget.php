@@ -26,7 +26,7 @@ class ExpiringMedicinesWidget extends BaseWidget
             ->heading('Obat Mendekati Kedaluwarsa')
             ->description('Batch yang masih bersisa dengan masa kedaluwarsa ≤ 90 hari.')
             ->query(function () use ($today, $threshold): Builder {
-                // F5: lapisan (baris D kartu stok) yang sisanya > 0 — bukan item RO yang mungkin sudah habis terjual.
+                // F5: lapisan (baris D kartu stok) yang sisanya > 0 bukan item RO yang mungkin sudah habis terjual.
                 $query = MedicineStock::layers()
                     ->withRemainingStock()
                     ->whereNotNull('expired_date')

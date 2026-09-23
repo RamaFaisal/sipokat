@@ -48,7 +48,7 @@ class Medicine extends Model
         });
     }
 
-    /** Uppercase, spasi ganda dirapikan — konvensi nama seperti tercetak di faktur. */
+    /** Uppercase, spasi ganda dirapikan konvensi nama seperti tercetak di faktur. */
     public static function normalizeName(?string $name): string
     {
         return strtoupper(trim(preg_replace('/\s+/', ' ', (string) $name)));
@@ -66,7 +66,7 @@ class Medicine extends Model
     }
 
     /**
-     * Pratinjau kode berikutnya untuk ditampilkan di form tambah — tanpa lock, jadi
+     * Pratinjau kode berikutnya untuk ditampilkan di form tambah tanpa lock, jadi
      * nomornya baru pasti saat disimpan (creating memanggil nextCode()).
      */
     public static function peekNextCode(): string
@@ -144,7 +144,7 @@ class Medicine extends Model
     }
 
     /**
-     * Harga item RO terakhir per satuan jual — hanya untuk harga perkiraan PO (P6).
+     * Harga item RO terakhir per satuan jual hanya untuk harga perkiraan PO (P6).
      * C4 SAW memakai HPP rata-rata bergerak di kartu stok, bukan ini.
      */
     public function latestPurchasePrice(): ?float
@@ -188,7 +188,7 @@ class Medicine extends Model
 
     /**
      * C3 (K3): ED **batch terjauh yang masih bersisa** dan belum kedaluwarsa. Dengan FEFO,
-     * batch terjauh adalah yang dikonsumsi terakhir — itulah horizon stok yang akan tersisa.
+     * batch terjauh adalah yang dikonsumsi terakhir itulah horizon stok yang akan tersisa.
      * Tidak ada lapisan layak (stok tersedia 0) → null; pemanggil memperlakukannya sebagai 0 hari.
      */
     public function farthestExpiryDate(): ?\Illuminate\Support\Carbon

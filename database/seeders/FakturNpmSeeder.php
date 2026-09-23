@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * 14 faktur asli PT. Nisa Permata Mulia (contoh-data.zip, 07–11 Mei 2024) ditulis sebagai RO
- * lewat StockMovementService — jalur yang sama dengan form Penerimaan.
+ * lewat StockMovementService jalur yang sama dengan form Penerimaan.
  *
  * Tanggal faktur dan ED digeser sejumlah bulan yang sama, dari Mei 2024 ke bulan berjalan saat
  * seeder dijalankan (Sep 2026 → +28 bulan): ED 12-26 menjadi 04-29, dst. Tanggal terima yang jatuh
@@ -254,7 +254,7 @@ class FakturNpmSeeder extends Seeder
         foreach (self::INVOICES as [$no, $date, $total, $lines]) {
             $sum = array_sum(array_map(fn ($l) => $l[2] * $l[3], $lines));
             if ($sum !== $total) {
-                throw new RuntimeException("Faktur {$no}: jumlah baris {$sum} ≠ total tercetak {$total} — periksa salinan.");
+                throw new RuntimeException("Faktur {$no}: jumlah baris {$sum} ≠ total tercetak {$total} periksa salinan.");
             }
             foreach ($lines as $line) {
                 $name = Medicine::normalizeName($line[0]);
@@ -343,7 +343,7 @@ class FakturNpmSeeder extends Seeder
             return self::ASSUMED_BOX_SIZE[$m->name];
         }
 
-        throw new \RuntimeException("Isi kemasan {$pack->name} untuk {$m->name} tidak diketahui — tambahkan ke ASSUMED_BOX_SIZE.");
+        throw new \RuntimeException("Isi kemasan {$pack->name} untuk {$m->name} tidak diketahui tambahkan ke ASSUMED_BOX_SIZE.");
     }
 
     /** 'MM-YY' digeser sejumlah bulan yang sama dengan faktur; kosong → tanggal terima + BLANK_ED_MONTHS. */

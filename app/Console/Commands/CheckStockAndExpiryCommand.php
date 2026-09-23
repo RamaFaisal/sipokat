@@ -23,7 +23,7 @@ class CheckStockAndExpiryCommand extends Command
         $users = User::all();
 
         if ($users->isEmpty()) {
-            $this->warn('Tidak ada user — notifikasi tidak dikirim.');
+            $this->warn('Tidak ada user notifikasi tidak dikirim.');
 
             return self::SUCCESS;
         }
@@ -82,7 +82,7 @@ class CheckStockAndExpiryCommand extends Command
         $today = Carbon::now()->startOfDay()->toDateString();
         $threshold = Carbon::now()->addDays($days)->toDateString();
 
-        // F5: hanya lapisan (batch) yang masih bersisa — batch yang sudah habis terjual tidak diperingatkan.
+        // F5: hanya lapisan (batch) yang masih bersisa batch yang sudah habis terjual tidak diperingatkan.
         $expiring = MedicineStock::layers()
             ->whereNotNull('expired_date')
             ->whereBetween('expired_date', [$today, $threshold])

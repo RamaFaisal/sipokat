@@ -12,7 +12,7 @@ use Filament\Support\Exceptions\Halt;
 
 /**
  * Edit RO = faktur revisi (R10). Batch/ED/harga selalu boleh diubah; jumlah dan penghapusan
- * baris dibatasi sisa lapisan (R8) — dilakukan di afterSave dalam transaksi Filament,
+ * baris dibatasi sisa lapisan (R8) dilakukan di afterSave dalam transaksi Filament,
  * jadi pelanggaran membatalkan seluruh perubahan.
  */
 class EditReceiveOrder extends EditRecord

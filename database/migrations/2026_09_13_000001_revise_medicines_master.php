@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\Schema;
  * Perampingan master obat (rencana-revisi-2026-09 Bagian 1).
  *
  * - dosage digabung ke name lalu dihapus (M6); photo, description, purchase_price,
- *   sale_price dihapus (M4, M5, M8, M12) — rupiah hidup di transaksi, bukan di master.
+ *   sale_price dihapus (M4, M5, M8, M12) rupiah hidup di transaksi, bukan di master.
  * - pack_unit_id + pack_size (kemasan pembelian) ditambah NOT NULL (M3, B8).
  * - min_stock wajib > 0, bawaan Strip 20 / lainnya pack_size (M9, B6, B7).
  * - code dinomori ulang OBT-#### urut id, termasuk yang soft-deleted (M7).
  *
  * down() sengaja kosong: dosage, harga, dan kode lama tidak tersimpan di mana pun
- * setelah dihapus — pemulihan lewat backup DB.
+ * setelah dihapus pemulihan lewat backup DB.
  */
 return new class extends Migration
 {
@@ -76,6 +76,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Sengaja kosong — lihat docblock.
+        // Sengaja kosong lihat docblock.
     }
 };

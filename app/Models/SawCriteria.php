@@ -42,7 +42,7 @@ class SawCriteria extends Model
 
     /**
      * Konversi nilai mentah ke skala 1-5 berdasarkan scale_rules.
-     * Format: [{"min": null|number, "max": null|number, "score": 1..5}, ...] — semua batas
+     * Format: [{"min": null|number, "max": null|number, "score": 1..5}, ...] semua batas
      * INKLUSIF (B2); null = terbuka. Aturan berdesimal (C1 rasio) ditulis dua desimal tanpa
      * celah dan nilai mentahnya dibulatkan dua desimal sebelum dicocokkan (K14).
      * null → 0 = data tidak tersedia.

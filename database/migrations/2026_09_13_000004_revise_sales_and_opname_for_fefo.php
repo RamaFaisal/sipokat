@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * - F6: seluruh baris C lama diatribusikan ke lapisan secara FEFO (urut ED naik, lapisan tanpa ED
  *   paling dulu), dipecah bila melintasi dua lapisan.
  *
- * down() sengaja kosong — pemulihan lewat backup DB.
+ * down() sengaja kosong pemulihan lewat backup DB.
  */
 return new class extends Migration
 {
@@ -50,6 +50,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Sengaja kosong — lihat docblock.
+        // Sengaja kosong lihat docblock.
     }
 };

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Gate;
 /**
  * Smoke test: halaman panel yang tersentuh revisi bisa dirender tanpa error
  * (kolom yang dihapus tidak lagi dirujuk form/table). Bukan uji perilaku
- * maupun otorisasi — policy Shield dilewati.
+ * maupun otorisasi policy Shield dilewati.
  */
 beforeEach(function () {
     seedMasterFixtures();

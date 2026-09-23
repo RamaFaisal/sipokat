@@ -28,7 +28,7 @@ class RealDataImportCommand extends Command
         }
 
         if ($result['errors']) {
-            $this->error(count($result['errors']).' masalah — tidak ada yang disimpan:');
+            $this->error(count($result['errors']).' masalah tidak ada yang disimpan:');
             foreach ($result['errors'] as $e) {
                 $this->line('  - '.$e);
             }

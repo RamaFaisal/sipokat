@@ -108,7 +108,7 @@ class SawCalculationService
     }
 
     /**
-     * Empat kriteria aktif dengan Σ bobot tepat 1,000 (K7) — dijaga di sini, bukan hanya di UI,
+     * Empat kriteria aktif dengan Σ bobot tepat 1,000 (K7) dijaga di sini, bukan hanya di UI,
      * supaya jalur terjadwal tidak bisa menghasilkan Vi di luar 0–1.
      *
      * @return Collection<string, SawCriteria>
@@ -173,7 +173,7 @@ class SawCalculationService
 
     /**
      * K2: Σ qty penjualan dalam periode ÷ jumlah hari × 30. Hari = selisih tanggal (00:00) + 1,
-     * bilangan bulat — menutup T5 (jalur terjadwal dulu menghitung 31,99 hari).
+     * bilangan bulat menutup T5 (jalur terjadwal dulu menghitung 31,99 hari).
      */
     public function getMonthlyDemand(Medicine $medicine, Carbon $start, Carbon $end): int
     {
@@ -274,7 +274,7 @@ class SawCalculationService
     }
 
     /**
-     * K9: peringkat padat — Vi sama (6 desimal) → tingkat sama, tingkat berikutnya +1.
+     * K9: peringkat padat Vi sama (6 desimal) → tingkat sama, tingkat berikutnya +1.
      * Urutan tampil di dalam tingkat: rasio C1 terkecil → permintaan terbesar → ED terdekat → id.
      *
      * @return array<int, array{medicine_id: int, value: float, rank: int, sort_order: int}>

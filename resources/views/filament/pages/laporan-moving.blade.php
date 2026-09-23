@@ -5,7 +5,7 @@
 
     @if ($this->meta)
         <x-filament::section>
-            <x-slot name="heading">Ringkasan Analisis — {{ $this->meta['periode'] }}</x-slot>
+            <x-slot name="heading">Ringkasan Analisis {{ $this->meta['periode'] }}</x-slot>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <div class="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400">Total Obat Aktif</div>
@@ -28,7 +28,7 @@
 
         <x-filament::section>
             <x-slot name="heading">Fast Moving (Demand Tertinggi)</x-slot>
-            <x-slot name="description">Obat dengan rata-rata demand bulanan paling tinggi — prioritas untuk stok cukup.</x-slot>
+            <x-slot name="description">Obat dengan rata-rata demand bulanan paling tinggi prioritas untuk stok cukup.</x-slot>
 
             @if ($this->fastMoving->isNotEmpty())
                 @include('filament.pages.partials.moving-table', ['rows' => $this->fastMoving, 'badgeColor' => 'green'])
@@ -39,7 +39,7 @@
 
         <x-filament::section>
             <x-slot name="heading">Slow Moving (Demand &lt; 20/bulan)</x-slot>
-            <x-slot name="description">Obat dengan penjualan rendah (per Tabel 3.6 proposal: score 1 = demand &lt; 20/bln) — pertimbangkan turunkan target stok.</x-slot>
+            <x-slot name="description">Obat dengan penjualan rendah (per Tabel 3.6 proposal: score 1 = demand &lt; 20/bln) pertimbangkan turunkan target stok.</x-slot>
 
             @if ($this->slowMoving->isNotEmpty())
                 @include('filament.pages.partials.moving-table', ['rows' => $this->slowMoving, 'badgeColor' => 'amber'])
@@ -50,7 +50,7 @@
 
         <x-filament::section>
             <x-slot name="heading">Dead Stock (Tidak Ada Transaksi)</x-slot>
-            <x-slot name="description">Obat aktif tanpa penjualan sama sekali dalam periode — diurutkan dari stok tertinggi (modal nyangkut).</x-slot>
+            <x-slot name="description">Obat aktif tanpa penjualan sama sekali dalam periode diurutkan dari stok tertinggi (modal nyangkut).</x-slot>
 
             @if ($this->deadStock->isNotEmpty())
                 @include('filament.pages.partials.moving-table', ['rows' => $this->deadStock, 'badgeColor' => 'red', 'hideValue' => true])

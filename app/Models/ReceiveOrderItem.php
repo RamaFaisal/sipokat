@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Satu baris faktur PBF. qty dan price dalam satuan jual; pack_* jejak konversi kemasan (R6).
- * expired_date selalu tanggal 1 bulan ED — obat dianggap kedaluwarsa sejak awal bulan (R3).
+ * expired_date selalu tanggal 1 bulan ED obat dianggap kedaluwarsa sejak awal bulan (R3).
  */
 class ReceiveOrderItem extends Model
 {

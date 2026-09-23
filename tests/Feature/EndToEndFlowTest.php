@@ -244,7 +244,7 @@ it('membalik penjualan dan menolak hapus RO yang batch-nya sudah terpakai, lewat
     $order = Order::firstOrFail();
     expect($stockCard->availableStock($obat->id))->toBe(18);
 
-    // RO yang lapisannya sudah dikonsumsi tidak boleh dihapus (R8/B5) — RO tetap ada, stok tetap.
+    // RO yang lapisannya sudah dikonsumsi tidak boleh dihapus (R8/B5) RO tetap ada, stok tetap.
     Livewire::test(\App\Filament\Resources\ReceiveOrders\Pages\ListReceiveOrders::class)
         ->callTableAction('delete', $ro)
         ->assertNotified();

@@ -106,7 +106,7 @@ class MedicineImporter extends Importer
             ]);
         }
 
-        // Dedup berdasarkan nama — satu obat fisik hanya boleh punya satu baris.
+        // Dedup berdasarkan nama satu obat fisik hanya boleh punya satu baris.
         $medicine = Medicine::firstOrNew(['name' => $name]);
 
         $medicine->name = $name;
@@ -123,7 +123,7 @@ class MedicineImporter extends Importer
 
     /**
      * Dipanggil setelah validasi, sebelum fillRecord(). Kolom yang sudah diterjemahkan
-     * ke relasi di resolveRecord() dibuang di sini — bukan di resolveRecord(), karena
+     * ke relasi di resolveRecord() dibuang di sini bukan di resolveRecord(), karena
      * Filament menjalankan resolveRecord() sebelum validasi dan `required` akan
      * menganggap kolomnya kosong.
      */

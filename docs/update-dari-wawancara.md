@@ -1,4 +1,4 @@
-# Update dari Wawancara — Apotek Anugrah Husada
+# Update dari Wawancara Apotek Anugrah Husada
 
 > Hasil wawancara lapangan yang mengubah konfigurasi sistem dan naskah TA.
 > Sumber jawaban: `docs/instrumen_pengumpulan_data.md`.
@@ -14,13 +14,13 @@
 | Alamat | Ds. Raji, Kec. Demak, Kab. Demak |
 | Tahun mulai beroperasi | 2020 |
 | Jumlah pegawai | 6 orang |
-| Narasumber | *belum dikonfirmasi — akan ditanyakan kembali* |
+| Narasumber | *belum dikonfirmasi akan ditanyakan kembali* |
 
 Dipakai untuk Bab 2.3 (Tinjauan Obyek Penelitian).
 
 ---
 
-## 2. Bobot Kriteria — TIDAK BERUBAH
+## 2. Bobot Kriteria TIDAK BERUBAH
 
 Bobot tetap **C1 0,30 · C2 0,30 · C3 0,20 · C4 0,20** sesuai proposal. Tidak ada perubahan pada
 `saw_criteria.weight` maupun Tabel 3.4.
@@ -40,7 +40,7 @@ Konversinya memakai dua tingkat kepentingan (Penting = 3, Cukup Penting = 2), la
 terhadap total 10. Hasilnya persis sama dengan bobot proposal, sehingga bobot yang semula asumtif
 kini berstatus terkonfirmasi lapangan.
 
-**Alasan C3 hanya "biasa saja"** — layak dikutip di Bab III: masa kedaluwarsa obat umumnya
+**Alasan C3 hanya "biasa saja"** layak dikutip di Bab III: masa kedaluwarsa obat umumnya
 2–3 tahun, sehingga jarang menjadi penentu saat memutuskan restock.
 
 **Catatan konsistensi**: pada pertanyaan pemeringkatan (No. 13) narasumber menempatkan harga beli
@@ -70,7 +70,7 @@ menggantikan angka lama yang berasal dari asumsi proposal.
 | 5 | ≥ 5,01 | ≥ 101 | ≥ 731 | ≥ 100.001 |
 
 Arah skor mengikuti keputusan normalisasi baku (Opsi Y): skor disusun searah nilai mentah, dan
-prioritas dibentuk lewat rumus normalisasi — `min/X` untuk kriteria *cost* (C1, C3, C4) dan `X/max`
+prioritas dibentuk lewat rumus normalisasi `min/X` untuk kriteria *cost* (C1, C3, C4) dan `X/max`
 untuk kriteria *benefit* (C2). Nilai mentah tiap kriteria:
 
 - **C1** = stok tersedia (lapisan belum kedaluwarsa) ÷ `min_stock` obat.
@@ -80,21 +80,21 @@ untuk kriteria *benefit* (C2). Nilai mentah tiap kriteria:
 
 ### Dasar tiap ambang
 
-**C1 — Stok.** Narasumber menyebut batas waspada **20 unit**. Angka itu menjadi batas skor 1 dalam
+**C1 Stok.** Narasumber menyebut batas waspada **20 unit**. Angka itu menjadi batas skor 1 dalam
 bentuk rasio (20 ÷ 20 = 1,00), lalu dinaikkan bertingkat (40 → 2,00; 70 → 3,50; 100 → 5,00). Dengan
 rasio, obat bersatuan Flask yang batas minimumnya 6 dinilai terhadap 6, bukan terhadap 20 strip.
 
-**C2 — Permintaan.** Narasumber memberi tiga tingkat untuk satuan kapsul: ramai **≥ 101/bulan**,
+**C2 Permintaan.** Narasumber memberi tiga tingkat untuk satuan kapsul: ramai **≥ 101/bulan**,
 sedang **31–100**, sepi **≤ 30**. Ketiga batas itu dipertahankan apa adanya; rentang sedang dan
 sepi hanya dibelah agar cukup untuk lima tingkat skor. Perlu dicatat bahwa jawaban awal "ribuan
-transaksi per bulan" merujuk total transaksi seluruh apotek, bukan per jenis obat — per jenis
+transaksi per bulan" merujuk total transaksi seluruh apotek, bukan per jenis obat per jenis
 berada di kisaran ratusan.
 
-**C3 — Sisa kedaluwarsa.** Batas **90 hari** adalah tenggat retur ke PBF. Lewat dari itu obat tidak
+**C3 Sisa kedaluwarsa.** Batas **90 hari** adalah tenggat retur ke PBF. Lewat dari itu obat tidak
 lagi dapat dikembalikan, sehingga seluruh risiko kerugian berpindah ke apotek. Inilah alasan
 90 hari dipakai sebagai batas skor paling mendesak, bukan sekadar angka bulat.
 
-**C4 — Harga.** Narasumber menyebut murah **≤ Rp2.000** dan mahal **> Rp100.000** per strip.
+**C4 Harga.** Narasumber menyebut murah **≤ Rp2.000** dan mahal **> Rp100.000** per strip.
 Kedua ujung itu dipakai sebagai batas skor 1 dan skor 5, diterapkan pada HPP per satuan jual.
 
 ### Keterbatasan yang harus ditulis di Bab 1.4
@@ -109,8 +109,8 @@ diakui sebagai batasan pada Bab 1.4 dan diusulkan pada saran Bab 5.2.
 
 ### Yang perlu diubah
 
-- ✅ `database/seeders/SawCriteriaSeeder.php` — sudah memuat tabel di atas (commit E5, 2026-09-13).
-- Tabel 3.5–3.8 pada naskah — ikuti tabel di atas (C1 rasio, C4 HPP).
+- ✅ `database/seeders/SawCriteriaSeeder.php` sudah memuat tabel di atas (commit E5, 2026-09-13).
+- Tabel 3.5–3.8 pada naskah ikuti tabel di atas (C1 rasio, C4 HPP).
 - `php artisan sipokat:recalculate-saw` dijalankan setelah seeder diperbarui.
 
 Bobot pada seeder **tidak perlu disentuh**.
@@ -119,7 +119,7 @@ Bobot pada seeder **tidak perlu disentuh**.
 
 ## 4. Temuan Lain yang Mengubah Naskah
 
-### 4.1 Pembelian ke PBF — perbandingan harga per transaksi
+### 4.1 Pembelian ke PBF perbandingan harga per transaksi
 
 Obat yang sama tersedia di beberapa PBF dengan harga berbeda, dan katalog tiap PBF tidak identik.
 Alur pemesanannya: apotek lebih dulu melihat **PBF mana yang menyediakan** obat tersebut saat itu,
@@ -138,13 +138,13 @@ Tiga konsekuensinya:
 2. **Definisi operasional C4 perlu ditulis eksplisit.** Harga beli bukan atribut tetap milik obat,
    melainkan hasil perbandingan saat pemesanan. Karena itu sistem (revisi September) tidak menyimpan
    harga di master obat sama sekali; C4 didefinisikan sebagai **harga pokok persediaan (HPP)
-   rata-rata bergerak per satuan jual** — `(saldo × HPP + qty × harga faktur) ÷ (saldo + qty)`,
-   dibulatkan ke atas — yang diperbarui setiap kali penerimaan dicatat. Tulis begitu di Bab III.
+   rata-rata bergerak per satuan jual** `(saldo × HPP + qty × harga faktur) ÷ (saldo + qty)`,
+   dibulatkan ke atas yang diperbarui setiap kali penerimaan dicatat. Tulis begitu di Bab III.
 3. **Obat yang sering kosong bukan karena terkunci di satu PBF.** Obat yang hanya tersedia di satu
    PBF jumlahnya sedikit, dan kelima obat yang paling sering kosong justru tersedia di PBF lain.
    Apotek juga tidak menunggu PBF termurah kembali tersedia, melainkan langsung membandingkan PBF
    lain yang punya stok. Karena itu kekosongan yang terjadi berasal dari ketiadaan pasokan di
-   tingkat distributor, di luar kendali apotek — dan **tidak boleh** dijelaskan sebagai akibat
+   tingkat distributor, di luar kendali apotek dan **tidak boleh** dijelaskan sebagai akibat
    eksklusivitas PBF maupun keengganan membeli lebih mahal.
 
 ### 4.2 Batch bercampur memang terjadi
@@ -154,10 +154,10 @@ dua tanggal kedaluwarsa atau lebih di rak. Pengambilan barang memakai FEFO di gu
 apotek.
 
 Ini mengesahkan asumsi FEFO pada perhitungan C3, sekaligus menegaskan bahwa keterbatasan
-`MedicineStock` yang belum melacak stok per batch adalah batasan nyata — layak ditulis di Bab 1.4
+`MedicineStock` yang belum melacak stok per batch adalah batasan nyata layak ditulis di Bab 1.4
 dan diusulkan sebagai pengembangan di Bab 5.2.
 
-### 4.3 Penanganan obat kedaluwarsa — cukup lewat Stok Opname
+### 4.3 Penanganan obat kedaluwarsa cukup lewat Stok Opname
 
 Praktik apotek menempuh tiga jalur: penyesuaian stok opname, retur ke PBF, dan pemusnahan.
 Keputusan: **tidak membangun modul retur maupun pemusnahan**. Keduanya dicatat sebagai penyesuaian
@@ -167,22 +167,22 @@ Pemusnahan di lapangan dilakukan dengan melarutkan tablet ke air lalu dibuang ke
 menitipkannya ke apotek yang memiliki IPAL. Frekuensinya sekitar dua tahun sekali, mencakup
 ±1.500 obat dengan kerugian ratusan ribu rupiah.
 
-### 4.4 Notifikasi kedaluwarsa — sudah sesuai, tidak perlu diubah
+### 4.4 Notifikasi kedaluwarsa sudah sesuai, tidak perlu diubah
 
 Terdapat dua angka berbeda yang sama-sama sah dan tidak boleh dicampur:
 
-- **90 hari** — ambang peringatan, diturunkan dari tenggat retur PBF.
-- **30 hari** — penanda kritis, sesuai keinginan narasumber "notifikasi muncul kurang dari 1 bulan".
+- **90 hari** ambang peringatan, diturunkan dari tenggat retur PBF.
+- **30 hari** penanda kritis, sesuai keinginan narasumber "notifikasi muncul kurang dari 1 bulan".
 
 Kalau peringatan baru muncul di 30 hari, kesempatan retur sudah lewat. Perintah
 `sipokat:check-stock-and-expiry` sudah menerapkan keduanya: ambang `--expiry-days=90` dengan
 penghitungan terpisah untuk batch kritis ≤ 30 hari. Tidak ada perubahan kode yang diperlukan.
 
-### 4.5 Laporan — perlu tambahan export PDF
+### 4.5 Laporan perlu tambahan export PDF
 
 Laporan yang diminta: rekap penjualan, rekap pembelian, fast moving, dan slow moving. Format yang
 diinginkan: tampil di layar, export Excel, **dan export PDF**. Frekuensi: sesuai kebutuhan dan
-tahunan — keduanya terlayani oleh filter rentang tanggal bebas.
+tahunan keduanya terlayani oleh filter rentang tanggal bebas.
 
 Seluruh jenis laporan sudah tersedia. Yang ditambahkan pada iterasi ini adalah **export PDF** pada
 kedua halaman laporan.
@@ -204,14 +204,14 @@ sebelumnya masih berupa pernyataan umum.
 | Waktu menentukan prioritas restock | ± 1 jam per periode, karena harus menelusuri penjualan dulu |
 | Pemusnahan obat kedaluwarsa | ± 1.500 obat per 2 tahun, kerugian ratusan ribu rupiah |
 
-**Contoh kekeliruan prioritas** — bahan terbaik untuk paragraf pembuka latar belakang: Vitamin B
+**Contoh kekeliruan prioritas** bahan terbaik untuk paragraf pembuka latar belakang: Vitamin B
 Complex sedang sangat dibutuhkan, tetapi yang terbeli justru Vitamin D yang stoknya masih banyak.
 Kekeliruan serupa juga sering terjadi antar-dosis pada obat yang sama.
 
 Contoh ini menunjukkan persis kegagalan yang hendak diperbaiki SAW: keputusan yang bertumpu pada
 satu faktor tanpa membandingkan stok dan tingkat konsumsi antar-obat secara bersamaan. Sejalan
-dengan itu, kekeliruan antar-dosis muncul dua kali secara terpisah dalam wawancara — sebagai
-penyebab selisih catatan dan sebagai contoh salah beli — sehingga keberadaan field dosis pada data
+dengan itu, kekeliruan antar-dosis muncul dua kali secara terpisah dalam wawancara sebagai
+penyebab selisih catatan dan sebagai contoh salah beli sehingga keberadaan field dosis pada data
 obat punya pembenaran lapangan yang konkret.
 
 ---
@@ -221,12 +221,12 @@ obat punya pembenaran lapangan yang konkret.
 | Item | Status |
 |---|---|
 | Nama & jabatan narasumber | akan ditanyakan kembali |
-| Hak akses tiga peran (Tabel 3.2) | dilewati — ditangani sendiri di luar cakupan ini |
+| Hak akses tiga peran (Tabel 3.2) | dilewati ditangani sendiri di luar cakupan ini |
 | Foto kartu stok gudang | sedang diminta ke apotek |
 
 Kartu stok adalah dokumen terpenting yang tersisa. Dari enam dokumen yang diminta, baru data
 penerimaan PBF beserta tanggal ED, nomor batch, dan faktur yang tersedia. Data itu cukup untuk
-membentuk daftar obat, harga beli (C4), tanggal kedaluwarsa (C3), dan daftar PBF — tetapi belum
+membentuk daftar obat, harga beli (C4), tanggal kedaluwarsa (C3), dan daftar PBF tetapi belum
 mencakup stok berjalan (C1) dan data penjualan (C2). Kartu stok menutup keduanya sekaligus, karena
 memuat stok berjalan sekaligus riwayat keluar-masuk. Tanpa itu, Bab IV belum dapat menampilkan
 perhitungan SAW di atas data nyata.

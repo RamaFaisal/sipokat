@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\Schema;
  * - Baris C menunjuk lapisan yang dikurangi lewat layer_stock_id (diisi mulai E4/FEFO).
  * - hpp_avg = HPP rata-rata bergerak sesudah baris itu (bilangan bulat rupiah, dibulatkan ke atas).
  * - B5: baris ledger milik dokumen yang sudah soft-deleted dihapus sungguhan; kolom deleted_at
- *   medicine_stocks dibuang — ledger tidak lagi disaring lewat whereHas ke dokumen induk.
+ *   medicine_stocks dibuang ledger tidak lagi disaring lewat whereHas ke dokumen induk.
  * - Q5: expired_date item RO dinormalkan ke tanggal 1 bulan ED (kedaluwarsa sejak awal bulan).
  *
- * down() sengaja kosong — pemulihan lewat backup DB.
+ * down() sengaja kosong pemulihan lewat backup DB.
  */
 return new class extends Migration
 {
@@ -34,7 +34,7 @@ return new class extends Migration
             $table->index(['medicine_id', 'expired_date']);
         });
 
-        // B5: ledger yang dokumennya sudah dihapus tidak lagi disaring — hapus sungguhan.
+        // B5: ledger yang dokumennya sudah dihapus tidak lagi disaring hapus sungguhan.
         DB::table('medicine_stocks')->whereNotNull('deleted_at')->delete();
         DB::table('medicine_stocks')
             ->whereIn('receive_order_id', DB::table('receive_orders')->whereNotNull('deleted_at')->pluck('id'))
@@ -91,6 +91,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Sengaja kosong — lihat docblock.
+        // Sengaja kosong lihat docblock.
     }
 };

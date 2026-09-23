@@ -7,7 +7,7 @@
 
     @if ($this->summary->isNotEmpty())
         <x-filament::section>
-            <x-slot name="heading">Ringkasan — {{ $this->summary['periode'] }}</x-slot>
+            <x-slot name="heading">Ringkasan {{ $this->summary['periode'] }}</x-slot>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 @if ($this->summary['tipe'] !== 'pembelian')

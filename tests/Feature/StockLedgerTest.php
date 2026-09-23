@@ -132,7 +132,7 @@ it('menandai stok di bawah batas minimum sebagai almost_empty', function () {
 
 it('menandai stok tepat di batas minimum sebagai available', function () {
     // Batasnya ketat (`<`), bukan (`<=`). Perhatikan Medicine::isLowStock()
-    // memakai `<=` — dead code dengan definisi tandingan, lihat CLAUDE.md 13.6.
+    // memakai `<=` dead code dengan definisi tandingan, lihat CLAUDE.md 13.6.
     $medicine = makeMedicine(['min_stock' => 20]);
     receiveInto($medicine, 20);
     $service = app(StockCardService::class);
@@ -143,7 +143,7 @@ it('menandai stok tepat di batas minimum sebagai available', function () {
 });
 
 // ---------------------------------------------------------------------------
-// Kedaluwarsa (sumber kriteria C3) — batch TERJAUH yang masih bersisa (rencana K3)
+// Kedaluwarsa (sumber kriteria C3) batch TERJAUH yang masih bersisa (rencana K3)
 // ---------------------------------------------------------------------------
 
 it('memakai batch dengan kedaluwarsa terjauh yang masih bersisa', function () {

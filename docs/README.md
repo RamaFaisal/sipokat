@@ -1,12 +1,12 @@
 # Sipokat
 
 Sistem Inventory Obat Berbasis Web dengan Sistem Pendukung Keputusan metode **SAW** (Simple Additive
-Weighting) untuk prioritas restock obat — studi kasus Apotek Anugrah Husada, Demak.
+Weighting) untuk prioritas restock obat studi kasus Apotek Anugrah Husada, Demak.
 
 ## Tentang Aplikasi
 
-Sipokat mencatat stok obat dari hulu ke hilir — pemesanan ke PBF, penerimaan per faktur, kartu stok
-per batch, penjualan FEFO, sampai stok opname — lalu memberi rekomendasi obat mana yang paling perlu
+Sipokat mencatat stok obat dari hulu ke hilir pemesanan ke PBF, penerimaan per faktur, kartu stok
+per batch, penjualan FEFO, sampai stok opname lalu memberi rekomendasi obat mana yang paling perlu
 di-restock berdasarkan SAW atas empat kriteria: rasio stok terhadap batas minimum, permintaan per
 bulan, sisa kedaluwarsa, dan harga pokok persediaan.
 
@@ -16,11 +16,11 @@ bulan, sisa kedaluwarsa, dan harga pokok persediaan.
 - **Pengadaan**: Purchase Order per PBF (bisa dibuat dari ranking SAW) dan Receive Order **satu per faktur** dengan input dalam kemasan yang otomatis dikonversi ke satuan jual; status PO (pending/sebagian/lengkap/ditutup) turun dari penerimaan.
 - **Kartu stok per batch**: setiap penerimaan menjadi lapisan dengan nomor batch, ED, dan harga beli; **HPP rata-rata bergerak** dihitung per obat.
 - **Penjualan FEFO**: stok keluar otomatis dari batch dengan ED terdekat (bisa memecah ke beberapa batch); harga jual ≥ HPP; jumlah ≤ stok tersedia. Salah input → hapus dan buat ulang.
-- **Stok Opname per batch**: hitung fisik tiap batch, selisih menjadi penyesuaian pada batch itu — sekaligus jalur retur/pemusnahan obat kedaluwarsa.
+- **Stok Opname per batch**: hitung fisik tiap batch, selisih menjadi penyesuaian pada batch itu sekaligus jalur retur/pemusnahan obat kedaluwarsa.
 - **SPK SAW**: bobot dan skala konversi 1–5 dapat diubah admin (Σ bobot harus 1,000), perhitungan manual & terjadwal, peringkat padat ("Tingkat"), tanda "sudah dipesan", aksi massal **Buat PO** dari ranking, riwayat snapshot, dan rincian perhitungan V per obat.
 - **Notifikasi** harian stok di bawah batas minimum dan batch yang mendekati kedaluwarsa.
 - **Dashboard**: Top-10 prioritas restock, stok kritis, PO terbuka, batch mendekati ED, grafik penjualan.
-- **Laporan**: kartu stok (per batch + HPP), rekap penjualan/pembelian, fast/slow/dead moving — Excel & PDF.
+- **Laporan**: kartu stok (per batch + HPP), rekap penjualan/pembelian, fast/slow/dead moving Excel & PDF.
 - **Data riil**: template Excel 4 sheet dan importer (`sipokat:data-riil:*`).
 
 ### Kriteria SAW

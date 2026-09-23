@@ -136,7 +136,7 @@ function makeOrder(Medicine $medicine, int $qty): Order
     return $order;
 }
 
-/** Penerimaan + lapisan kartu stok lewat service — jalur yang sama dengan CreateReceiveOrder::afterCreate(). */
+/** Penerimaan + lapisan kartu stok lewat service jalur yang sama dengan CreateReceiveOrder::afterCreate(). */
 function receiveInto(Medicine $medicine, int $qty, ?string $expiredDate = null, string $batch = 'B-001'): ReceiveOrder
 {
     $receiveOrder = makeReceiveOrder($medicine, $qty, $expiredDate, $batch);
@@ -145,7 +145,7 @@ function receiveInto(Medicine $medicine, int $qty, ?string $expiredDate = null, 
     return $receiveOrder;
 }
 
-/** Penjualan + alokasi FEFO lewat service — jalur yang sama dengan CreateOrder::afterCreate(). */
+/** Penjualan + alokasi FEFO lewat service jalur yang sama dengan CreateOrder::afterCreate(). */
 function sellFrom(Medicine $medicine, int $qty): Order
 {
     $order = makeOrder($medicine, $qty);

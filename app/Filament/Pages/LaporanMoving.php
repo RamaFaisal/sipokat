@@ -249,7 +249,7 @@ class LaporanMoving extends Page implements HasSchemas
             $sheet = $spreadsheet->createSheet();
             $sheet->setTitle($sheetName);
 
-            $sheet->setCellValue('A1', strtoupper($sheetName).' — '.$this->meta['periode']);
+            $sheet->setCellValue('A1', strtoupper($sheetName).' '.$this->meta['periode']);
             $sheet->mergeCells('A1:H1');
             $sheet->getStyle('A1')->applyFromArray([
                 'font' => ['bold' => true, 'size' => 13],

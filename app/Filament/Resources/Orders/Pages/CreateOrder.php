@@ -24,7 +24,7 @@ class CreateOrder extends CreateRecord
 
     /**
      * Item baru tersimpan setelah handleRecordCreation (saveRelationships), jadi kartu stok
-     * ditulis di sini — masih di dalam transaksi Filament: gagal alokasi = seluruhnya batal.
+     * ditulis di sini masih di dalam transaksi Filament: gagal alokasi = seluruhnya batal.
      */
     protected function afterCreate(): void
     {

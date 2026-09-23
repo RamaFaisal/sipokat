@@ -8,9 +8,9 @@
 > konsistensi, Bagian 9 urutan eksekusi.
 >
 > Prinsip yang dipegang di seluruh dokumen: topik TA adalah **prioritas restock**, bukan penjualan.
-> Setiap field dan fitur diuji dengan satu pertanyaan — apakah ini dibutuhkan untuk memutuskan
+> Setiap field dan fitur diuji dengan satu pertanyaan apakah ini dibutuhkan untuk memutuskan
 > restock, atau untuk memberi data ke SAW? Keputusan yang lolos uji itu tetapi bukan kontribusi
-> (kebersihan data, konversi kemasan, penamaan) **tidak** ditulis sebagai fitur di naskah — cukup
+> (kebersihan data, konversi kemasan, penamaan) **tidak** ditulis sebagai fitur di naskah cukup
 > muncul sebagai konsekuensi di definisi operasional.
 
 ---
@@ -24,15 +24,15 @@
 | M1 | Kategori tetap dua golongan: Obat Bebas, Obat Keras | Hasil wawancara. Label PREKURSOR/OOT di faktur diabaikan |
 | M2 | Master Satuan dan Supplier **tidak diubah strukturnya** | Sudah sesuai. Isi tabel `units` kini dipakai untuk dua peran: satuan dasar dan nama kemasan. Ampul & Kaleng ditambah sebagai *data* (faktur: KETOROLAC INJ 100 AMP, GG TRIMAN 20 KLG) |
 | M3 | `unit_id` = **satuan dasar** = satuan jual = satuan kartu stok. Kemasan beli disimpan sebagai `pack_unit_id` (FK `units`) + `pack_size` (isi per kemasan) | Faktur dalam BOX/FLS/TUBE dengan harga per kemasan; stok berkurang dalam satuan jual, jadi kartu stok harus dalam satuan itu. Selaras dengan CLAUDE.md §13.2 aturan #1 |
-| M4 | **`purchase_price` dihapus dari master.** C4 = **HPP rata-rata bergerak** per satuan jual, dibaca dari kartu stok (`hpp_avg` baris terakhir obat itu) — lihat Bagian 4. `Medicine::latestPurchasePrice()` (harga item RO terakhir) tetap ada, hanya untuk harga perkiraan di PO | Kolom di master hanyalah salinan yang bisa basi. **Diputuskan 2026-09-13 (menggantikan "harga penerimaan terakhir")**: C4 mengukur modal yang tertanam pada stok yang dipegang. Definisi operasional C4 di Bab III dan `update-dari-wawancara.md` §4.1 harus diperbarui |
+| M4 | **`purchase_price` dihapus dari master.** C4 = **HPP rata-rata bergerak** per satuan jual, dibaca dari kartu stok (`hpp_avg` baris terakhir obat itu) lihat Bagian 4. `Medicine::latestPurchasePrice()` (harga item RO terakhir) tetap ada, hanya untuk harga perkiraan di PO | Kolom di master hanyalah salinan yang bisa basi. **Diputuskan 2026-09-13 (menggantikan "harga penerimaan terakhir")**: C4 mengukur modal yang tertanam pada stok yang dipegang. Definisi operasional C4 di Bab III dan `update-dari-wawancara.md` §4.1 harus diperbarui |
 | M5 | **`sale_price` dihapus dari master.** Harga jual diketik kasir di form penjualan, divalidasi **≥ HPP**. Aturan margin **tidak dibangun** (D2) | Bukan urusan restock; modul penjualan hanya dibutuhkan sebagai sumber C2. Margin adalah kebijakan apotek, bukan sistem |
 | M6 | `dosage` **dihapus**. `name` memuat nama + kekuatan + merek/pabrikan; keunikan pada seluruh string `name` | Faktur & Winong menulis dosis dan merek di nama (`ALLOPURINOL 100MG IFI` vs `ALLOPURINOL 100MG NOVA`, harga beda). Kolom dosis terpisah tidak bisa membedakan keduanya |
 | M7 | `code` → **`OBT-0001`** sekuensial, dibuat sekali, tidak pernah dihitung ulang | Kode lama menyimpan kategori & satuan sehingga dua kali butuh migration penulisan ulang (CLAUDE.md §12.3, §14). Generator lama diduplikasi di 3 tempat |
 | M8 | `photo` **dihapus** | Tidak ada gunanya untuk restock |
-| M9 | `min_stock` tetap, **wajib > 0**. Nilai bawaan **per satuan jual**: Strip **20**, satuan lain = `pack_size` (satu kemasan); bisa ditimpa. Data lama bernilai 0 di-backfill ke bawaan ini | Dipakai notifikasi F-04 **dan** sebagai pembagi C1 (K1) — jadi harus diisi nyata dari apotek, bawaan hanya jaring pengaman. Angka 20 untuk strip = batas waspada wawancara (B6, B7) |
-| M10 | Satuan dasar tiap obat = **satuan yang tertulis di kartu stok apotek**. Untuk tablet: strip atau tablet — **dikunci setelah foto kartu stok diterima** | Ambang C1 "≤ 20 unit" dan C4 "per strip" dari wawancara hanya bermakna kalau satuannya sama dengan yang dihitung apotek |
+| M9 | `min_stock` tetap, **wajib > 0**. Nilai bawaan **per satuan jual**: Strip **20**, satuan lain = `pack_size` (satu kemasan); bisa ditimpa. Data lama bernilai 0 di-backfill ke bawaan ini | Dipakai notifikasi F-04 **dan** sebagai pembagi C1 (K1) jadi harus diisi nyata dari apotek, bawaan hanya jaring pengaman. Angka 20 untuk strip = batas waspada wawancara (B6, B7) |
+| M10 | Satuan dasar tiap obat = **satuan yang tertulis di kartu stok apotek**. Untuk tablet: strip atau tablet **dikunci setelah foto kartu stok diterima** | Ambang C1 "≤ 20 unit" dan C4 "per strip" dari wawancara hanya bermakna kalau satuannya sama dengan yang dihitung apotek |
 | M11 | Kemasan di **baris RO boleh ditimpa** (kemasan & isi), master **tidak ditulis balik**. Satuan dasar obat **tidak pernah berubah**: kemasan baru yang merupakan kelipatan bulat satuan dasar → timpa di baris RO; yang bukan → **obat berbeda** | Lihat §1.6. Penulisan balik ditolak karena satu pembelian eceran 5 strip akan mengubah bawaan form jadi "per strip" |
-| M12 | `description` **dihapus** | Tidak ada tujuan yang jelas. Satu-satunya pemakai adalah penanda `[SPK_TEST_DATA]` di `SpkTestDataSeeder` untuk pembersihan idempoten — diganti penanda lain (lihat §1.4) |
+| M12 | `description` **dihapus** | Tidak ada tujuan yang jelas. Satu-satunya pemakai adalah penanda `[SPK_TEST_DATA]` di `SpkTestDataSeeder` untuk pembersihan idempoten diganti penanda lain (lihat §1.4) |
 
 ### 1.2 Skema `medicines` sesudah revisi
 
@@ -47,13 +47,13 @@
 | `min_stock` | int, **> 0** | tetap | Bawaan per satuan (M9); data lama 0 di-backfill (B7) |
 | `stock_status` | enum | tetap | Turunan, dihitung `StockCardService` |
 | `status` | enum active/inactive | tetap | Menentukan alternatif SAW |
-| `purchase_price` | — | **drop** | Dibaca dari RO (M4) |
-| `sale_price` | — | **drop** | Diketik di penjualan (M5) |
-| `dosage` | — | **drop** | |
-| `photo` | — | **drop** | |
-| `description` | — | **drop** | |
+| `purchase_price` | | **drop** | Dibaca dari RO (M4) |
+| `sale_price` | | **drop** | Diketik di penjualan (M5) |
+| `dosage` | | **drop** | |
+| `photo` | | **drop** | |
+| `description` | | **drop** | |
 
-Tidak ada satu pun angka rupiah di master obat — semua rupiah hidup di transaksi, tempat asalnya.
+Tidak ada satu pun angka rupiah di master obat semua rupiah hidup di transaksi, tempat asalnya.
 
 ### 1.3 Form master obat sesudah revisi
 
@@ -73,12 +73,12 @@ Lima field yang benar-benar diketik, tidak ada field opsional. Sebelumnya sembil
 
 Supaya tidak rancu di layar, ketiga field satuan ditata sebagai satu baris kalimat dengan helper text:
 
-> **Satuan jual**: `[Strip ▾]` — satuan yang dipakai saat menjual dan menghitung stok.
-> **Kemasan pembelian**: `[Box ▾]` isi `[10]` Strip — satuan yang tertulis di faktur PBF; sistem
+> **Satuan jual**: `[Strip ▾]` satuan yang dipakai saat menjual dan menghitung stok.
+> **Kemasan pembelian**: `[Box ▾]` isi `[10]` Strip satuan yang tertulis di faktur PBF; sistem
 > mengonversinya ke satuan jual saat penerimaan.
 
 Di kode, "satuan jual" tetap disimpan sebagai `unit_id` (nama kolom lama, tidak perlu diganti) dan
-di dokumen ini disebut *satuan dasar* — ketiganya satu hal yang sama.
+di dokumen ini disebut *satuan dasar* ketiganya satu hal yang sama.
 
 ### 1.4 Aturan turunan
 
@@ -96,18 +96,18 @@ selalu membuat RO untuk tiap obat).
 **Harga beli (C4) = HPP rata-rata bergerak.** Dibaca dari `medicine_stocks.hpp_avg` pada baris
 terakhir obat itu (definisi dan rumus di §4.3). Obat berstok 0 tetap punya HPP (nilai terakhir
 dipertahankan), jadi tidak kehilangan C4. Obat yang belum punya satu pun baris kartu stok **tidak ikut
-dihitung SAW** (K0) — dan karena stok awal wajib lewat RO (§7.3), setiap obat yang punya baris kartu
+dihitung SAW** (K0) dan karena stok awal wajib lewat RO (§7.3), setiap obat yang punya baris kartu
 stok pasti punya HPP. C4 tidak pernah 0.
 
 **Harga perkiraan PO.** `Medicine::latestPurchasePrice()` = `price` item RO terakhir (urut
 `receive_orders.receive_date` lalu `id`, RO tidak soft-deleted), per satuan jual. Hanya untuk mengisi
-harga awal baris PO (P6). @Harga faktur dipakai apa adanya — **sudah termasuk PPN** (cek faktur 02029:
+harga awal baris PO (P6). @Harga faktur dipakai apa adanya **sudah termasuk PPN** (cek faktur 02029:
 474.000 + 530.000 + 392.500 = 1.396.500 = Total; DPP adalah hitungan mundur). Kolom Disc kosong di
 semua faktur contoh.
 
 **Keunikan nama.** `PARACETAMOL` dan `PARACETAMOL 500MG` adalah dua string berbeda → keduanya boleh
 dan memang dua obat berbeda. Yang tidak tertangkap validasi: satu obat fisik terdaftar dua kali karena
-ejaan (`PARACETAMOL 500MG` vs `PARACETAMOL 500 MG`). Akibatnya ke SAW nyata — stok dan permintaan
+ejaan (`PARACETAMOL 500MG` vs `PARACETAMOL 500 MG`). Akibatnya ke SAW nyata stok dan permintaan
 terbelah ke dua alternatif. Penangkalnya konvensi penamaan + normalisasi + dedup di importer data riil.
 
 ### 1.5 Ilustrasi: perjalanan 5 Box
@@ -120,7 +120,7 @@ Faktur: `5 BOX @ 41.000 = 205.000`.
 | Kolom | Diisi petugas |
 |---|---|
 | Obat | Obat A |
-| Kemasan | Box (isi 10 Strip) — terisi dari master, boleh diubah |
+| Kemasan | Box (isi 10 Strip) terisi dari master, boleh diubah |
 | Jumlah kemasan | 5 |
 | Harga per kemasan | 41.000 |
 | Batch / ED | T10088BC / 10-2026 |
@@ -131,7 +131,7 @@ Faktur: `5 BOX @ 41.000 = 205.000`.
 |---|---|
 | Jumlah satuan dasar | 50 Strip |
 | Harga per satuan dasar | Rp 4.100 |
-| Subtotal | Rp 205.000 — harus sama dengan Jml.Harga faktur (kontrol input) |
+| Subtotal | Rp 205.000 harus sama dengan Jml.Harga faktur (kontrol input) |
 
 **Yang tersimpan:**
 
@@ -151,7 +151,7 @@ yang salah bagi langsung melempar obat ke ujung skala C4.
 
 ### 1.6 Dua situasi kemasan berubah
 
-**Situasi A — kemasan luar berubah, isinya tetap satuan dasar yang sama.**
+**Situasi A kemasan luar berubah, isinya tetap satuan dasar yang sama.**
 Calortusin Mei datang 10 Box isi 10 strip; Juli datang 1 Karton isi 100 strip; Agustus 5 strip lepas.
 
 | RO | Kemasan (ditimpa di baris) | Isi | Jumlah | Kartu stok |
@@ -162,9 +162,9 @@ Calortusin Mei datang 10 Box isi 10 strip; Juli datang 1 Karton isi 100 strip; A
 
 Kartu stok tidak tahu dari kemasan apa strip itu datang. Master tidak ditulis balik (M11).
 
-**Situasi B — kemasan baru tidak bisa dinyatakan dalam satuan dasar.**
+**Situasi B kemasan baru tidak bisa dinyatakan dalam satuan dasar.**
 CTM 4MG pertama datang Box berisi strip, lalu datang KLG (kaleng) berisi 1.000 tablet lepas. Tablet
-lepas bukan kelipatan strip. Ini **obat berbeda** — dan PBF sendiri menamainya begitu di faktur
+lepas bukan kelipatan strip. Ini **obat berbeda** dan PBF sendiri menamainya begitu di faktur
 (`CTM 4MG KLG TRIMAN`, `GG TRIMAN KLG`, `IFIDEX 0,5MG KLG`); konvensi M6 otomatis memisahkannya.
 
 | Obat | Satuan dasar | Kemasan bawaan |
@@ -193,11 +193,11 @@ Contoh pemilihan satuan dasar dari faktur:
 | Aksi | Berkas |
 |------|--------|
 | Migration baru | drop `dosage`, `photo`, `purchase_price`, `sale_price`, `description`; add `pack_unit_id` (FK `units`), `pack_size`; unique index `name`; penomoran ulang `code` → `OBT-####` urut `id` |
-| Model | `app/Models/Medicine.php` — `$fillable`, relasi `packUnit()`, generator kode di `booted()`, `latestPurchasePrice()`, hapus `isLowStock()` (dead code, CLAUDE.md §13.6 #5) |
-| Form | `app/Filament/Resources/Medicines/Schemas/MedicineForm.php` — hapus `dosage`, `photo`, `purchase_price`, `sale_price`, `description`, `generateCode()`; tambah `pack_unit_id`/`pack_size`; `min_stock` bawaan per satuan (M9), tolak 0 |
-| Table | `app/Filament/Resources/Medicines/Tables/MedicinesTable.php` — kolom kemasan; hapus kolom harga |
-| Importer | `app/Filament/Imports/MedicineImporter.php` — hapus `dosage`, `purchase_price`, `sale_price`, `description`; tambah `pack_unit`/`pack_size` |
-| SAW | `app/Services/SawCalculationService.php` — C4 via `hpp_avg` kartu stok (Bagian 4) |
+| Model | `app/Models/Medicine.php` `$fillable`, relasi `packUnit()`, generator kode di `booted()`, `latestPurchasePrice()`, hapus `isLowStock()` (dead code, CLAUDE.md §13.6 #5) |
+| Form | `app/Filament/Resources/Medicines/Schemas/MedicineForm.php` hapus `dosage`, `photo`, `purchase_price`, `sale_price`, `description`, `generateCode()`; tambah `pack_unit_id`/`pack_size`; `min_stock` bawaan per satuan (M9), tolak 0 |
+| Table | `app/Filament/Resources/Medicines/Tables/MedicinesTable.php` kolom kemasan; hapus kolom harga |
+| Importer | `app/Filament/Imports/MedicineImporter.php` hapus `dosage`, `purchase_price`, `sale_price`, `description`; tambah `pack_unit`/`pack_size` |
+| SAW | `app/Services/SawCalculationService.php` C4 via `hpp_avg` kartu stok (Bagian 4) |
 | Pemakai `purchase_price` lain | `PurchaseOrderForm` (harga awal → `latestPurchasePrice()`), `ReceiveOrderForm` (fallback harga), `MedicineStockOpnameForm` & `ViewMedicineStockOpname` (hpp penyesuaian → `hpp_avg`) |
 | Pemakai `sale_price` | `OrderForm` (harga diketik, validasi ≥ HPP) |
 | Referensi `dosage` yang harus dibersihkan (18 berkas) | `MedicineStockOpnameForm`, `MedicineStocksTable`, `OrderForm`, `PurchaseOrderForm`, `ReceiveOrderForm`, 3 widget (`Expiring`, `LowStock`, `SawTop10`), `StockMovementService` (pesan error), 2 blade print (`print-purchase-order`, `print-receive-order`), `tests/Pest.php` |
@@ -210,7 +210,7 @@ Contoh pemilihan satuan dasar dari faktur:
 |-------|--------|
 | SAW C4 | Sumber pindah dari kolom master ke `hpp_avg` kartu stok (HPP rata-rata bergerak, Bagian 4). Tidak pernah null (K0) |
 | SAW alternatif | `status = active` **dan** punya ≥ 1 baris kartu stok (K0) |
-| SAW C1 | `min_stock` kini pembagi rasio (K1) — perubahan `min_stock` mengubah peringkat, disengaja |
+| SAW C1 | `min_stock` kini pembagi rasio (K1) perubahan `min_stock` mengubah peringkat, disengaja |
 | Penjualan | Harga item diketik kasir, validasi ≥ HPP. Tidak ada autofill dari master |
 | PO | Harga awal dari `latestPurchasePrice()`; nilainya per satuan dasar |
 | Stok opname | `hpp` penyesuaian = `hpp_avg` saat itu |
@@ -233,16 +233,16 @@ Contoh pemilihan satuan dasar dari faktur:
 ### 1.10 Hal terbuka
 
 - **M10 menunggu foto kartu stok**: strip atau tablet untuk sediaan padat. Menentukan `pack_size` seluruh obat tablet dan interpretasi ambang C1. Sampai data datang, seeder demo memakai **strip** (T2).
-- Penomoran ulang kode pada data yang ada: urut `id` (urutan pembuatan) — paling mudah dipertanggungjawabkan.
-- Implementasi: keunikan `name` di aplikasi (rule form + importer), bukan indeks unik DB — lihat C4 di Bagian 8; generator kode memakai transaksi + `lockForUpdate` pada pencarian nomor terbesar (C6).
+- Penomoran ulang kode pada data yang ada: urut `id` (urutan pembuatan) paling mudah dipertanggungjawabkan.
+- Implementasi: keunikan `name` di aplikasi (rule form + importer), bukan indeks unik DB lihat C4 di Bagian 8; generator kode memakai transaksi + `lockForUpdate` pada pencarian nomor terbesar (C6).
 
 ---
 
 ## 2. Transaksi Masuk (Receive Order)
 
 RO adalah pintu masuk data: dari faktur PBF, RO memberi C3 (batch/ED) dan C4 (harga). Konversi
-kemasan (M3, M11) hidup di sini. Alur nyata apotek **tidak lewat dokumen PO ke PBF** — pesan lewat
-telepon/WA ke sales, faktur datang bersama barang — jadi RO harus bisa berdiri sendiri, dan PO hanya
+kemasan (M3, M11) hidup di sini. Alur nyata apotek **tidak lewat dokumen PO ke PBF** pesan lewat
+telepon/WA ke sales, faktur datang bersama barang jadi RO harus bisa berdiri sendiri, dan PO hanya
 pengisi awal.
 
 ### 2.1 Keputusan
@@ -253,11 +253,11 @@ pengisi awal.
 | R1a | `medicine_name` di item RO tetap sebagai snapshot | Nama obat bisa diedit di master; faktur lama harus tetap terbaca |
 | R1b | Cetakan RO seperti faktur: kemasan, tanpa kolom konversi | Sepadan dengan dokumen PBF |
 | R2 | `manufacture_date` **dihapus** | Tidak ada di faktur maupun sistem pembanding |
-| R3 | ED diinput **bulan-tahun**, disimpan sebagai **tanggal 1** bulan itu — obat dianggap kedaluwarsa sejak awal bulan | Faktur hanya mencetak MM-YY. Tafsir konservatif: C3 dan notifikasi ±30 hari lebih pendek daripada akhir bulan |
+| R3 | ED diinput **bulan-tahun**, disimpan sebagai **tanggal 1** bulan itu obat dianggap kedaluwarsa sejak awal bulan | Faktur hanya mencetak MM-YY. Tafsir konservatif: C3 dan notifikasi ±30 hari lebih pendek daripada akhir bulan |
 | R4 | ED **wajib**, dan harus **> tanggal terima** (Q4) | Bila faktur kosong (RECO TM, ALLOPURINOL IFI), petugas membaca fisik kemasan. ED sebelum tanggal terima tidak mungkin secara fisik |
-| R5 | Header: nomor RO (otomatis), **nomor faktur PBF** (wajib, unik per supplier), PBF, tanggal terima, PO (opsional), `received_by`. **Hapus** `description`, `late_arrival`, `status` | Status selalu *completed* — RO menulis kartu stok saat disimpan; kolom tanpa makna dihapus, bukan dikonstankan |
+| R5 | Header: nomor RO (otomatis), **nomor faktur PBF** (wajib, unik per supplier), PBF, tanggal terima, PO (opsional), `received_by`. **Hapus** `description`, `late_arrival`, `status` | Status selalu *completed* RO menulis kartu stok saat disimpan; kolom tanpa makna dihapus, bukan dikonstankan |
 | R6 | Jejak konversi per baris: `pack_unit_id`, `pack_size`, `pack_qty` | Isi kemasan PBF bisa berubah; faktur harus tetap bisa direkonsiliasi |
-| R7 | `medicine_stocks.receive_order_item_id` — **satu baris D per item RO = per batch** | Fondasi C3 batch terjauh dan Section 13 Tahap 3. `recordReceipt()` sudah menulis per item; hanya kurang kolomnya |
+| R7 | `medicine_stocks.receive_order_item_id` **satu baris D per item RO = per batch** | Fondasi C3 batch terjauh dan Section 13 Tahap 3. `recordReceipt()` sudah menulis per item; hanya kurang kolomnya |
 | R8 | Edit/hapus RO: **batch/ED/harga selalu boleh** (harga → `hpp` baris D ikut, C4 ikut). **Jumlah atau hapus RO hanya bila belum ada baris C yang menunjuk item RO itu**; selebihnya koreksi lewat Stok Opname | Menghapus lapisan yang sudah terjual membuat stok negatif diam-diam. Opname adalah jalur koreksi yang disepakati wawancara |
 | R9 | PO **mengikuti format baris RO**; sisa PO dihitung dalam satuan jual. RO dari PO: petugas **mencentang** item dari daftar sisa PO, bukan menerima semua sisa lalu menghapus. Baris yang berasal dari PO **ditolak bila melebihi sisa** (validasi yang ada dipertahankan); kelebihan kiriman dicatat sebagai baris di luar PO (Q6) | PBF memecah pesanan jadi banyak faktur (maks 14 baris/lembar + Prekursor/OOT wajib terpisah). Sisa PO tetap bermakna |
 | R10 | **Satu faktur = satu RO**, berapa pun jumlah faktur sehari (data: 8 faktur pada 11-05-2024). Faktur revisi = edit RO yang ada | Faktur adalah satuan rekonsiliasi (subtotal RO = Total faktur), satuan regulasi (Prekursor/OOT), dan satuan revisi. Bentuk "satu RO banyak faktur" (faktur per baris / nested repeater) ditolak: tidak mengurangi ketikan, menambah struktur, dan mematikan pengisian dari PO |
@@ -279,25 +279,25 @@ pengisi awal.
 | Nomor faktur PBF | ✔ | Unik per PBF |
 | Tanggal terima | ✔ | |
 
-**Pilih item dari PO** (hanya bila PO dipilih) — daftar sisa PO dengan kolom dipesan / sudah diterima
+**Pilih item dari PO** (hanya bila PO dipilih) daftar sisa PO dengan kolom dipesan / sudah diterima
 / sisa, petugas mencentang yang ada di faktur. Baris terbentuk dengan kemasan dan harga dari PO.
 
 **Baris item**
 
 | Kolom | Diisi | Bawaan |
 |---|---|---|
-| Obat | petugas / dari PO | — |
+| Obat | petugas / dari PO | |
 | Satuan input | petugas | kemasan bawaan obat |
 | Isi per kemasan | petugas | dari master; nonaktif bila satuan input = satuan jual |
 | Jumlah | petugas | dari sisa PO bila dari PO |
 | Harga per satuan input | petugas | dari PO bila ada, kalau tidak `latestPurchasePrice()` × isi |
-| No. Batch | petugas | — |
-| ED (bulan-tahun) | petugas | — |
+| No. Batch | petugas | |
+| ED (bulan-tahun) | petugas | |
 | *= jumlah satuan jual* | sistem | |
 | *= harga per satuan jual* | sistem | |
 | *Subtotal* | sistem | |
 
-**Footer**: Total RO (Σ baris, tampil saja — petugas mencocokkan dengan faktur secara manual; tidak
+**Footer**: Total RO (Σ baris, tampil saja petugas mencocokkan dengan faktur secara manual; tidak
 ada field "Total menurut faktur" dan tidak ada validasi). Tombol **+ Tambah item di luar PO**,
 **Simpan**, **Simpan & buat lagi**.
 
@@ -307,7 +307,7 @@ ada field "Total menurut faktur" dan tidak ada validasi). Tombol **+ Tambah item
 |---|---|
 | `receive_orders` | **tambah** `invoice_number` (unique `[supplier_id, invoice_number]`); **drop** `description`, `late_arrival`, `status` |
 | `receive_order_items` | **tambah** `pack_unit_id` (FK `units`), `pack_size`, `pack_qty`; **drop** `manufacture_date`; `expired_date` NOT NULL dan **dinormalkan ke tanggal 1** untuk data lama (Q5); `qty`/`price` tetap (dalam satuan jual) |
-| `medicine_stocks` | **tambah** pada baris D: `receive_order_item_id` (FK nullable, jejak asal), `batch_number`, `expired_date` (disalin ke **semua** baris D — dari RO maupun opname, C5); pada baris C: `layer_stock_id` (FK ke baris D, D1). Lihat §5.4 |
+| `medicine_stocks` | **tambah** pada baris D: `receive_order_item_id` (FK nullable, jejak asal), `batch_number`, `expired_date` (disalin ke **semua** baris D dari RO maupun opname, C5); pada baris C: `layer_stock_id` (FK ke baris D, D1). Lihat §5.4 |
 | `general_settings` | **tambah** `ppn_rate` (decimal, default 11) |
 
 Backfill: baris D lama mendapat `receive_order_item_id` + batch/ED dengan mencocokkan
@@ -320,21 +320,21 @@ diatribusikan lewat replay FEFO (F6).
 |------|--------|
 | Migration | 4 perubahan skema di atas + backfill `receive_order_item_id` |
 | Model | `ReceiveOrder` (fillable, hapus status), `ReceiveOrderItem` (fillable, cast, relasi `packUnit`), `MedicineStock` (relasi `receiveOrderItem`, `layer`; accessor `remaining` pada baris D) |
-| Form | `ReceiveOrderForm` — header baru, komponen centang item PO, baris dengan konversi, ED bulan-tahun, aturan R8; **tanpa** validasi total |
-| Service | `StockMovementService::recordReceipt()` — tulis lapisan (jejak item, batch, ED); `reverseReceipt()` baru dengan cek R8, **menghapus baris D sungguhan** lalu replay HPP (B5) |
-| Cetak | `print-receive-order.blade.php` — kemasan, DPP/PPN hitung tampil |
-| Export | `ReceiveOrderExporter` — kolom baru, hapus status |
-| Settings | `GeneralSettings` + `ManageGeneralSettings` — `ppn_rate` |
+| Form | `ReceiveOrderForm` header baru, komponen centang item PO, baris dengan konversi, ED bulan-tahun, aturan R8; **tanpa** validasi total |
+| Service | `StockMovementService::recordReceipt()` tulis lapisan (jejak item, batch, ED); `reverseReceipt()` baru dengan cek R8, **menghapus baris D sungguhan** lalu replay HPP (B5) |
+| Cetak | `print-receive-order.blade.php` kemasan, DPP/PPN hitung tampil |
+| Export | `ReceiveOrderExporter` kolom baru, hapus status |
+| Settings | `GeneralSettings` + `ManageGeneralSettings` `ppn_rate` |
 | Widget | `PendingPurchaseOrdersWidget` (definisi "belum lengkap" ikut Bagian 3) |
-| Seeder | `SpkTestDataSeeder`, `DemoApotekSeeder` — RO dengan `invoice_number`, jejak kemasan, tanpa `manufacture_date` |
-| Test | `StockMovementServiceTest` — atribusi item, aturan R8 |
+| Seeder | `SpkTestDataSeeder`, `DemoApotekSeeder` RO dengan `invoice_number`, jejak kemasan, tanpa `manufacture_date` |
+| Test | `StockMovementServiceTest` atribusi item, aturan R8 |
 
 ### 2.5 Dampak ke modul lain
 
 | Modul | Dampak |
 |---|---|
 | SAW C3 | `farthestExpiryDate()` membaca **sisa per lapisan** (`SUM(D) − SUM(C)` per `layer_stock_id`, Bagian 5) |
-| SAW C4 | Baris D dari RO memperbarui `hpp_avg` (Bagian 4) — C4 ikut berubah pada perhitungan berikutnya |
+| SAW C4 | Baris D dari RO memperbarui `hpp_avg` (Bagian 4) C4 ikut berubah pada perhitungan berikutnya |
 | PO | Sisa dihitung dalam satuan jual; status penerimaan turunan (Bagian 3) |
 | Notifikasi ED | Hanya lapisan dengan sisa > 0 (F5) |
 | Stok opname | Jalur resmi koreksi jumlah RO yang sudah terjual (R8) |
@@ -355,7 +355,7 @@ diatribusikan lewat replay FEFO (F6).
 
 - Tidak ada. Atribusi batch pada baris C dibahas di Bagian 5.
 
-Catatan: pembandingan Total RO dengan Total faktur **tidak dibuat** — pengecekan awal dan revisi
+Catatan: pembandingan Total RO dengan Total faktur **tidak dibuat** pengecekan awal dan revisi
 dilakukan petugas secara manual. Faktur revisi pada data contoh (01955, 07-05-2024) menunjukkan
 revisi PBF menyangkut *isi kiriman* (jumlah dipangkas), bukan salah hitung; totalnya selalu
 konsisten dengan barisnya.
@@ -365,7 +365,7 @@ konsisten dengan barisnya.
 ## 3. Pemesanan (Purchase Order)
 
 Dari wawancara: apotek **menelepon/WA sales dulu untuk menanyakan ketersediaan**, baru memesan.
-Maka PO **bukan dokumen ke PBF** — PBF tidak pernah melihatnya. PO adalah catatan internal
+Maka PO **bukan dokumen ke PBF** PBF tidak pernah melihatnya. PO adalah catatan internal
 "setelah dikonfirmasi sales, apotek memesan barang-barang ini ke PBF X", sekaligus pengikat
 banyak RO yang memenuhinya.
 
@@ -396,7 +396,7 @@ pesanan di luar metode; Bab 5.2 boleh menyarankan EOQ atau permintaan × lead ti
 |---|---|
 | `po_number`, `supplier_id`, `po_date`, `created_by` | tetap |
 | `status_receive_order` | tetap, nilai: `pending` / `partial` / `received` / **`closed`** (baru) |
-| `status` (draft/approved/cancelled/completed) | **drop** — PO yang dibuat sudah keputusan final (pasca-WA); pembatalan = Tutup PO. Pemakai lain hanya widget PO Tertunda & filter tabel PO → pindah ke `status_receive_order` |
+| `status` (draft/approved/cancelled/completed) | **drop** PO yang dibuat sudah keputusan final (pasca-WA); pembatalan = Tutup PO. Pemakai lain hanya widget PO Tertunda & filter tabel PO → pindah ke `status_receive_order` |
 | `sub_total`, `discount`, `tax`, `total_tax`, `shipping_cost`, `other_cost`, `grand_total`, `estimated_arrival`, `status_payment`, `description` | **drop** |
 
 `purchase_order_items`: `medicine_id`, `qty` (satuan jual), `price` (per satuan jual), **tambah**
@@ -408,7 +408,7 @@ pesanan di luar metode; Bab 5.2 boleh menyarankan EOQ atau permintaan × lead ti
 |---|---|---|
 | Nomor PO | sistem | |
 | PBF | ✔ | |
-| Tanggal pesan | ✔ | = tanggal WA. Bersama tanggal RO memberi **lead time terukur per PBF** — bahan Bab 5.2 |
+| Tanggal pesan | ✔ | = tanggal WA. Bersama tanggal RO memberi **lead time terukur per PBF** bahan Bab 5.2 |
 | Baris: Obat · Satuan beli · Isi · Jumlah · Harga perkiraan | ✔ | Sesuai P4–P6 |
 
 Total PO ditampilkan dari Σ baris, tidak disimpan.
@@ -419,11 +419,11 @@ Total PO ditampilkan dari Σ baris, tidak disimpan.
 |------|--------|
 | Migration | drop/tambah kolom §3.2; migrasi nilai status |
 | Model | `PurchaseOrder` (fillable, accessor sisa per item & status turunan), `PurchaseOrderItem` |
-| Form | `PurchaseOrderForm` — hapus seksi Perhitungan & Keterangan, baris format RO, jumlah bawaan P5 |
-| Table | `PurchaseOrdersTable` — bulk action Tutup PO, kolom status turunan |
+| Form | `PurchaseOrderForm` hapus seksi Perhitungan & Keterangan, baris format RO, jumlah bawaan P5 |
+| Table | `PurchaseOrdersTable` bulk action Tutup PO, kolom status turunan |
 | Hapus | `resources/views/print/print-purchase-order.blade.php` + action cetaknya |
-| SAW page | `SawCalculation.php` — bulk action "Buat PO" (modal pilih PBF), kolom/badge "sudah dipesan" |
-| Widget | `PendingPurchaseOrdersWidget` — definisi: `status_receive_order` in (`pending`, `partial`) |
+| SAW page | `SawCalculation.php` bulk action "Buat PO" (modal pilih PBF), kolom/badge "sudah dipesan" |
+| Widget | `PendingPurchaseOrdersWidget` definisi: `status_receive_order` in (`pending`, `partial`) |
 | Seeder | `SpkTestDataSeeder`, `DemoApotekSeeder` |
 | Dokumen | PRD F-03 & Flow 1; Bab III alur pemesanan; Bab 1.4 batasan jumlah |
 
@@ -436,17 +436,17 @@ Total PO ditampilkan dari Σ baris, tidak disimpan.
 ## 4. Penjualan dan HPP
 
 Modul penjualan dibutuhkan skripsi hanya untuk dua hal: **mengurangi stok** (C1) dan **mencatat
-permintaan** (C2). Semua yang lain — nama pembeli, struk, aturan margin — di luar cakupan sebelum
+permintaan** (C2). Semua yang lain nama pembeli, struk, aturan margin di luar cakupan sebelum
 sidang. HPP dibahas di sini karena hidup di kartu stok dan **dipakai SAW sebagai C4** (M4).
 
 ### 4.1 Keputusan
 
 | # | Keputusan | Dasar |
 |---|-----------|-------|
-| S1 | Kolom `status` (pending/paid/cancelled) **dihapus** | Penjualan apotek selalu lunas saat barang diserahkan; tidak ada retur. Pembatalan = hapus (order soft-delete, baris C kartu stok dihapus sungguhan — B5) |
+| S1 | Kolom `status` (pending/paid/cancelled) **dihapus** | Penjualan apotek selalu lunas saat barang diserahkan; tidak ada retur. Pembatalan = hapus (order soft-delete, baris C kartu stok dihapus sungguhan B5) |
 | S2 | `no_payment` **dihapus** | Tidak ada sumbernya; `order_code` sudah unik |
 | S3 | Harga **diketik kasir**, divalidasi **≥ HPP** saat itu. `discount` per baris **dihapus** (ada di DB, tidak di form) | M5 |
-| S4 | **HPP = rata-rata bergerak (Metode A)**, disimpan sebagai kolom `hpp_avg` (bilangan bulat, dibulatkan ke atas — K14) di `medicine_stocks`, diperbarui di setiap baris. Tidak ada modul terpisah — kartu stok per obat *adalah* riwayat pembelian + HPP | Metode A adalah metode biaya baku (rata-rata bergerak), tidak terikat pada batch, dan memberi angka yang sama dengan rumus peneliti di setiap penerimaan. Metode B (rata-rata lapisan tersisa) ditolak agar biaya tidak bergantung pada alokasi FEFO (F7) |
+| S4 | **HPP = rata-rata bergerak (Metode A)**, disimpan sebagai kolom `hpp_avg` (bilangan bulat, dibulatkan ke atas K14) di `medicine_stocks`, diperbarui di setiap baris. Tidak ada modul terpisah kartu stok per obat *adalah* riwayat pembelian + HPP | Metode A adalah metode biaya baku (rata-rata bergerak), tidak terikat pada batch, dan memberi angka yang sama dengan rumus peneliti di setiap penerimaan. Metode B (rata-rata lapisan tersisa) ditolak agar biaya tidak bergantung pada alokasi FEFO (F7) |
 | S5 | Baris penjualan selalu dalam **satuan jual**, tanpa pilihan kemasan | M3. Pelanggan beli 1 box → kasir mengetik 10 strip (jarang terjadi) |
 | S6 | Penjualan **tidak bisa diedit**. Salah input → hapus → buat ulang | Praktik apotek; menyederhanakan pembalikan stok, dan alokasi FEFO nanti tidak perlu "mengembalikan ke lapisan mana" |
 | S7 | Tidak dibangun: nama pembeli, cetak struk, aturan margin | Di luar topik |
@@ -463,7 +463,7 @@ sidang. HPP dibahas di sini karena hidup di kartu stok dan **dipakai SAW sebagai
 
 Aksi: **Simpan**, **Hapus**. Tidak ada Edit.
 
-### 4.3 HPP rata-rata bergerak — rumus dan contoh
+### 4.3 HPP rata-rata bergerak rumus dan contoh
 
 Setiap baris **D** dari penerimaan memperbarui HPP:
 
@@ -472,9 +472,9 @@ HPP_baru = (Saldo_lama × HPP_lama + Qty_masuk × Harga_masuk) / (Saldo_lama + Q
 ```
 
 `Saldo` = **stok fisik** (Σ D − Σ C seluruh lapisan, termasuk yang kedaluwarsa dan belum dimusnahkan)
-— pembagi akuntansi, bukan stok tersedia (Q2). Hasil dibulatkan **ke atas** ke rupiah bulat (K14).
+pembagi akuntansi, bukan stok tersedia (Q2). Hasil dibulatkan **ke atas** ke rupiah bulat (K14).
 
-Baris **C** (penjualan, opname keluar) **tidak mengubah** HPP — hanya menyalinnya ke kolom `hpp`
+Baris **C** (penjualan, opname keluar) **tidak mengubah** HPP hanya menyalinnya ke kolom `hpp`
 baris itu (harga pokok barang yang keluar). Baris **D dari opname masuk** memakai HPP saat itu
 sebagai harganya (koreksi jumlah tidak mengubah biaya). Saldo 0 lalu ada penerimaan → HPP = harga
 penerimaan itu.
@@ -492,7 +492,7 @@ Contoh Obat A (satuan jual: strip):
 | 15/9 | Penjualan | | 18 | hpp = 18.600 | 0 | tidak berubah | 18.600 |
 | 20/9 | RO batch 4 | 10 | | 19.000 | 10 | saldo 0 → = harga | **19.000** |
 
-Pada 15/9 stok 0 tapi HPP tetap 18.600 — obat berstok 0 **tidak kehilangan C4**.
+Pada 15/9 stok 0 tapi HPP tetap 18.600 obat berstok 0 **tidak kehilangan C4**.
 
 **C4 untuk SAW** = `hpp_avg` baris terakhir obat itu pada saat perhitungan. Pada contoh: dihitung
 10/9 → 18.600; dihitung 21/9 → 19.000.
@@ -500,8 +500,8 @@ Pada 15/9 stok 0 tapi HPP tetap 18.600 — obat berstok 0 **tidak kehilangan C4*
 **Validasi harga jual** pada 6/9: harga ≥ 17.200.
 
 **Perhitungan ulang (replay).** `hpp_avg` bergantung pada urutan dan saldo, jadi setiap perubahan pada
-baris yang bukan baris terakhir — koreksi harga RO (R8), hapus penjualan yang terjadi *sebelum* suatu
-penerimaan, hapus RO — memicu hitung ulang `hpp_avg` seluruh baris obat itu dari awal. Ledger per obat
+baris yang bukan baris terakhir koreksi harga RO (R8), hapus penjualan yang terjadi *sebelum* suatu
+penerimaan, hapus RO memicu hitung ulang `hpp_avg` seluruh baris obat itu dari awal. Ledger per obat
 kecil (puluhan–ratusan baris), jadi murah. Aturan tunggal: **setiap mutasi kartu stok → replay obat
 itu.** Ini juga membuat backfill data lama sekadar menjalankan replay untuk semua obat.
 
@@ -515,7 +515,7 @@ berubah → HPP berubah. Replay menangani ini tanpa kasus khusus.
 |---|---|
 | `orders` | **drop** `status`, `no_payment`; **pertahankan** `grand_total` sebagai cache (tidak pernah basi karena tidak ada edit, S6; dibaca widget penjualan) |
 | `order_items` | **drop** `discount`, `total` (= qty × price, hitung saat tampil) |
-| `medicine_stocks` | **tambah** `hpp_avg` (unsigned int rupiah, dibulatkan ke atas pada tiap langkah — K14; nullable hanya untuk baris lama sebelum backfill); `hpp` baris C kini = harga pokok, bukan harga jual |
+| `medicine_stocks` | **tambah** `hpp_avg` (unsigned int rupiah, dibulatkan ke atas pada tiap langkah K14; nullable hanya untuk baris lama sebelum backfill); `hpp` baris C kini = harga pokok, bukan harga jual |
 
 Backfill: replay `hpp_avg` untuk semua obat dari baris D pertama; `hpp` baris C lama ditimpa dengan
 `hpp_avg` pada posisinya.
@@ -525,16 +525,16 @@ Backfill: replay `hpp_avg` untuk semua obat dari baris D pertama; `hpp` baris C 
 | Aksi | Berkas |
 |------|--------|
 | Migration | drop/tambah kolom §4.4 + backfill replay |
-| Service | `StockMovementService` — `recordReceipt()` menulis `hpp_avg`; `recordSale()` menulis `hpp = hpp_avg`; method `replayHpp(medicineId)` dipanggil setelah setiap mutasi; `reverseSale()` **menghapus baris C sungguhan** (B5) lalu replay. Setelah B5, `currentStock()`/`availableStock()` tidak lagi butuh saringan `whereHas` ke dokumen induk |
-| Service | `StockCardService` — kolom HPP di kartu stok; `currentHpp(medicineId)` |
+| Service | `StockMovementService` `recordReceipt()` menulis `hpp_avg`; `recordSale()` menulis `hpp = hpp_avg`; method `replayHpp(medicineId)` dipanggil setelah setiap mutasi; `reverseSale()` **menghapus baris C sungguhan** (B5) lalu replay. Setelah B5, `currentStock()`/`availableStock()` tidak lagi butuh saringan `whereHas` ke dokumen induk |
+| Service | `StockCardService` kolom HPP di kartu stok; `currentHpp(medicineId)` |
 | SAW | `SawCalculationService::getRawValue('C4')` → `currentHpp()` |
-| Form | `OrderForm` — hapus `no_payment`, status; harga diketik + rule ≥ HPP; hapus kolom `total`/`discount` |
+| Form | `OrderForm` hapus `no_payment`, status; harga diketik + rule ≥ HPP; hapus kolom `total`/`discount` |
 | Pages | `CreateOrder` tetap; **`EditOrder` dihapus** beserta rute & action edit di tabel |
-| Opname | `MedicineStockOpnameForm` — hpp penyesuaian = `currentHpp()` |
-| Page | `MedicineStockDetail` — kolom HPP |
-| Laporan | `LaporanRekap` — margin kini dari `hpp` baris C yang benar |
-| Seeder | `SpkTestDataSeeder`, `DemoApotekSeeder` — orders tanpa status/no_payment; jalankan replay di akhir |
-| Test | `StockLedgerTest` — tambah karakterisasi rumus §4.3 persis tabel contoh; `StockMovementServiceTest` — replay setelah hapus |
+| Opname | `MedicineStockOpnameForm` hpp penyesuaian = `currentHpp()` |
+| Page | `MedicineStockDetail` kolom HPP |
+| Laporan | `LaporanRekap` margin kini dari `hpp` baris C yang benar |
+| Seeder | `SpkTestDataSeeder`, `DemoApotekSeeder` orders tanpa status/no_payment; jalankan replay di akhir |
+| Test | `StockLedgerTest` tambah karakterisasi rumus §4.3 persis tabel contoh; `StockMovementServiceTest` replay setelah hapus |
 | Dokumen | Bab III definisi operasional C4 (HPP rata-rata bergerak); `update-dari-wawancara.md` §4.1; PRD F-03 |
 
 ### 4.6 Dampak ke modul lain
@@ -543,7 +543,7 @@ Backfill: replay `hpp_avg` untuk semua obat dari baris D pertama; `hpp` baris C 
 |---|---|
 | SAW C4 | Definisi baru: HPP rata-rata bergerak per satuan jual. Angka contoh Bab 3.4.4 harus dihitung ulang dengan definisi ini |
 | SAW C2 | Tidak berubah: Σ qty order dalam periode → proyeksi 30 hari. Filter `status != cancelled` dihapus (kolomnya tidak ada lagi; order batal = soft delete, sudah tidak terhitung) |
-| Laporan rekap | Margin = Σ (harga jual − hpp) × qty — kini bermakna |
+| Laporan rekap | Margin = Σ (harga jual − hpp) × qty kini bermakna |
 | Widget penjualan | Tidak ada filter status lagi |
 | Section 13 Tahap 4 | Saat FEFO masuk, `hpp` baris C **tetap** `hpp_avg` (metode tidak diganti di tengah jalan); atribusi batch hanya untuk sisa per batch, bukan untuk biaya |
 
@@ -577,8 +577,8 @@ dijalankan, maka batch terjauh pasti bersisa"), bukan *perhitungan*.
 
 | # | Keputusan | Dasar |
 |---|-----------|-------|
-| F0 | Penjualan **dialokasikan FEFO oleh sistem** (Opsi B), bukan dipilih kasir (cara Winong). Kasir mengetik jumlah; sistem memecah ke batch dengan ED terdekat lebih dulu dan **menampilkan** hasilnya (batch, ED, sisa hari) | C3 dan notifikasi hanya benar kalau kartu stok mencerminkan batch yang benar-benar keluar. Di Opsi A kebenaran itu bergantung klik kasir — sumber "salah tulis" yang disebut wawancara |
-| F1 | Batch yang **sudah lewat ED tidak dialokasikan** untuk dijual. "Belum kedaluwarsa" = `expired_date > hari ini` (B1 — konsisten dengan R3: kedaluwarsa **sejak** tanggal 1). Sisa batch kedaluwarsa dikeluarkan lewat opname (pemusnahan/retur) | Keputusan wawancara #4 (tidak ada modul retur/pemusnahan) |
+| F0 | Penjualan **dialokasikan FEFO oleh sistem** (Opsi B), bukan dipilih kasir (cara Winong). Kasir mengetik jumlah; sistem memecah ke batch dengan ED terdekat lebih dulu dan **menampilkan** hasilnya (batch, ED, sisa hari) | C3 dan notifikasi hanya benar kalau kartu stok mencerminkan batch yang benar-benar keluar. Di Opsi A kebenaran itu bergantung klik kasir sumber "salah tulis" yang disebut wawancara |
+| F1 | Batch yang **sudah lewat ED tidak dialokasikan** untuk dijual. "Belum kedaluwarsa" = `expired_date > hari ini` (B1 konsisten dengan R3: kedaluwarsa **sejak** tanggal 1). Sisa batch kedaluwarsa dikeluarkan lewat opname (pemusnahan/retur) | Keputusan wawancara #4 (tidak ada modul retur/pemusnahan) |
 | F2 | **Dua pengertian stok, dua nama** (B4): *stok fisik* = Σ D − Σ C seluruh lapisan (saldo kartu stok, dasar opname); *stok tersedia* = sisa lapisan belum kedaluwarsa. **C1, validasi jual, alokasi FEFO, notifikasi stok minimum, `stock_status`, widget Low Stock, dan laporan fast/slow memakai stok tersedia** | Stok yang seluruhnya kedaluwarsa secara restock = stok 0. Satu kalimat di definisi operasional C1 Bab III |
 | F3 | Opname **sadar batch**: pengurangan menyebut lapisan mana; penambahan wajib batch + ED **dan hanya untuk obat yang sudah punya HPP** (§7.3). Lapisan tanpa ED hanya dari data lama, dikonsumsi **paling dulu** | "Semua obat yang diopname punya ED" (peneliti). = Section 13 Tahap 5 |
 | F4 | Baris **C** kartu stok terpecah per lapisan (`layer_stock_id` → baris D, D1); kartu stok menampilkan kolom batch/ED dan bisa difilter per batch; sisa per lapisan = Σ D − Σ C per `layer_stock_id` | = Section 13 Tahap 6, turunan |
@@ -586,7 +586,7 @@ dijalankan, maka batch terjauh pasti bersisa"), bukan *perhitungan*.
 | F6 | Backfill: seluruh baris C lama diputar ulang secara FEFO urut tanggal lalu `id`, diatribusikan ke lapisan yang ada; lapisan tanpa ED (opname lama) dikonsumsi lebih dulu | Deterministik karena semua baris D sudah punya lapisan (R7) |
 | F7 | `hpp` baris C **tetap rata-rata bergerak** (S4); atribusi batch hanya untuk jumlah | Metode biaya tidak diganti di tengah jalan |
 
-### 5.2 Alokasi penjualan — contoh
+### 5.2 Alokasi penjualan contoh
 
 Obat A: batch 1 (ED 05-2027) sisa 5, batch 2 (ED 12-2027) sisa 20. Kasir mengetik 7.
 
@@ -620,8 +620,8 @@ stok pada lapisan itu.
 
 | Baris di form | Diisi petugas | Efek |
 |---|---|---|
-| Lapisan yang ada — batch · ED · **sisa sistem** | **jumlah fisik** | Fisik < sistem → baris **C** menunjuk lapisan itu (rusak, hilang, dimusnahkan, diretur — termasuk lapisan kedaluwarsa, satu-satunya jalan mengeluarkannya). Fisik > sistem → baris **D** pada lapisan itu dengan `hpp = hpp_avg` (S4). Sama → tidak ada baris |
-| **+ Batch baru** — batch + ED baru | jumlah fisik | Lapisan baru: baris D dengan `batch_number`, `expired_date`, `hpp = hpp_avg`. Hanya untuk obat yang sudah punya HPP; **saldo awal obat baru lewat RO** (§7.3) |
+| Lapisan yang ada batch · ED · **sisa sistem** | **jumlah fisik** | Fisik < sistem → baris **C** menunjuk lapisan itu (rusak, hilang, dimusnahkan, diretur termasuk lapisan kedaluwarsa, satu-satunya jalan mengeluarkannya). Fisik > sistem → baris **D** pada lapisan itu dengan `hpp = hpp_avg` (S4). Sama → tidak ada baris |
+| **+ Batch baru** batch + ED baru | jumlah fisik | Lapisan baru: baris D dengan `batch_number`, `expired_date`, `hpp = hpp_avg`. Hanya untuk obat yang sudah punya HPP; **saldo awal obat baru lewat RO** (§7.3) |
 
 ### 5.4 Skema
 
@@ -635,13 +635,13 @@ stok pada lapisan itu.
 
 | Aksi | Berkas |
 |------|--------|
-| Service | `StockMovementService` — `allocateFefo()`, `recordSale()` memecah baris, `recordOpname()` per lapisan; `StockCardService` — `physicalStock()`, `availableStock()` (stok tersedia), `layers(medicineId)`; `updateMedicineStockStatus()` memakai stok tersedia (B4) |
-| Model | `Medicine` — `farthestExpiryDate()` membaca sisa per lapisan (menggantikan `nearestExpiryDate()`); `MedicineStock` — scope `layers()`, accessor `remaining` |
-| Form | `OrderForm` — panel alokasi (tampil, tidak dipilih); `MedicineStockOpnameForm` — pilih lapisan / batch+ED baru; tolak penambahan pada obat tanpa HPP |
-| Page | `MedicineStockDetail` — kolom batch/ED, filter per batch, ringkasan sisa per batch |
-| Command | `CheckStockAndExpiryCommand` — **hitung ulang `stock_status` semua obat lebih dulu** (batch bisa kedaluwarsa tanpa mutasi, Q1); lapisan dengan sisa > 0 (F5); stok minimum memakai stok tersedia (B4) |
-| Widget | `ExpiringMedicinesWidget`, `LowStockMedicinesWidget` — idem |
-| Laporan | `LaporanMoving` — stok tersedia (B4) |
+| Service | `StockMovementService` `allocateFefo()`, `recordSale()` memecah baris, `recordOpname()` per lapisan; `StockCardService` `physicalStock()`, `availableStock()` (stok tersedia), `layers(medicineId)`; `updateMedicineStockStatus()` memakai stok tersedia (B4) |
+| Model | `Medicine` `farthestExpiryDate()` membaca sisa per lapisan (menggantikan `nearestExpiryDate()`); `MedicineStock` scope `layers()`, accessor `remaining` |
+| Form | `OrderForm` panel alokasi (tampil, tidak dipilih); `MedicineStockOpnameForm` pilih lapisan / batch+ED baru; tolak penambahan pada obat tanpa HPP |
+| Page | `MedicineStockDetail` kolom batch/ED, filter per batch, ringkasan sisa per batch |
+| Command | `CheckStockAndExpiryCommand` **hitung ulang `stock_status` semua obat lebih dulu** (batch bisa kedaluwarsa tanpa mutasi, Q1); lapisan dengan sisa > 0 (F5); stok minimum memakai stok tersedia (B4) |
+| Widget | `ExpiringMedicinesWidget`, `LowStockMedicinesWidget` idem |
+| Laporan | `LaporanMoving` stok tersedia (B4) |
 | Migration | kolom §5.4 + backfill F6 |
 | Test | alokasi 7 = 5 + 2; batch kedaluwarsa dilewati; tolak bila sisa belum-kedaluwarsa < qty; hapus penjualan memulihkan lapisan; backfill deterministik |
 | Dokumen | CLAUDE.md §5.4 dicabut, §13 ditandai dieksekusi; Bab 1.4 hapus batasan "stok tidak dilacak per batch"; Bab III definisi C1 & C3 |
@@ -649,10 +649,10 @@ stok pada lapisan itu.
 ### 5.6 Hal terbuka
 
 - **Lapisan dari opname penambahan**: butuh tempat menyimpan batch + ED tanpa RO. Dua pilihan:
-  (a) `medicine_stocks` baris D membawa `batch_number` + `expired_date` sendiri bila `receive_order_item_id` null — lapisan = baris D itu sendiri; atau
+  (a) `medicine_stocks` baris D membawa `batch_number` + `expired_date` sendiri bila `receive_order_item_id` null lapisan = baris D itu sendiri; atau
   (b) tabel `medicine_batches` sebagai sumber lapisan tunggal, diisi dari RO maupun opname.
-  **Diputuskan (a)** — lihat D1 di Bagian 6.
-- Dampak ke angka Bab IV: hampir nol — sisa per batch sungguhan = aturan "batch terjauh bersisa selama stok > 0" kecuali ada batch kedaluwarsa/opname. C1 berubah hanya bila ada stok kedaluwarsa (F2), dan itu perubahan yang lebih benar.
+  **Diputuskan (a)** lihat D1 di Bagian 6.
+- Dampak ke angka Bab IV: hampir nol sisa per batch sungguhan = aturan "batch terjauh bersisa selama stok > 0" kecuali ada batch kedaluwarsa/opname. C1 berubah hanya bila ada stok kedaluwarsa (F2), dan itu perubahan yang lebih benar.
 
 ---
 
@@ -666,7 +666,7 @@ Semua hal yang sempat ditunda, diputuskan sekaligus supaya tidak ada pekerjaan y
 | D2 | Aturan margin harga jual | **Tidak dibangun.** Validasi ≥ HPP cukup; margin adalah kebijakan apotek |
 | D3 | `orders.grand_total` / `order_items.total` | `grand_total` dipertahankan (cache yang tidak pernah basi karena S6); `order_items.total` dan `discount` dihapus |
 | D4 | Nomor PO | Tetap `PO{YYYYMMDD}-XXXX` |
-| D5 | Jalur masuk data riil Bab IV | Template Excel 4 sheet — **Obat** (nama, kategori, satuan jual, kemasan, isi), **Faktur** (no faktur, PBF, tanggal, obat, kemasan, jumlah, harga, batch, ED), **Stok** (obat, batch, ED, sisa — hanya bila kartu stok memberi sisa per batch; kalau tidak, sisa per obat dan dialokasikan ke batch terjauh), **Penjualan** (tanggal, obat, jumlah). Seeder sekali pakai membacanya, dedup obat berdasarkan nama. Dibangun sekarang, diuji dengan faktur Mei 2024; bentuk final dikunci setelah foto kartu stok |
+| D5 | Jalur masuk data riil Bab IV | Template Excel 4 sheet **Obat** (nama, kategori, satuan jual, kemasan, isi), **Faktur** (no faktur, PBF, tanggal, obat, kemasan, jumlah, harga, batch, ED), **Stok** (obat, batch, ED, sisa hanya bila kartu stok memberi sisa per batch; kalau tidak, sisa per obat dan dialokasikan ke batch terjauh), **Penjualan** (tanggal, obat, jumlah). Seeder sekali pakai membacanya, dedup obat berdasarkan nama. Dibangun sekarang, diuji dengan faktur Mei 2024; bentuk final dikunci setelah foto kartu stok |
 | D6 | Database | Target deploy **MySQL di VPS**. Kode ditulis netral (tanpa fitur khusus vendor); catatan: `LIKE` MySQL tidak peka huruf, generator kode `OBT-%` aman |
 | D7 | Roles & permissions | Peneliti menangani sendiri via Filament Shield. Notifikasi tetap ke semua user |
 | D8 | Cron | Dijalankan tiap pagi di server; bukan pekerjaan kode |
@@ -705,7 +705,7 @@ dosen pembimbing tentang batas minimum yang berbeda-beda per obat.
 | K12 | Catatan "N obat tanpa riwayat stok dikecualikan" di halaman SAW (menggantikan rencana peringatan "tanpa harga beli") | K0, K4 |
 | K13 | Test Pest yang mereproduksi contoh Bab 3.4.4 **versi baru** (setelah skala, C1 rasio, dan C4 HPP dihitung ulang) sel per sel, plus test tiap aturan di atas | Menutup T8 |
 | K14 | `hpp_avg` disimpan **bilangan bulat, dibulatkan ke atas** (17.200,50 → 17.201). C1 rasio dibulatkan **2 desimal**. **Semua aturan skala inklusif** (satu semantik, B2); C1 ditulis dua desimal tanpa celah. C2, C3 sudah bulat | Menutup T6 tanpa mengubah skala C2–C4 dan tanpa dua semantik di `convertToScore()` |
-| K15 | Normalisasi: `min/X` untuk cost (C1, C3, C4), `X/max` untuk benefit (C2); skor 0 dikecualikan dari Min dan dinormalisasi 0 — **tidak berubah**, hanya ditulis di Bab 3.4.3 | Menutup T3, T11 (dokumen internal masih menulis "X/max universal") |
+| K15 | Normalisasi: `min/X` untuk cost (C1, C3, C4), `X/max` untuk benefit (C2); skor 0 dikecualikan dari Min dan dinormalisasi 0 **tidak berubah**, hanya ditulis di Bab 3.4.3 | Menutup T3, T11 (dokumen internal masih menulis "X/max universal") |
 
 ### 7.2 Kriteria sesudah revisi
 
@@ -728,7 +728,7 @@ Skala konversi:
 
 C1 diturunkan dari kolom wawancara (≤20 / 21–40 / 41–70 / 71–100 / ≥101) dibagi batas waspada 20.
 Semua aturan **inklusif** (B2); C1 ditulis dua desimal tanpa celah karena rasionya dibulatkan dua
-desimal sebelum dicocokkan. `convertToScore()` cukup mendukung nilai desimal — semantiknya satu.
+desimal sebelum dicocokkan. `convertToScore()` cukup mendukung nilai desimal semantiknya satu.
 
 Contoh C1 pada tiga satuan berbeda:
 
@@ -781,17 +781,17 @@ execute(period_start, today, trigger, user)
 
 | Aksi | Berkas |
 |------|--------|
-| Service | `SawCalculationService` — K0 (alternatif), K1–K4 (`getRawValue`), K7 (validasi bobot), K9 (peringkat padat + tie-breaker), K12 (excluded) |
-| Model | `SawCriteria::convertToScore()` desimal-aware, batas atas eksklusif untuk aturan berdesimal; `Medicine` — `farthestExpiryDays()` per lapisan, hapus `nearestExpiryDate()`/`nearestExpiryDays()`; `StockCardService::availableStock()` |
-| Command | `RecalculateSawCommand` — `period_end = today()->startOfDay()` (K2) |
-| Seeder | `SawCriteriaSeeder` — K5 (ambang wawancara, C1 rasio); `SpkTestDataSeeder` — `min_stock` nyata per obat (bukan bawaan), distribusi rasio merata |
-| Page | `SawCalculation.php` — filter "sampai" terkunci, kolom "Tingkat", tampilan "Stok 18 (min 20)", catatan excluded, bulk action Buat PO, penanda sudah dipesan |
-| Blade | `saw-result-detail.blade.php` — K10 (label rumus, Min/Max, langkah rasio) |
-| Resource | `SawCriterias` — hapus ToggleColumn & Layer 3 validasi aktivasi; form rules: total = 1,000 dua sisi; repeater scale_rules menerima desimal |
-| Resource | `SawCalculations` (history) — kolom baru |
-| Widget | `SawTop10RestockWidget` — 10 baris via `sort_order`, label "Tingkat" |
-| Test | `tests/Unit/SawCalculationTest.php` — reproduksi contoh 3.4.4 baru; K0, K2 (hari bulat), K3 (stok 0 → 0 hari; batch terjauh), K7, K9 (padat + tie-breaker), K14 (rasio desimal) |
-| Dokumen | Bab III: definisi operasional C1–C4, Tabel 3.5 rasio + paragraf penurunan, 3.4.3 aturan skor 0 & kriteria alternatif, 3.4.4 dihitung ulang; Bab 1.4 batasan menyempit ("ambang C2 dan C4 satu set untuk seluruh satuan"); Bab 4.1.7 koreksi "kriteria dapat dinonaktifkan"; 4.2.2 penjelasan tingkat; CLAUDE.md §5.1, §5.4, §13.8 (`min_stock` kini masuk SAW — disengaja); PRD §9; `update-dari-wawancara.md` §3 (C1 rasio), §4.1 (C4 HPP) |
+| Service | `SawCalculationService` K0 (alternatif), K1–K4 (`getRawValue`), K7 (validasi bobot), K9 (peringkat padat + tie-breaker), K12 (excluded) |
+| Model | `SawCriteria::convertToScore()` desimal-aware, batas atas eksklusif untuk aturan berdesimal; `Medicine` `farthestExpiryDays()` per lapisan, hapus `nearestExpiryDate()`/`nearestExpiryDays()`; `StockCardService::availableStock()` |
+| Command | `RecalculateSawCommand` `period_end = today()->startOfDay()` (K2) |
+| Seeder | `SawCriteriaSeeder` K5 (ambang wawancara, C1 rasio); `SpkTestDataSeeder` `min_stock` nyata per obat (bukan bawaan), distribusi rasio merata |
+| Page | `SawCalculation.php` filter "sampai" terkunci, kolom "Tingkat", tampilan "Stok 18 (min 20)", catatan excluded, bulk action Buat PO, penanda sudah dipesan |
+| Blade | `saw-result-detail.blade.php` K10 (label rumus, Min/Max, langkah rasio) |
+| Resource | `SawCriterias` hapus ToggleColumn & Layer 3 validasi aktivasi; form rules: total = 1,000 dua sisi; repeater scale_rules menerima desimal |
+| Resource | `SawCalculations` (history) kolom baru |
+| Widget | `SawTop10RestockWidget` 10 baris via `sort_order`, label "Tingkat" |
+| Test | `tests/Unit/SawCalculationTest.php` reproduksi contoh 3.4.4 baru; K0, K2 (hari bulat), K3 (stok 0 → 0 hari; batch terjauh), K7, K9 (padat + tie-breaker), K14 (rasio desimal) |
+| Dokumen | Bab III: definisi operasional C1–C4, Tabel 3.5 rasio + paragraf penurunan, 3.4.3 aturan skor 0 & kriteria alternatif, 3.4.4 dihitung ulang; Bab 1.4 batasan menyempit ("ambang C2 dan C4 satu set untuk seluruh satuan"); Bab 4.1.7 koreksi "kriteria dapat dinonaktifkan"; 4.2.2 penjelasan tingkat; CLAUDE.md §5.1, §5.4, §13.8 (`min_stock` kini masuk SAW disengaja); PRD §9; `update-dari-wawancara.md` §3 (C1 rasio), §4.1 (C4 HPP) |
 
 ### 7.6 Verifikasi
 
@@ -811,11 +811,11 @@ execute(period_start, today, trigger, user)
 ### 7.7 Hal terbuka
 
 - **`min_stock` nyata**: kolom di template D5, ditanyakan ke apotek bersama kartu stok ("batas waspada obat ini berapa?"). Sampai itu ada, bawaan M9 (Strip 20, lainnya isi kemasan) yang berlaku.
-- **Contoh 3.4.4** dipilih dari data yang dipakai Bab IV — data riil bila sudah ada, seeder demo bila belum (T2).
+- **Contoh 3.4.4** dipilih dari data yang dipakai Bab IV data riil bila sudah ada, seeder demo bila belum (T2).
 
 ---
 
-## 8. Keputusan Konsistensi (B1–B8, C1–C6, T1–T2 — 2026-09-13)
+## 8. Keputusan Konsistensi (B1–B8, C1–C6, T1–T2 2026-09-13)
 
 Hasil pembacaan ulang seluruh dokumen dari sisi implementasi. Semua sudah dijahit ke bagian yang
 bersangkutan; tabel ini rekap.
@@ -832,11 +832,11 @@ bersangkutan; tabel ini rekap.
 | B8 | `pack_size`/`pack_unit_id` | NOT NULL; backfill 1 / `unit_id` | §1.2 |
 | C1 | Sheet *Stok* template | Saldo **awal periode** (hari ini − 30) per obat, dialokasikan ke batch faktur terakhir sebelum tanggal itu; urutan muat: saldo awal → faktur periode → penjualan periode = saldo hari ini | D5 |
 | C2 | Harga saldo awal | Sheet *Stok* punya kolom harga; importer menulisnya sebagai RO "saldo awal" (supplier & faktur khusus) → HPP ada | D5, §7.3 |
-| C3 | Harga jual di sheet *Penjualan* | Opsional; kosong → = HPP saat itu (margin nol, tidak bermakna untuk laporan margin — diterima) | D5 |
+| C3 | Harga jual di sheet *Penjualan* | Opsional; kosong → = HPP saat itu (margin nol, tidak bermakna untuk laporan margin diterima) | D5 |
 | C4 | Unik + soft delete | **Dikoreksi saat E1**: indeks unik yang menyertakan `deleted_at` tidak menegakkan apa pun di MySQL (NULL dianggap selalu berbeda). Keunikan `name` dan `[supplier_id, invoice_number]` ditegakkan di **aplikasi** (rule form mengabaikan baris soft-deleted, importer/seeder dedup); DB hanya indeks biasa | §1.10 |
-| C5 | Batch/ED pada lapisan | Disalin ke **semua** baris D (RO dan opname) — query FEFO/C3 tanpa join | §2.3, §5.4 |
+| C5 | Batch/ED pada lapisan | Disalin ke **semua** baris D (RO dan opname) query FEFO/C3 tanpa join | §2.3, §5.4 |
 | C6 | Generator kode | Retry sekali bila tabrakan unik | §1.10 |
-| T1 | Tanggal sidang / batas data | **Tidak dijadikan pengendali** — fokus membangun sistem |
+| T1 | Tanggal sidang / batas data | **Tidak dijadikan pengendali** fokus membangun sistem |
 | T2 | Data apotek terlambat | Bab IV memakai `SpkTestDataSeeder` versi baru; naskah **tidak** diubah untuk itu |
 
 Pembacaan kedua (Q0–Q9, 2026-09-13):
@@ -856,19 +856,19 @@ Pembacaan kedua (Q0–Q9, 2026-09-13):
 
 Catatan implementasi (tanpa keputusan):
 
-- C2 tetap memakai `whereHas('order')` pada `order_items` agar order soft-deleted tidak terhitung — B5 menghapus saringan di *ledger*, bukan di sini.
+- C2 tetap memakai `whereHas('order')` pada `order_items` agar order soft-deleted tidak terhitung B5 menghapus saringan di *ledger*, bukan di sini.
 - `layer_stock_id` FK ke tabel sendiri: `ON DELETE RESTRICT` sebagai pagar tambahan R8.
 - 9 pemanggil `currentStock()`/`getAvailableStock()` dipetakan satu per satu ke `physicalStock()`/`availableStock()` (widget, laporan, opname).
 - `LaporanRekap` dan `SalesSummaryWidget` yang membaca `order_items.total` → `qty × price`.
 - Permission Shield untuk `EditOrder` dan action cetak PO yang dihapus dibersihkan (pola CLAUDE.md §12.4).
-- Mengubah ED sebuah lapisan (R8) tidak mengalokasi ulang penjualan yang sudah terjadi — konsisten S6.
+- Mengubah ED sebuah lapisan (R8) tidak mengalokasi ulang penjualan yang sudah terjadi konsisten S6.
 
 Revisi template D5 akibat C1–C3:
 
 | Sheet | Kolom |
 |---|---|
 | Obat | nama, kategori, satuan jual, kemasan, isi, **min_stock** |
-| Saldo awal | obat, batch, ED, jumlah (satuan jual), **harga per satuan jual** — per tanggal awal periode |
+| Saldo awal | obat, batch, ED, jumlah (satuan jual), **harga per satuan jual** per tanggal awal periode |
 | Faktur | no faktur, PBF, tanggal, obat, kemasan, isi, jumlah kemasan, harga per kemasan, batch, ED |
 | Penjualan | tanggal, obat, jumlah, harga jual (opsional) |
 
@@ -877,12 +877,12 @@ Revisi template D5 akibat C1–C3:
 ## 9. Urutan Eksekusi
 
 Prinsip: **satu bagian = satu rangkaian commit yang meninggalkan test hijau**; migration bersifat
-maju saja (tidak ada `down()` bermakna — pemulihan lewat backup); angka SAW tidak dikunci sampai
+maju saja (tidak ada `down()` bermakna pemulihan lewat backup); angka SAW tidak dikunci sampai
 seluruh kode selesai (T1).
 
 | Tahap | Isi | Bergantung pada | Titik uji |
 |---|---|---|---|
-| E0 | Cabang kerja `revisi-2026-09` dari `main`; backup DB lokal; **`timezone` → `Asia/Jakarta`** (Q0) | — | `today()` pada pukul 05:00 WIB = tanggal WIB |
+| E0 | Cabang kerja `revisi-2026-09` dari `main`; backup DB lokal; **`timezone` → `Asia/Jakarta`** (Q0) | | `today()` pada pukul 05:00 WIB = tanggal WIB |
 | E1 | **Master obat** (Bagian 1): migration drop/tambah kolom + backfill (B7, B8) + penomoran `OBT-####`; model & generator kode; form/table/importer; hapus 18 referensi `dosage`; seeder satuan (Ampul, Kaleng) | E0 | §1.9 |
 | E2 | **Kartu stok & HPP** (Bagian 4 + D1/C5): `medicine_stocks` kolom lapisan (`batch_number`, `expired_date`, `receive_order_item_id`, `layer_stock_id`, `hpp_avg`); `StockMovementService` replay HPP; `StockCardService` `physicalStock()`/`availableStock()`; B5 (hapus sungguhan, buang `whereHas`); backfill lapisan D + replay; normalisasi ED ke tanggal 1 (Q5) | E1 | §4.7 tabel §4.3 direproduksi |
 | E3 | **Pengadaan** (Bagian 2 + 3, Q8), urutan internal: (a) migration PO + RO sekaligus (skema ramping PO, header/item RO, `ppn_rate`); (b) form PO format RO, status turunan, Tutup PO, widget, hapus cetak; (c) form RO: konversi kemasan, ED bulan-tahun (Q4), centang item PO (Q6), R8, cetak, export | E2 | §2.6 + verifikasi §3 |
@@ -890,8 +890,8 @@ seluruh kode selesai (T1).
 | E5 | **SAW** (Bagian 7): seeder skala (K5); K0–K4 nilai mentah; K7; K9 padat; K10 modal; K11 Buat PO + sudah dipesan; hapus toggle; test contoh 3.4.4 baru | E3, E4 | §7.6 |
 | E6 | **Seeder demo & importer** (D5, T2): `SpkTestDataSeeder` versi baru (lapisan, HPP, `min_stock` nyata, faktur, FEFO); template Excel 4 sheet + seeder pembaca; uji dengan faktur Mei 2024 | E5 | seeder 2× tidak berlipat; angka SAW konsisten |
 | E7 | **Smoke test browser** seluruh alur: obat → PO dari ranking → RO per faktur → jual (FEFO) → opname → SAW → laporan | E6 | checklist NEXT_STEPS C1 |
-| E8 | **Sinkronisasi dokumen** (D10): CLAUDE.md (§5.1, §5.4, §12, §13, §14), PRD, README (MySQL), `update-dari-wawancara.md` §3/§4.1, `IMPROVEMENT.md` ditutup; bersihkan permission Shield yang basi | E7 | — |
-| E9 | **Deploy VPS MySQL** + cron (D6, D8); roles via Shield oleh peneliti (D7) | E8 | — |
+| E8 | **Sinkronisasi dokumen** (D10): CLAUDE.md (§5.1, §5.4, §12, §13, §14), PRD, README (MySQL), `update-dari-wawancara.md` §3/§4.1, `IMPROVEMENT.md` ditutup; bersihkan permission Shield yang basi | E7 | |
+| E9 | **Deploy VPS MySQL** + cron (D6, D8); roles via Shield oleh peneliti (D7) | E8 | |
 
 **Status eksekusi (2026-09-14):** E0 `21b6218`/`2ab4b5a` · E1 `e5b89a4` (+ `f92a5b7` FilamentUser) · E2 `20e64cb` · E3 `932d259` · E4 `bb45654` · E5 `434729d` · E6 `70687e1` · E7 `5f6c7d6` (uji ujung-ke-ujung otomatis lewat halaman Filament; menemukan & memperbaiki 4 cacat) · E8 `8c7f6e8` · E9 `10c6558` (jalur migrasi dari nol diverifikasi di MySQL kosong; eksekusi di server oleh peneliti mengikuti `docs/deploy-vps.md`). Tambahan di luar rencana: `DemoApotekSeeder` dipensiunkan karena menulis ledger tanpa lapisan; permission Shield diperiksa, tidak ada yang basi.
 
@@ -899,4 +899,4 @@ Yang bisa berjalan paralel: E6 template Excel (bukan seedernya) sejak E1; E8 dic
 tapi dikunci di akhir.
 
 **Setelah E9** tidak ada pekerjaan kode yang tersisa dalam rencana ini. Yang tersisa hanya data
-apotek (A1–A5) dan naskah — keduanya milik peneliti.
+apotek (A1–A5) dan naskah keduanya milik peneliti.

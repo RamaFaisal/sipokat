@@ -14,8 +14,8 @@ use Illuminate\Support\HtmlString;
 /**
  * Baris pesanan/penerimaan dalam kemasan (rencana-revisi-2026-09 R1, P4, §1.5).
  *
- * Petugas mengetik apa yang tercetak di faktur — kemasan, jumlah kemasan, isi, harga per
- * kemasan — dan sistem yang mengalikan. Yang tersimpan: qty dan price dalam satuan jual,
+ * Petugas mengetik apa yang tercetak di faktur kemasan, jumlah kemasan, isi, harga per
+ * kemasan dan sistem yang mengalikan. Yang tersimpan: qty dan price dalam satuan jual,
  * plus jejak konversi (pack_unit_id, pack_size, pack_qty). Master obat tidak ditulis balik (M11).
  * Subtotal hanya tampilan (TextInput baca-saja), diperbarui lewat $set setiap isian berubah.
  */

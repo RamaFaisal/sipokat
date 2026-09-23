@@ -1,11 +1,11 @@
-# Sipokat — Product Requirements Document (PRD)
+# Sipokat Product Requirements Document (PRD)
 
 > **Sistem Inventory Obat Berbasis Web dengan Sistem Pendukung Keputusan Metode Simple Additive Weighting (SAW) untuk Apotek Anugrah Husada**
 
 | Field | Value |
 |-------|-------|
 | Versi | 2.0 (Revisi September 2026: batch/FEFO, HPP, PO–RO per faktur, SAW rasio & HPP) |
-| Status | ✅ Implemented — rincian keputusan di `docs/rencana-revisi-2026-09.md` |
+| Status | ✅ Implemented rincian keputusan di `docs/rencana-revisi-2026-09.md` |
 | Last updated | 2026-09-14 |
 | Author | Rama Faisal Muntaha (A11.2022.14082) |
 | Stakeholder | Apotek Anugrah Husada (Demak), Universitas Dian Nuswantoro |
@@ -16,11 +16,11 @@
 
 Sipokat adalah sistem manajemen inventaris obat berbasis web untuk Apotek Anugrah Husada yang menggantikan pencatatan manual (buku besar + Microsoft Excel) dengan platform terintegrasi. Sistem ini menggabungkan:
 
-1. **Manajemen Inventaris Modern** — kartu stok per batch (lapisan D/C), konversi kemasan beli → satuan jual, HPP rata-rata bergerak, penjualan FEFO, opname per batch, notifikasi otomatis.
-2. **Sistem Pendukung Keputusan (SPK) berbasis Simple Additive Weighting (SAW)** — rekomendasi prioritas restock obat berdasarkan 4 kriteria (rasio stok terhadap batas minimum, permintaan, sisa kedaluwarsa, HPP) dengan bobot dan skala yang dapat dikonfigurasi, dan pembuatan PO langsung dari ranking.
-3. **Laporan & Audit Trail** — laporan rekap penjualan/pembelian, analisis fast/slow moving, riwayat snapshot SAW, breakdown perhitungan V_i per obat.
+1. **Manajemen Inventaris Modern** kartu stok per batch (lapisan D/C), konversi kemasan beli → satuan jual, HPP rata-rata bergerak, penjualan FEFO, opname per batch, notifikasi otomatis.
+2. **Sistem Pendukung Keputusan (SPK) berbasis Simple Additive Weighting (SAW)** rekomendasi prioritas restock obat berdasarkan 4 kriteria (rasio stok terhadap batas minimum, permintaan, sisa kedaluwarsa, HPP) dengan bobot dan skala yang dapat dikonfigurasi, dan pembuatan PO langsung dari ranking.
+3. **Laporan & Audit Trail** laporan rekap penjualan/pembelian, analisis fast/slow moving, riwayat snapshot SAW, breakdown perhitungan V_i per obat.
 
-Sistem dibangun dengan Laravel 12, Filament 4, MySQL, dan Tailwind CSS — sesuai stack yang ditentukan di proposal Tugas Akhir.
+Sistem dibangun dengan Laravel 12, Filament 4, MySQL, dan Tailwind CSS sesuai stack yang ditentukan di proposal Tugas Akhir.
 
 ---
 
@@ -60,7 +60,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 |---------|-------|-------------|-------|
 | **Admin (Apoteker Penanggung Jawab)** | Pengelola master & SAW | Setup data obat, satuan, PBF; konfigurasi bobot & skala SAW; review semua data | Full access semua modul |
 | **Petugas Apotek (Staf Gudang)** | Operasional harian | Catat obat masuk (RO) dengan ED, input batch, catat penjualan (Orders), opname stok | Modul transaksi + view inventory |
-| **Pemilik / Manajer Apotek** | Pengambil keputusan | Lihat dashboard, laporan rekap, hasil SAW, fast/slow moving — putuskan restock | View dashboard + laporan + SPK output |
+| **Pemilik / Manajer Apotek** | Pengambil keputusan | Lihat dashboard, laporan rekap, hasil SAW, fast/slow moving putuskan restock | View dashboard + laporan + SPK output |
 
 > **Catatan**: Infrastruktur role-based access (Spatie Permission + Filament Shield) sudah terpasang. Setup roles dilakukan terpisah via Filament Shield.
 
@@ -98,22 +98,22 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 
 ## 6. Functional Requirements
 
-### F-01 — Login & Autentikasi
+### F-01 Login & Autentikasi
 **As a** user, **I want to** login dengan email + password, **so that** saya bisa mengakses data sesuai role.
 - Form login Filament panel dengan validasi
 - Session-based auth (Laravel default)
 - Logout dari header panel
 
-### F-02 — Kelola Data Obat (CRUD)
+### F-02 Kelola Data Obat (CRUD)
 **As an** admin, **I want to** mengelola master obat lengkap dengan kode auto-generate.
 - Field: kode (auto `OBT####`, tidak diubah), nama (uppercase, memuat kekuatan & merek seperti di faktur), kategori, **satuan jual** (= satuan kartu stok), **kemasan pembelian + isi** (1 Box = N satuan jual), min_stock (bawaan Strip 20, lainnya = isi kemasan), status
 - Tidak ada harga di master: harga beli dari RO, HPP dihitung; tidak ada dosis/foto/deskripsi
-- Validasi unik berdasarkan nama (dinormalkan) — di aplikasi, karena soft-delete
+- Validasi unik berdasarkan nama (dinormalkan) di aplikasi, karena soft-delete
 - Import via Excel/CSV template (`MedicineImporter`) dengan download template otomatis (`ImporterTemplate`)
 - Import supplier via Excel/CSV (`SupplierImporter`)
 - Soft delete
 
-### F-03 — Catat Transaksi Obat Masuk & Keluar
+### F-03 Catat Transaksi Obat Masuk & Keluar
 **As a** petugas apotek, **I want to** mencatat penerimaan dari supplier & penjualan ke pelanggan dengan tracking otomatis.
 
 **Pemesanan (Purchase Order):**
@@ -133,9 +133,9 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 - Auto-number `ORD-{YYYYMMDD}XXXX`
 - Validasi: `qty ≤ StockCardService::availableStock()`; `price ≥ HPP saat itu`
 - `recordSale` mengalokasikan **FEFO** ke lapisan belum kedaluwarsa (ED terdekat dulu; satu baris jual bisa jadi beberapa baris C dengan `layer_stock_id`)
-- Tanpa status/pembayaran/diskon; **tanpa edit** — hapus (baris C dihapus sungguhan, stok kembali ke lapisan asal) lalu buat ulang
+- Tanpa status/pembayaran/diskon; **tanpa edit** hapus (baris C dihapus sungguhan, stok kembali ke lapisan asal) lalu buat ulang
 
-### F-04 — Notifikasi Stok Minimum & Kedaluwarsa
+### F-04 Notifikasi Stok Minimum & Kedaluwarsa
 **As an** admin, **I want to** mendapat peringatan dini setiap hari saat ada obat menipis atau mendekati ED.
 - Command `sipokat:check-stock-and-expiry` scheduled daily 08:00 (jam buka apotek)
 - Segarkan `stock_status` semua obat (dari stok tersedia vs `min_stock`), lalu scan `empty` / `almost_empty`
@@ -143,17 +143,17 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 - Kirim Filament Database Notification ke semua user dengan action "Lihat di Dashboard"
 - Muncul di bell icon header panel + halaman notifikasi
 
-### F-05 — Laporan Inventory Otomatis
+### F-05 Laporan Inventory Otomatis
 **As a** pemilik/manajer, **I want to** generate laporan operasional dalam berbagai sudut pandang.
 
 **Laporan tersedia:**
-1. **Kartu Stok per Obat** (`MedicineStockDetail`) — riwayat D/C per obat dengan kolom batch/ED, HPP baris, dan HPP rata-rata berjalan; filter year/month/supplier + export Excel.
-2. **Rekap Penjualan & Pembelian** (`LaporanRekap`) — filter periode + tipe (Penjualan / Pembelian / Keduanya), summary cards (total + jumlah transaksi + margin kotor), tabel agregasi per obat (kode, nama, kategori, qty/nilai beli & jual, margin), export Excel berformat dengan total row.
-3. **Fast/Slow Moving / Dead Stock** (`LaporanMoving`) — analisis demand bulanan dengan 3 kategori: Fast Moving (top demand), Slow Moving (< 20/bln per Tabel 3.6 proposal), Dead Stock (tanpa transaksi). Multi-sheet Excel export.
-4. **Dashboard Widgets** — 5 widget real-time: Top 10 SAW, Low Stock, Pending PO, Expiring Batches, Sales Summary 30 hari.
-5. **Export Receive Order** — Filament Exporter (`ReceiveOrderExporter`) untuk data penerimaan barang.
+1. **Kartu Stok per Obat** (`MedicineStockDetail`) riwayat D/C per obat dengan kolom batch/ED, HPP baris, dan HPP rata-rata berjalan; filter year/month/supplier + export Excel.
+2. **Rekap Penjualan & Pembelian** (`LaporanRekap`) filter periode + tipe (Penjualan / Pembelian / Keduanya), summary cards (total + jumlah transaksi + margin kotor), tabel agregasi per obat (kode, nama, kategori, qty/nilai beli & jual, margin), export Excel berformat dengan total row.
+3. **Fast/Slow Moving / Dead Stock** (`LaporanMoving`) analisis demand bulanan dengan 3 kategori: Fast Moving (top demand), Slow Moving (< 20/bln per Tabel 3.6 proposal), Dead Stock (tanpa transaksi). Multi-sheet Excel export.
+4. **Dashboard Widgets** 5 widget real-time: Top 10 SAW, Low Stock, Pending PO, Expiring Batches, Sales Summary 30 hari.
+5. **Export Receive Order** Filament Exporter (`ReceiveOrderExporter`) untuk data penerimaan barang.
 
-### F-06 — SAW untuk Rekomendasi Prioritas Restock
+### F-06 SAW untuk Rekomendasi Prioritas Restock
 **As an** admin, **I want to** menjalankan perhitungan SAW kapan saja dan melihat ranking semua obat.
 - Page **"Hitung Prioritas Restock"** dengan periode permintaan: "Sampai" selalu hari ini (terkunci), "Dari" bawaan 30 hari ke belakang
 - Tombol "Hitung Sekarang" dengan modal konfirmasi → `SawCalculationService::execute()`
@@ -163,7 +163,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 - Scheduled command `sipokat:recalculate-saw` daily 06:00 (hasil dipakai dashboard widget)
 - Aksi massal **"Buat PO dari yang dicentang"** → PO per PBF berisi obat terpilih; obat yang sudah ada di PO terbuka ditandai "sudah dipesan"
 
-### F-07 — Tampilan Hasil Perangkingan Obat
+### F-07 Tampilan Hasil Perangkingan Obat
 **As a** pemilik, **I want to** melihat ranking semua obat + breakdown perhitungan untuk audit/verifikasi.
 - Table paginated 25/halaman, urut `sort_order` (V desc, tie-breaker rasio → permintaan → ED)
 - Kolom: **Tingkat** (peringkat padat: V sama → tingkat sama), kode, nama, Stok / Min (C1 rasio), permintaan/bln (C2), sisa ED batch terjauh (C3), HPP (C4), **Nilai Prioritas (V_i)**, penanda "sudah dipesan"
@@ -171,7 +171,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 - **ViewAction "Detail Hitungan"** per row: modal breakdown V_i step-by-step (matriks per kriteria + rumus `V = W₁×R₁ + W₂×R₂ + W₃×R₃ + W₄×R₄`) match contoh Bab 3.4.4 proposal
 - **Resource "Riwayat Perhitungan"** untuk audit trail: list semua snapshot historis dengan filter trigger_type + date range, view detail per snapshot
 
-### F-08 — Pengaturan Umum Aplikasi
+### F-08 Pengaturan Umum Aplikasi
 **As an** admin, **I want to** mengatur informasi dasar aplikasi dari panel admin.
 - Page `ManageGeneralSettings` via Spatie Laravel Settings
 - Field: nama aplikasi (brand name dinamis), email kontak, nomor telepon, website, tarif PPN (bawaan 11%, dipakai untuk tampilan DPP/PPN pada cetak RO)
@@ -247,7 +247,7 @@ medicines (code OBT####, unit_id = satuan jual, pack_unit_id + pack_size = kemas
    ├─ purchase_order_items (pack_unit_id, pack_size, pack_qty, price/satuan jual, qty)
    ├─ receive_order_items  (jejak kemasan + batch_number, expired_date)
    ├─ order_items (qty, price)
-   ├─ medicine_stocks — ledger lapisan:
+   ├─ medicine_stocks ledger lapisan:
    │     D: batch_number, expired_date, hpp (harga beli/satuan jual), hpp_avg, receive_order_item_id
    │     C: layer_stock_id → lapisan yang dikonsumsi (FEFO), hpp = HPP saat itu
    └─ saw_calculation_results (c1_stock, c1_min_stock, c1..c4 raw/score/norm, preference_value, rank padat, sort_order)
@@ -284,7 +284,7 @@ users ── (FK calculated_by, created_by, received_by di tabel transaksional)
 
 ---
 
-## 9. SPK SAW — Detail Spesifikasi
+## 9. SPK SAW Detail Spesifikasi
 
 ### Kriteria (sesuai Tabel 3.4 proposal)
 | Kode | Nama | Tipe | Bobot | Sumber Data |
@@ -292,7 +292,7 @@ users ── (FK calculated_by, created_by, received_by di tabel transaksional)
 | C1 | Rasio Stok | cost | 0.300 | `availableStock ÷ min_stock` (2 desimal); stok tersedia = Σ sisa lapisan belum kedaluwarsa |
 | C2 | Permintaan/bulan | benefit | 0.300 | Σ `OrderItem.qty` dalam periode × 30 ÷ jumlah hari (inklusif) |
 | C3 | Sisa Kedaluwarsa (hari) | cost | 0.200 | Hari ke ED lapisan **terjauh** yang masih bersisa; stok tersedia 0 → 0 |
-| C4 | Harga Pokok (HPP) | cost | 0.200 | `StockCardService::currentHpp()` — rata-rata bergerak, bulat ke atas |
+| C4 | Harga Pokok (HPP) | cost | 0.200 | `StockCardService::currentHpp()` rata-rata bergerak, bulat ke atas |
 | **Total** | | | **1.000** | |
 
 Skala 1–5 (inklusif, hasil wawancara): lihat CLAUDE.md §4 / `SawCriteriaSeeder`.
@@ -307,29 +307,29 @@ Input: period_start (bawaan 30 hari lalu), period_end = hari ini, trigger_type, 
   │
   ├─ getRawValue() per obat × kriteria → ['raw', 'meta'] (C1 menyimpan stok & min_stock)
   │
-  ├─ buildDecisionMatrix() — raw → skor 1-5 via SawCriteria::convertToScore()
+  ├─ buildDecisionMatrix() raw → skor 1-5 via SawCriteria::convertToScore()
   │     (rentang inklusif, pembulatan 2 desimal; di luar rentang → 0)
   │
-  ├─ normalize() — cost: R = min/X (min dari skor > 0), benefit: R = X/max; skor 0 → R = 0
+  ├─ normalize() cost: R = min/X (min dari skor > 0), benefit: R = X/max; skor 0 → R = 0
   │     presisi penuh; pembulatan hanya saat disimpan
   │
-  ├─ calculatePreference() — V_i = Σ (W_j × R_ij)
+  ├─ calculatePreference() V_i = Σ (W_j × R_ij)
   │
-  ├─ rank() — peringkat PADAT (V sama → tingkat sama); sort_order = V desc, rasio asc, permintaan desc, ED asc
+  ├─ rank() peringkat PADAT (V sama → tingkat sama); sort_order = V desc, rasio asc, permintaan desc, ED asc
   │
   └─ persist (DB transaction): saw_calculations + saw_calculation_results
 ```
 
 ### Konfigurasi Editable Admin
-- **Bobot kriteria** — `SawCriteriaResource`; validasi Σ bobot aktif = 1.000 tepat saat simpan; `min ≤ max` per rentang; step 0,01
-- **Skala konversi 1-5** — `saw_criteria.scale_rules` JSON, editable via Repeater
+- **Bobot kriteria** `SawCriteriaResource`; validasi Σ bobot aktif = 1.000 tepat saat simpan; `min ≤ max` per rentang; step 0,01
+- **Skala konversi 1-5** `saw_criteria.scale_rules` JSON, editable via Repeater
 - Keempat kriteria wajib aktif (toggle aktif/non-aktif dihapus)
 
 ### Output
-- **Page Hitung Prioritas Restock** — tabel ranking (Tingkat, Stok/Min, C2–C4, V), ViewAction Detail, penanda "sudah dipesan", aksi massal Buat PO
-- **Widget Dashboard Top 10** — 10 baris teratas snapshot terakhir
-- **Resource Riwayat Perhitungan** — list snapshot historis dengan filter, view detail per snapshot
-- **Modal Detail V_i** — matriks per kriteria (raw dengan rincian C1 = stok ÷ min, skor, Min/Max kolom, R dengan label min/X atau X/max) + rumus step-by-step
+- **Page Hitung Prioritas Restock** tabel ranking (Tingkat, Stok/Min, C2–C4, V), ViewAction Detail, penanda "sudah dipesan", aksi massal Buat PO
+- **Widget Dashboard Top 10** 10 baris teratas snapshot terakhir
+- **Resource Riwayat Perhitungan** list snapshot historis dengan filter, view detail per snapshot
+- **Modal Detail V_i** matriks per kriteria (raw dengan rincian C1 = stok ÷ min, skor, Min/Max kolom, R dengan label min/X atau X/max) + rumus step-by-step
 
 ### Catatan Resolusi Inkonsistensi Proposal
 Tabel 3.10 draf proposal memuat konversi terbalik dari Tabel 3.5–3.8. Sistem memakai **normalisasi baku**: skor searah nilai mentah, prioritas dari `min/X` (cost) dan `X/max` (benefit). Contoh 5 alternatif (`SawCalculationTest`): A1 0,90 · A2 0,74 · A4 0,5467 · A5 0,54 · A3 0,42. Bab 3.4.4 naskah ditulis ulang mengikuti ini; pembahasan T1–T11 di `IMPROVEMENT.md` (ditutup).
@@ -341,7 +341,7 @@ Tabel 3.10 draf proposal memuat konversi terbalik dari Tabel 3.5–3.8. Sistem m
 ### Flow 1: Restock Decision (Pemilik)
 ```
 1. Login admin → Dashboard
-2. Cek Widget "Top 10 Prioritas Restock (SAW)" — lihat obat dengan nilai prioritas tertinggi
+2. Cek Widget "Top 10 Prioritas Restock (SAW)" lihat obat dengan nilai prioritas tertinggi
 3. (Opsional) Buka Page "Hitung Prioritas Restock" → klik "Hitung Sekarang" untuk recalc terbaru
 4. Klik ViewAction "Detail Hitungan" pada obat top 1 → modal tampilkan breakdown V_i
 5. Konfirmasi ketersediaan ke sales PBF (WA/telepon), lalu centang obat → "Buat PO dari yang dicentang" → pilih PBF & tanggal
@@ -421,14 +421,14 @@ Tabel 3.10 draf proposal memuat konversi terbalik dari Tabel 3.5–3.8. Sistem m
 
 ## 13. Demo Data
 
-Seeder `SpkTestDataSeeder` (idempotent, lewat `StockMovementService` — jalur yang sama dengan UI) generate:
+Seeder `SpkTestDataSeeder` (idempotent, lewat `StockMovementService` jalur yang sama dengan UI) generate:
 - 150 obat dengan profil satuan/kemasan/min_stock bervariasi, kode `OBT####`
 - 1 PBF "PT. Distributor SPK Test"; faktur ≤ 14 baris (seperti faktur asli)
 - Rencana per obat untuk semua bracket C1–C4: ~35% punya dua batch, ~8% sisa kedaluwarsa, ~10% stok tersedia 0
 - Penjualan 30 hari terakhir (FEFO), HPP terbentuk dari harga faktur
 - Idempoten via berkas penanda `storage/app/spk-test-data.json`
 
-`DatabaseSeeder` (`migrate --seed`) hanya memuat akun, master data, dan kriteria SAW — data demo
+`DatabaseSeeder` (`migrate --seed`) hanya memuat akun, master data, dan kriteria SAW data demo
 sengaja terpisah. Data riil apotek dimuat lewat `sipokat:data-riil:template` → `sipokat:data-riil:import`.
 
 Run:
@@ -477,16 +477,16 @@ Item yang masih perlu dikerjakan **manual oleh peneliti** (tidak bisa di-generat
 
 | Term | Definition |
 |------|------------|
-| **SAW** | Simple Additive Weighting — metode SPK Multi-Attribute Decision Making berbasis penjumlahan nilai terbobot |
+| **SAW** | Simple Additive Weighting metode SPK Multi-Attribute Decision Making berbasis penjumlahan nilai terbobot |
 | **V_i (Nilai Prioritas)** | Nilai preferensi alternatif ke-i, hasil `Σ (W_j × R_ij)` |
 | **W_j** | Bobot kriteria ke-j |
 | **R_ij** | Nilai normalisasi alternatif ke-i pada kriteria ke-j |
-| **Kartu Stok** | Buku besar stok obat — di Sipokat di-track dinamis via `MedicineStock` D/C entries |
-| **FEFO** | First Expired First Out — asumsi keluar stok dari batch ED terdekat dulu |
+| **Kartu Stok** | Buku besar stok obat di Sipokat di-track dinamis via `MedicineStock` D/C entries |
+| **FEFO** | First Expired First Out asumsi keluar stok dari batch ED terdekat dulu |
 | **ED** | Expired Date / Tanggal Kedaluwarsa |
 | **HPP** | Harga Pokok Penjualan |
-| **PO** | Purchase Order — pesanan ke supplier |
-| **RO** | Receive Order — penerimaan barang dari supplier |
+| **PO** | Purchase Order pesanan ke supplier |
+| **RO** | Receive Order penerimaan barang dari supplier |
 | **Opname** | Penyesuaian stok fisik vs sistem |
 
 ---
@@ -497,8 +497,8 @@ Sistem dianggap memenuhi requirement TA jika:
 
 - [x] F-01 sampai F-08 semua terimplementasi
 - [x] Algoritma SAW persis match Bab 3.4.3 dengan normalisasi baku (min/X cost, X/max benefit), Σ bobot = 1,000 divalidasi di service
-- [x] 4 kriteria + skala hasil wawancara (C1 rasio stok÷min, C4 HPP) — Tabel 3.4–3.8 naskah mengikuti sistem
-- [x] Kartu stok per batch, HPP rata-rata bergerak, penjualan FEFO, opname per batch — prasyarat agar C1/C3/C4 benar
+- [x] 4 kriteria + skala hasil wawancara (C1 rasio stok÷min, C4 HPP) Tabel 3.4–3.8 naskah mengikuti sistem
+- [x] Kartu stok per batch, HPP rata-rata bergerak, penjualan FEFO, opname per batch prasyarat agar C1/C3/C4 benar
 - [x] PO per PBF (juga dari ranking SAW) dan RO satu per faktur dengan konversi kemasan
 - [x] Notifikasi otomatis berjalan (terdaftar di scheduler)
 - [x] Laporan rekap + fast/slow moving + kartu stok, export Excel & PDF
@@ -515,5 +515,5 @@ Sistem dianggap memenuhi requirement TA jika:
 ---
 
 **Dokumen terkait:**
-- [CLAUDE.md](CLAUDE.md) — progress & mentoring document dengan detail teknis
-- [README.md](README.md) — dokumentasi project setup & deployment
+- [CLAUDE.md](CLAUDE.md) progress & mentoring document dengan detail teknis
+- [README.md](README.md) dokumentasi project setup & deployment

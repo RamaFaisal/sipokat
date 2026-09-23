@@ -17,13 +17,13 @@ class RecalculateSawCommand extends Command
     {
         $days = max(1, (int) $this->option('days'));
         $start = Carbon::now()->subDays($days - 1)->startOfDay();
-        $end = Carbon::today(); // K2: tanggal saja, bukan endOfDay — pembagi hari harus bulat (T5)
+        $end = Carbon::today(); // K2: tanggal saja, bukan endOfDay pembagi hari harus bulat (T5)
 
         try {
             $calc = $service->execute($start, $end, 'scheduled', null);
 
             $this->info(sprintf(
-                'SAW snapshot #%d tersimpan — %d alternatif diranking, periode %s s/d %s.',
+                'SAW snapshot #%d tersimpan %d alternatif diranking, periode %s s/d %s.',
                 $calc->id,
                 $calc->total_alternatives,
                 $calc->period_start->format('Y-m-d'),

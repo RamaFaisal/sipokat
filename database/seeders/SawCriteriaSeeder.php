@@ -11,7 +11,7 @@ use Illuminate\Database\Seeder;
  *
  * Semua aturan skala INKLUSIF (B2). C1 dinyatakan sebagai rasio stok ÷ batas minimum,
  * diturunkan dari kolom wawancara (≤20 / 21–40 / 41–70 / 71–100 / ≥101) dibagi batas
- * waspada 20 — dua desimal tanpa celah karena rasio dibulatkan dua desimal (K14).
+ * waspada 20 dua desimal tanpa celah karena rasio dibulatkan dua desimal (K14).
  * Bobot 0,30 / 0,30 / 0,20 / 0,20 terkonfirmasi lapangan (§2).
  */
 class SawCriteriaSeeder extends Seeder

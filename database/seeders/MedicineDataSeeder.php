@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 
 /**
  * 127 obat riil Apotek Anugrah Husada (rencana-revisi-2026-09 D5). Sumbernya salinan
- * `storage/app/import/master-data-obat.csv` (berkas lokal, tidak ikut git —
+ * `storage/app/import/master-data-obat.csv` (berkas lokal, tidak ikut git
  * lihat storage/app/.gitignore) di `database/seeders/data`, supaya master data ikut
  * termuat lewat `db:seed` di server manapun, bukan bergantung berkas yang harus
  * disalin manual. Aman dijalankan berulang (upsert berdasar nama ternormalisasi, M6).
@@ -52,7 +52,7 @@ class MedicineDataSeeder extends Seeder
                 $this->command?->error($error);
             }
 
-            throw new \RuntimeException('MedicineDataSeeder: '.count($result['errors']).' baris gagal diimpor — lihat pesan di atas.');
+            throw new \RuntimeException('MedicineDataSeeder: '.count($result['errors']).' baris gagal diimpor lihat pesan di atas.');
         }
 
         $this->command?->info("MedicineDataSeeder: {$result['summary']['obat']} obat termuat/diperbarui.");

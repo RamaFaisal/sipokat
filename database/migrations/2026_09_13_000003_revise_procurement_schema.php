@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  * status/keterangan/late_arrival dihapus (R5). Baris PO dan RO menyimpan qty & price dalam
  * satuan jual plus jejak konversi kemasan (R6, P4). manufacture_date dihapus (R2).
  *
- * down() sengaja kosong — pemulihan lewat backup DB.
+ * down() sengaja kosong pemulihan lewat backup DB.
  */
 return new class extends Migration
 {
@@ -93,6 +93,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Sengaja kosong — lihat docblock.
+        // Sengaja kosong lihat docblock.
     }
 };

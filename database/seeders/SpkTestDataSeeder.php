@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * Data demo SPK SAW — versi rencana-revisi-2026-09 (tahap E6, T2).
+ * Data demo SPK SAW versi rencana-revisi-2026-09 (tahap E6, T2).
  *
  * Dipakai untuk Bab IV bila data apotek terlambat. Dibangun lewat jalur yang sama dengan
  * UI (StockMovementService): lapisan batch, HPP rata-rata bergerak, alokasi FEFO.
@@ -322,7 +322,7 @@ class SpkTestDataSeeder extends Seeder
             }
 
             // Obat tanpa stok & permintaan tetap butuh satu lapisan supaya punya HPP dan ikut SAW (K0):
-            // diterima 1 lalu tidak terjual — stok tersedia 1, bukan 0. Untuk kasus stok 0 sungguhan,
+            // diterima 1 lalu tidak terjual stok tersedia 1, bukan 0. Untuk kasus stok 0 sungguhan,
             // permintaan > 0 menghabiskannya lewat penjualan.
             if ($needed > 0 || $plan['ed_near'] === null) {
                 $farLines[] = [$m, max(1, $needed), $plan['price'], $plan['ed_far']];

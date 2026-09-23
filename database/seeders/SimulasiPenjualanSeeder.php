@@ -19,16 +19,16 @@ use Illuminate\Support\Carbon;
  * pertama dan hari ini, memakai `StockMovementService::recordSale()` (bukan tulis ledger
  * langsung) supaya FEFO dan HPP tetap konsisten dengan alur form. Harga = HPP × 1,25
  * dibulatkan ke atas (memenuhi aturan harga ≥ HPP, S1). Ditandai `[SIMULASI]` pada
- * catatan — WAJIB dinyatakan sebagai data simulasi, bukan penjualan riil, di Bab 1.4/IV.
+ * catatan WAJIB dinyatakan sebagai data simulasi, bukan penjualan riil, di Bab 1.4/IV.
  *
  * Idempoten-sederhana: hanya jalan bila belum ada penjualan bertanda simulasi (bukan
- * idempoten per hari — cukup untuk mengisi data awal, bukan simulasi berkelanjutan).
+ * idempoten per hari cukup untuk mengisi data awal, bukan simulasi berkelanjutan).
  */
 class SimulasiPenjualanSeeder extends Seeder
 {
     private const MARKUP = 1.25;
 
-    public const NOTE = '[SIMULASI] penjualan otomatis untuk demo & data C2 SAW — bukan transaksi riil';
+    public const NOTE = '[SIMULASI] penjualan otomatis untuk demo & data C2 SAW bukan transaksi riil';
 
     private const SEED = 20260921;
 

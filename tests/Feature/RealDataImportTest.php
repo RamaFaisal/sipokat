@@ -22,7 +22,7 @@ beforeEach(function () {
 
 afterEach(fn () => @unlink($this->path));
 
-it('memuat contoh template: obat, saldo awal, faktur per nomor, penjualan — dan HPP terbentuk', function () {
+it('memuat contoh template: obat, saldo awal, faktur per nomor, penjualan dan HPP terbentuk', function () {
     $result = app(RealDataImporter::class)->import($this->path, \Carbon\Carbon::parse('2024-05-01'));
 
     expect($result['errors'])->toBe([])

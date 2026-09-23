@@ -150,7 +150,7 @@ class MedicineStockOpnameForm
                                                 fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
                                                     $medicineId = $get('../../medicine_id');
                                                     if ($medicineId && app(StockCardService::class)->currentHpp((int) $medicineId) === null) {
-                                                        $fail('Obat ini belum punya riwayat harga — masukkan stok awal lewat Penerimaan, bukan opname.');
+                                                        $fail('Obat ini belum punya riwayat harga masukkan stok awal lewat Penerimaan, bukan opname.');
                                                     }
                                                 },
                                             ]),

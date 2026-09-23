@@ -26,7 +26,7 @@ class CreateMedicineStockOpname extends CreateRecord
 
     /**
      * Selisih fisik vs sistem per lapisan → item opname (C/D pada lapisan itu); batch baru → item D
-     * dengan batch/ED. Kartu stok ditulis service dalam transaksi Filament — gagal = batal semua.
+     * dengan batch/ED. Kartu stok ditulis service dalam transaksi Filament gagal = batal semua.
      */
     protected function afterCreate(): void
     {
@@ -79,7 +79,7 @@ class CreateMedicineStockOpname extends CreateRecord
         }
 
         if ($created === 0) {
-            Notification::make()->warning()->title('Tidak ada selisih')->body('Semua jumlah fisik sama dengan sistem — opname tidak disimpan.')->send();
+            Notification::make()->warning()->title('Tidak ada selisih')->body('Semua jumlah fisik sama dengan sistem opname tidak disimpan.')->send();
 
             throw (new Halt)->rollBackDatabaseTransaction();
         }

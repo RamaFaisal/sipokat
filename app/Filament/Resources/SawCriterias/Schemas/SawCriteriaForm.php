@@ -54,7 +54,7 @@ class SawCriteriaForm
                                     ->step(0.001)
                                     ->minValue(0)
                                     ->maxValue(1)
-                                    ->helperText('Total bobot keempat kriteria harus tepat 1,000 (K7) — kurang maupun lebih ditolak.')
+                                    ->helperText('Total bobot keempat kriteria harus tepat 1,000 (K7) kurang maupun lebih ditolak.')
                                     ->rules([
                                         static function (?SawCriteria $record): Closure {
                                             return static function (string $attribute, $value, Closure $fail) use ($record): void {

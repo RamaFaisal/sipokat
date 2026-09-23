@@ -1,9 +1,9 @@
-# CLAUDE.md — Sipokat: Progress & Mentoring Document
+# CLAUDE.md Sipokat: Progress & Mentoring Document
 
 > Rangkuman **kondisi proyek saat ini** dibanding requirement draft TA "Rancang Bangun Sistem Inventory
 > Obat Berbasis Web dengan SPK Metode SAW pada Apotek Anugrah Husada" (Bab I–III), untuk bahan
 > review/mentoring dosen pembimbing.
-> Last updated: 2026-09-14 — setelah **revisi besar September 2026** (rencana lengkap dan alasan tiap
+> Last updated: 2026-09-14 setelah **revisi besar September 2026** (rencana lengkap dan alasan tiap
 > keputusan ada di [docs/rencana-revisi-2026-09.md](docs/rencana-revisi-2026-09.md)).
 
 ---
@@ -20,11 +20,11 @@
 | **SPK SAW (inti skripsi)** | ✅ | C1 rasio stok÷min, C2 permintaan/bulan, C3 ED batch terjauh yang bersisa, C4 HPP; skala hasil wawancara; peringkat padat; "Buat PO" dari ranking (Bagian 7) |
 | Notifikasi stok & ED | ✅ | `sipokat:check-stock-and-expiry` harian 08:00 (Filament DB notification) |
 | Dashboard & widget | ✅ | Top-10 SAW, stok kritis, PO terbuka, batch mendekati ED, grafik penjualan |
-| Laporan | ✅ | Kartu stok per obat (per batch + HPP), Rekap penjualan/pembelian, Fast/slow moving — Excel & PDF |
+| Laporan | ✅ | Kartu stok per obat (per batch + HPP), Rekap penjualan/pembelian, Fast/slow moving Excel & PDF |
 | Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat sintetis) · `FakturNpmSeeder` (14 faktur asli NPM Mei 2024 → bulan berjalan, 137 lapisan untuk 127 obat riil) · template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
 | Pengujian | ✅ | 84 tes Pest / 826 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament |
 | Roles & Permissions | ⏸️ | Ditangani peneliti via Filament Shield (D7). Permission di DB sudah bersih dari halaman yang dihapus |
-| Deploy VPS (MySQL) + cron | 🔜 | E9 — jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |
+| Deploy VPS (MySQL) + cron | 🔜 | E9 jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |
 
 ---
 
@@ -128,9 +128,9 @@ Tes (`tests/Feature`): `MedicineMasterTest`, `HppMovingAverageTest` (tabel §4.3
    faktur (wawancara §4.1), dan HPP-lah yang benar-benar tertanam di stok.
 4. **Peringkat padat** dipilih karena Vi kembar wajar terjadi dengan skala 1–5; angka urut 1,2,3 akan
    memberi kesan perbedaan yang tidak ada.
-5. Konversi kemasan, HPP, FEFO, dan opname per batch adalah **prasyarat data** agar C1–C4 benar —
+5. Konversi kemasan, HPP, FEFO, dan opname per batch adalah **prasyarat data** agar C1–C4 benar
    bukan fitur tambahan penjualan. Topik tetap prioritas restock.
-6. Apotek Winong hanya referensi internal peneliti — **tidak dicantumkan** di naskah.
+6. Apotek Winong hanya referensi internal peneliti **tidak dicantumkan** di naskah.
 
 ---
 
@@ -152,7 +152,7 @@ sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → ta
 
 ---
 
-## 8. Deploy (E9) & yang ditangani peneliti — rincian di `docs/deploy-vps.md`
+## 8. Deploy (E9) & yang ditangani peneliti rincian di `docs/deploy-vps.md`
 
 - VPS + MySQL 8: `.env` `DB_CONNECTION=mysql`, `APP_ENV=production`, `APP_TIMEZONE` sudah
   `Asia/Jakarta` di `config/app.php`. `php artisan migrate --force`, `php artisan db:seed --class=SawCriteriaSeeder`,
@@ -167,13 +167,13 @@ sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → ta
 > Catatan lokal (Windows/Laragon): `php` tidak ada di PATH; pakai
 > `C:\laragon\bin\php\php-8.4.25-nts-Win32-vs17-x64\php.exe`. `pdo_sqlite` tidak aktif di php.ini, jadi tes
 > dijalankan dengan `php -d extension=pdo_sqlite -d extension=sqlite3 vendor/pestphp/pest/bin/pest`
-> (bukan `artisan test`). `artisan tinker` tersangkut prompt interaktif — jangan dipakai.
-> Riwayat rencana sebelum revisi (Section 12–14 lama: rak obat dihapus, kategori dikunci tanpa CRUD — kini 3 golongan: Obat Bebas, Obat Keras, Alat Kesehatan, satuan
+> (bukan `artisan test`). `artisan tinker` tersangkut prompt interaktif jangan dipakai.
+> Riwayat rencana sebelum revisi (Section 12–14 lama: rak obat dihapus, kategori dikunci tanpa CRUD kini 3 golongan: Obat Bebas, Obat Keras, Alat Kesehatan, satuan
 > kemasan) tetap berlaku dan sudah tercermin di kode; dokumentasinya ada di git history.
 
 ## 9. Aturan Commit (wajib, permintaan peneliti 2026-09-15)
 
-- Format **Conventional Commits** satu baris **tanpa scope**: `type: summary` — contoh `feat: add rupiah mask to pack price input`. Tipe: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`.
+- Format **Conventional Commits** satu baris **tanpa scope**: `type: summary` contoh `feat: add rupiah mask to pack price input`. Tipe: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`.
 - Ringkasan **berbahasa Inggris**, huruf kecil, kalimat imperatif, tanpa titik di akhir (diperbarui 2026-09-16).
 - **Tanpa body**, **tanpa trailer/atribusi Claude** (tidak ada `Co-Authored-By`, tidak ada tanda "generated with").
 - Alur: kerjakan → suite tes hijau → laporkan. **Commit dan push keduanya ditahan** sampai peneliti menyatakan "oke commit" / "oke push" (diperbarui 2026-09-17). Perubahan dibiarkan di working tree; sebutkan berkas yang menunggu di laporan.

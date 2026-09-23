@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 
 /**
- * Kode PBF dibuat sistem dari inisial nama — tidak diketik di form maupun di berkas import.
+ * Kode PBF dibuat sistem dari inisial nama tidak diketik di form maupun di berkas import.
  */
 it('membentuk kode dari inisial nama tanpa kata badan usaha', function () {
     expect(Supplier::codeFromName('PT. Nisa Permata Mulia'))->toBe('NPM')

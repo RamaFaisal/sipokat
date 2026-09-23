@@ -10,7 +10,7 @@ use App\Services\StockCardService;
 use Illuminate\Database\Seeder;
 
 /**
- * Beberapa PO contoh (P1) supaya menu Pemesanan tidak kosong pada deploy baru — dipilihkan
+ * Beberapa PO contoh (P1) supaya menu Pemesanan tidak kosong pada deploy baru dipilihkan
  * obat dengan rasio stok (C1) terendah, seolah dibuat dari hasil ranking SAW. Hanya jalan
  * bila tabel masih kosong (idempoten: tidak menambah PO setiap kali seeder diulang).
  */

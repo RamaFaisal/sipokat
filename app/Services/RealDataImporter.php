@@ -21,7 +21,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
  *
  * Urutan muat menjaga urutan waktu (C1): saldo awal ditulis sebagai RO "SALDO AWAL" bertanggal
  * awal periode (C2, supaya obat langsung punya HPP), lalu faktur dalam periode, lalu penjualan.
- * Semua lewat StockMovementService — lapisan batch, HPP, FEFO sama dengan jalur UI.
+ * Semua lewat StockMovementService lapisan batch, HPP, FEFO sama dengan jalur UI.
  * Obat didedup berdasarkan nama ternormalisasi (M6). Seluruh muatan satu transaksi:
  * satu baris salah → tidak ada yang tersimpan; daftar masalah dikembalikan.
  */
@@ -139,7 +139,7 @@ class RealDataImporter
     // ---------------------------------------------------------------------
 
     /**
-     * Muat hanya sheet Obat dari baris siap pakai (bukan berkas Excel) — dipakai
+     * Muat hanya sheet Obat dari baris siap pakai (bukan berkas Excel) dipakai
      * `MedicineDataSeeder` supaya master data riil bisa di-commit sebagai seeder,
      * tidak bergantung pada berkas lokal di storage/app/import (digitignore).
      *

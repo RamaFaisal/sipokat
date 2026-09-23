@@ -35,7 +35,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Halaman ranking SAW (rencana-revisi-2026-09 Bagian 7): periode "sampai" dikunci hari ini (K2),
  * kolom "Tingkat" = peringkat padat (K9), penanda "sudah dipesan" (P10), dan bulk "Buat PO" (P9)
- * — jembatan dari rekomendasi ke tindakan; apoteker yang mencentang, sistem tidak memutuskan.
+ * jembatan dari rekomendasi ke tindakan; apoteker yang mencentang, sistem tidak memutuskan.
  */
 class SawCalculation extends Page implements HasSchemas, HasTable
 {
@@ -203,7 +203,7 @@ class SawCalculation extends Page implements HasSchemas, HasTable
             ->defaultPaginationPageOption(25);
     }
 
-    /** P9: PO dari ranking — baris dalam kemasan bawaan obat, jumlah ⌈min_stock ÷ isi⌉ (P5), harga perkiraan (P6). */
+    /** P9: PO dari ranking baris dalam kemasan bawaan obat, jumlah ⌈min_stock ÷ isi⌉ (P5), harga perkiraan (P6). */
     protected function createPurchaseOrder(Collection $records, int $supplierId, Carbon $poDate): PurchaseOrder
     {
         return DB::transaction(function () use ($records, $supplierId, $poDate) {

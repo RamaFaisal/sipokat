@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Satu RO = satu faktur PBF (rencana-revisi-2026-09 R10). Tidak ada status: RO menulis
- * kartu stok saat disimpan (R5). PO opsional — hanya pengisi awal (R11).
+ * kartu stok saat disimpan (R5). PO opsional hanya pengisi awal (R11).
  */
 class ReceiveOrder extends Model
 {

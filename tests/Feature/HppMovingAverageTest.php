@@ -181,7 +181,7 @@ it('menolak penghapusan RO yang batch-nya sudah dikonsumsi (R8)', function () {
     $ro = receiveOn('2026-09-01', $m, 10, 5000);
     $sale = sellOn('2026-09-02', $m, 4);
 
-    // Atribusi lapisan (alokasi FEFO menyusul di E4) — di sini disetel langsung.
+    // Atribusi lapisan (alokasi FEFO menyusul di E4) di sini disetel langsung.
     $layer = MedicineStock::where('receive_order_id', $ro->id)->first();
     MedicineStock::where('order_id', $sale->id)->update(['layer_stock_id' => $layer->id]);
 

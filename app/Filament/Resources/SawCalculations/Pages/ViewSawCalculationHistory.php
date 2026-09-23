@@ -30,7 +30,7 @@ class ViewSawCalculationHistory extends Page implements HasTable
 
     public function getTitle(): string
     {
-        return 'Snapshot #'.$this->record->id.' — '.$this->record->calculated_at->format('d M Y H:i');
+        return 'Snapshot #'.$this->record->id.' '.$this->record->calculated_at->format('d M Y H:i');
     }
 
     public function table(Table $table): Table

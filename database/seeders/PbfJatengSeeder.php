@@ -9,7 +9,7 @@ use Illuminate\Database\Seeder;
  * Delapan PBF di sekitar apotek (Semarang, Demak, Kudus): tujuh dari "Daftar Alamat PBF
  * Propinsi Jawa Tengah" (Dinkes) plus PT. Nisa Permata Mulia, PBF Demak yang fakturnya dipakai
  * FakturNpmSeeder. Kolom mengikuti daftar itu (nama, alamat, telp, fax);
- * kode dibuat model dari inisial nama. Idempoten — kunci pada nama.
+ * kode dibuat model dari inisial nama. Idempoten kunci pada nama.
  */
 class PbfJatengSeeder extends Seeder
 {

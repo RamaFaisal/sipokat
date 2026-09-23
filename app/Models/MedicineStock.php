@@ -86,7 +86,7 @@ class MedicineStock extends Model
         return $this->hasMany(self::class, 'layer_stock_id');
     }
 
-    /** Hanya baris D — setiap baris D adalah satu lapisan batch. */
+    /** Hanya baris D setiap baris D adalah satu lapisan batch. */
     public function scopeLayers(Builder $query): Builder
     {
         return $query->where('type_account', 'D');

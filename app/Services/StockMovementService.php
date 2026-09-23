@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * Aturan (rencana-revisi-2026-09 Bagian 4–5):
  * - Baris D dari RO membawa lapisan (batch, ED, jejak item RO) dan harga belinya.
  * - HPP rata-rata bergerak (hpp_avg) dihitung ulang dari awal untuk obat itu setiap kali
- *   ledgernya berubah — replay adalah satu-satunya jalur, tidak ada kasus khusus.
+ *   ledgernya berubah replay adalah satu-satunya jalur, tidak ada kasus khusus.
  * - Menghapus dokumen menghapus baris ledgernya sungguhan (B5), dijaga aturan R8:
  *   lapisan yang sudah dikonsumsi tidak boleh dihapus.
  *
@@ -31,7 +31,7 @@ class StockMovementService
     /** Tulis satu lapisan (baris D) per item penerimaan. */
     public function recordReceipt(ReceiveOrder $receiveOrder): array
     {
-        // purchase_order_id boleh kosong — form RO tidak mewajibkannya.
+        // purchase_order_id boleh kosong form RO tidak mewajibkannya.
         $description = $receiveOrder->purchaseOrder
             ? 'Penerimaan dari '.$receiveOrder->purchaseOrder->po_number
             : 'Penerimaan '.$receiveOrder->receive_order_number;
@@ -60,7 +60,7 @@ class StockMovementService
     }
 
     /**
-     * Hapus lapisan milik satu penerimaan. Ditolak bila ada lapisan yang sudah dikonsumsi (R8) —
+     * Hapus lapisan milik satu penerimaan. Ditolak bila ada lapisan yang sudah dikonsumsi (R8)
      * koreksinya lewat Stok Opname.
      *
      * @throws \RuntimeException
@@ -234,7 +234,7 @@ class StockMovementService
     }
 
     /**
-     * F6: atribusikan baris C lama (tanpa lapisan) secara FEFO historis — urut ED naik tanpa
+     * F6: atribusikan baris C lama (tanpa lapisan) secara FEFO historis urut ED naik tanpa
      * memandang kedaluwarsa (saat terjual dulu batch itu masih layak), lapisan tanpa ED paling
      * dulu. Baris yang melintasi dua lapisan dipecah. Deterministik; aman dijalankan ulang.
      *
@@ -335,7 +335,7 @@ class StockMovementService
             if ($item->type_account === 'D' && $hpp === null) {
                 $medicine = Medicine::find($item->medicine_id);
                 throw new \RuntimeException(
-                    'Obat '.($medicine?->name ?? $item->medicine_id).' belum punya riwayat harga — masukkan stok awal lewat Penerimaan, bukan opname.'
+                    'Obat '.($medicine?->name ?? $item->medicine_id).' belum punya riwayat harga masukkan stok awal lewat Penerimaan, bukan opname.'
                 );
             }
 
@@ -346,7 +346,7 @@ class StockMovementService
                 'medicine_id' => $item->medicine_id,
                 'qty' => $item->qty,
                 'type_account' => $item->type_account,
-                // Pengurangan menunjuk lapisan yang dikoreksi (termasuk lapisan kedaluwarsa — satu-satunya
+                // Pengurangan menunjuk lapisan yang dikoreksi (termasuk lapisan kedaluwarsa satu-satunya
                 // jalan mengeluarkannya, F1). Penambahan membuat lapisan baru dengan batch/ED yang disebut,
                 // atau menyalin batch/ED lapisan acuan (selisih lebih pada batch yang ada).
                 'layer_stock_id' => $isOut ? $item->layer_stock_id : null,
@@ -355,7 +355,7 @@ class StockMovementService
                 'date' => $opname->opname_date,
                 'hpp' => $hpp ?? 0,
                 'medicine_stock_opname_id' => $opname->id,
-                'description' => 'opname dari '.$opname->opname_number.($item->note ? ' — '.$item->note : ''),
+                'description' => 'opname dari '.$opname->opname_number.($item->note ? ' '.$item->note : ''),
                 'created_by' => auth()->id(),
             ]);
 
