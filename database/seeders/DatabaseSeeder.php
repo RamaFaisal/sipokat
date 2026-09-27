@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Akun awal, master data (kategori, satuan, PBF, kriteria SAW), obat riil, faktur
+     * Peran (Tabel 3.2), akun awal, master data (kategori, satuan, PBF, kriteria SAW), obat riil, faktur
      * riil (RO), contoh PO, dan simulasi penjualan supaya `db:seed` di deploy manapun
      * membuat tiap menu langsung terisi (rencana-sidang-2026-10 §3). Urutan menjaga
      * dependensi: obat dulu sebelum RO/PO/penjualan yang mengacunya. Data demo sintetis
@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            RoleSeeder::class,
             UserSeeder::class,
             MasterDataSeeder::class,
             PbfJatengSeeder::class,

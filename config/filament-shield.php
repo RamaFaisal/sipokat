@@ -66,7 +66,8 @@ return [
 
     'super_admin' => [
         'enabled' => true,
-        'name' => 'super_admin',
+        // Tabel 3.2 naskah: peran akses penuh bernama Admin (keputusan K2, 2026-09-24).
+        'name' => 'admin',
         'define_via_gate' => false,
         'intercept_gate' => 'before',
     ],
