@@ -1,33 +1,35 @@
+@php($summary = $this->summary())
+
 <x-filament::page>
     <x-filament::section>
         <x-slot name="heading">Parameter Perhitungan</x-slot>
-        <x-slot name="description">Isi rentang periode untuk agregasi permintaan (C2), lalu tekan tombol "Hitung Sekarang" di header.</x-slot>
+        <x-slot name="description">Isi rentang periode untuk agregasi permintaan (C2). Peringkat di bawah dihitung dari kondisi stok dan penjualan saat halaman ini dibuka.</x-slot>
 
         {{ $this->form }}
     </x-filament::section>
 
-    @if ($latest)
+    @if ($summary['error'])
         <x-filament::section>
-            <x-slot name="heading">
-                Hasil Terakhir &mdash; {{ \Illuminate\Support\Carbon::parse($latest->calculated_at)->format('d M Y H:i') }}
-            </x-slot>
-            <x-slot name="description">
-                Periode: {{ \Illuminate\Support\Carbon::parse($latest->period_start)->format('d M Y') }}
-                s/d {{ \Illuminate\Support\Carbon::parse($latest->period_end)->format('d M Y') }}
-                &middot; Alternatif: {{ $latest->total_alternatives }} obat
-                @if ($latest->excluded_count > 0)
-                    &middot; <span class="text-warning-600">{{ $latest->excluded_count }} obat tanpa riwayat kartu stok dikecualikan</span>
-                @endif
-                &middot; Pemicu: {{ $latest->trigger_type === 'scheduled' ? 'terjadwal' : 'manual' }}
-            </x-slot>
-
-            {{ $this->table }}
+            <p class="text-sm text-danger-600 dark:text-danger-400">
+                Perhitungan tidak dapat dijalankan: {{ $summary['error'] }}
+            </p>
         </x-filament::section>
     @else
         <x-filament::section>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-                Belum ada perhitungan SAW. Tekan tombol <strong>"Hitung Sekarang"</strong> di header untuk menjalankan kalkulasi pertama.
-            </p>
+            <x-slot name="heading">
+                Peringkat Prioritas Restock &mdash; per {{ $summary['calculated_at']->format('d M Y H:i') }}
+            </x-slot>
+            <x-slot name="description">
+                Periode permintaan: {{ $summary['period_start']->format('d M Y') }}
+                s/d {{ $summary['period_end']->format('d M Y') }}
+                &middot; Alternatif: {{ $summary['total_alternatives'] }} obat
+                @if ($summary['excluded_count'] > 0)
+                    &middot; <span class="text-warning-600">{{ $summary['excluded_count'] }} obat tanpa riwayat kartu stok dikecualikan</span>
+                @endif
+                &middot; dihitung langsung, bukan dari data tersimpan
+            </x-slot>
+
+            {{ $this->table }}
         </x-filament::section>
     @endif
 </x-filament::page>

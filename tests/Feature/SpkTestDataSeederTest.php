@@ -40,7 +40,7 @@ it('membangun data demo yang konsisten, idempoten, dan tersebar di semua bracket
     expect($maxLines)->toBeLessThanOrEqual(14);
 
     // SAW berjalan dan setiap kriteria punya minimal 4 dari 5 skor yang terisi.
-    $calc = app(SawCalculationService::class)->execute(today()->subDays(29), today());
+    $calc = sawRun(app(SawCalculationService::class), today()->subDays(29), today());
     expect($calc->total_alternatives)->toBe(150)->and($calc->excluded_count)->toBe(0);
     foreach (['c1_score', 'c2_score', 'c3_score', 'c4_score'] as $col) {
         expect($calc->results->pluck($col)->unique()->count())->toBeGreaterThanOrEqual(4);

@@ -5,12 +5,9 @@ namespace App\Services;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
 use App\Models\OrderItem;
-use App\Models\SawCalculation;
-use App\Models\SawCalculationResult;
 use App\Models\SawCriteria;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * SPK SAW (rencana-revisi-2026-09 Bagian 7).
@@ -21,6 +18,10 @@ use Illuminate\Support\Facades\DB;
  * C4 = HPP rata-rata bergerak (K4). Konversi skala 1–5 inklusif, normalisasi min/X
  * (cost) & X/max (benefit) dengan skor 0 dikecualikan dari Min (K15), Vi = Σ Wj·Rij,
  * peringkat padat + tie-breaker rasio C1 → permintaan → ED (K9).
+ *
+ * Sejak 2026-09-27 hasil perhitungan **tidak disimpan**: halaman dan widget memanggil
+ * calculate() sehingga angka yang tampil selalu mencerminkan kondisi saat itu juga.
+ * Riwayat snapshot dihapus bukti angka untuk naskah dibekukan sebagai berkas terpisah.
  */
 class SawCalculationService
 {
@@ -30,12 +31,24 @@ class SawCalculationService
         private StockCardService $stockCard,
     ) {}
 
-    public function execute(
-        Carbon $periodStart,
-        Carbon $periodEnd,
-        string $triggerType = 'manual',
-        ?int $userId = null,
-    ): SawCalculation {
+    /**
+     * Hitung peringkat SAW atas kondisi saat ini. **Tidak menyimpan apa pun** hasilnya
+     * dipakai langsung oleh halaman & widget, sehingga angka yang dilihat selalu mutakhir
+     * tanpa perlu snapshot (keputusan peneliti 2026-09-27).
+     *
+     * @return array{
+     * period_start: Carbon,
+     * period_end: Carbon,
+     * calculated_at: Carbon,
+     * criteria: array<int, array<string, mixed>>,
+     * column_stats: array<string, array{min: int, max: int}>,
+     * total_alternatives: int,
+     * excluded_count: int,
+     * rows: array<int, array<string, mixed>>,
+     * }
+     */
+    public function calculate(Carbon $periodStart, Carbon $periodEnd): array
+    {
         $periodStart = $periodStart->copy()->startOfDay();
         $periodEnd = $periodEnd->copy()->startOfDay();
 
@@ -56,55 +69,75 @@ class SawCalculationService
         $preferences = $this->calculatePreference($normalized, $criteria);
         $ranked = $this->rank($preferences, $matrix);
 
-        return DB::transaction(function () use (
-            $criteria, $medicines, $excludedCount, $matrix, $normalized, $ranked,
-            $periodStart, $periodEnd, $triggerType, $userId,
-        ) {
-            $calc = SawCalculation::create([
-                'calculated_at' => now(),
-                'calculated_by' => $userId,
-                'period_start' => $periodStart->toDateString(),
-                'period_end' => $periodEnd->toDateString(),
-                'trigger_type' => $triggerType,
-                'criteria_snapshot' => $criteria->values()
-                    ->map(fn (SawCriteria $c) => $c->only(['code', 'name', 'type', 'weight', 'scale_rules']))
-                    ->all(),
-                'total_alternatives' => $medicines->count(),
-                'excluded_count' => $excludedCount,
-            ]);
+        $byId = $medicines->keyBy('id');
 
-            $rows = [];
-            foreach ($ranked as $entry) {
-                $mid = $entry['medicine_id'];
-                $rows[] = [
-                    'saw_calculation_id' => $calc->id,
-                    'medicine_id' => $mid,
-                    'c1_raw' => $matrix[$mid]['raw']['C1'],
-                    'c1_stock' => $matrix[$mid]['meta']['stock'],
-                    'c1_min_stock' => $matrix[$mid]['meta']['min_stock'],
-                    'c2_raw' => $matrix[$mid]['raw']['C2'],
-                    'c3_raw' => $matrix[$mid]['raw']['C3'],
-                    'c4_raw' => $matrix[$mid]['raw']['C4'],
-                    'c1_score' => $matrix[$mid]['score']['C1'],
-                    'c2_score' => $matrix[$mid]['score']['C2'],
-                    'c3_score' => $matrix[$mid]['score']['C3'],
-                    'c4_score' => $matrix[$mid]['score']['C4'],
-                    'c1_norm' => round($normalized[$mid]['C1'], 6),
-                    'c2_norm' => round($normalized[$mid]['C2'], 6),
-                    'c3_norm' => round($normalized[$mid]['C3'], 6),
-                    'c4_norm' => round($normalized[$mid]['C4'], 6),
-                    'preference_value' => $entry['value'],
-                    'rank' => $entry['rank'],
-                    'sort_order' => $entry['sort_order'],
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
+        $rows = [];
+        foreach ($ranked as $entry) {
+            $mid = $entry['medicine_id'];
+            /** @var Medicine|null $medicine */
+            $medicine = $byId->get($mid);
 
-            SawCalculationResult::insert($rows);
+            $rows[] = [
+                // Filament mewajibkan kunci unik per baris untuk tabel berbasis array (ArrayRecord).
+                '__key' => (string) $mid,
+                'medicine_id' => $mid,
+                'code' => $medicine?->code,
+                'name' => $medicine?->name,
+                'c1_raw' => $matrix[$mid]['raw']['C1'],
+                'c1_stock' => $matrix[$mid]['meta']['stock'],
+                'c1_min_stock' => $matrix[$mid]['meta']['min_stock'],
+                'c2_raw' => $matrix[$mid]['raw']['C2'],
+                'c3_raw' => $matrix[$mid]['raw']['C3'],
+                'c4_raw' => $matrix[$mid]['raw']['C4'],
+                'c1_score' => $matrix[$mid]['score']['C1'],
+                'c2_score' => $matrix[$mid]['score']['C2'],
+                'c3_score' => $matrix[$mid]['score']['C3'],
+                'c4_score' => $matrix[$mid]['score']['C4'],
+                'c1_norm' => round($normalized[$mid]['C1'], 6),
+                'c2_norm' => round($normalized[$mid]['C2'], 6),
+                'c3_norm' => round($normalized[$mid]['C3'], 6),
+                'c4_norm' => round($normalized[$mid]['C4'], 6),
+                'preference_value' => $entry['value'],
+                'rank' => $entry['rank'],
+                'sort_order' => $entry['sort_order'],
+            ];
+        }
 
-            return $calc->fresh('results');
-        });
+        return [
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'calculated_at' => now(),
+            'criteria' => $criteria->values()
+                ->map(fn (SawCriteria $c) => $c->only(['code', 'name', 'type', 'weight', 'scale_rules']))
+                ->all(),
+            'column_stats' => $this->columnStats($matrix, $criteria),
+            'total_alternatives' => $medicines->count(),
+            'excluded_count' => $excludedCount,
+            'rows' => $rows,
+        ];
+    }
+
+    /**
+     * Min/Max skor per kriteria dari seluruh alternatif (K10) acuan normalisasi yang
+     * ditampilkan di rincian perhitungan. Skor 0 dikecualikan dari Min (K15).
+     *
+     * @return array<string, array{min: int, max: int}>
+     */
+    protected function columnStats(array $matrix, Collection $criteria): array
+    {
+        $stats = [];
+
+        foreach ($criteria as $code => $criterion) {
+            $scores = array_map(fn ($row) => (int) ($row['score'][$code] ?? 0), $matrix);
+            $positive = array_filter($scores, fn ($s) => $s > 0);
+
+            $stats[$code] = [
+                'min' => $positive === [] ? 0 : min($positive),
+                'max' => $scores === [] ? 0 : max($scores),
+            ];
+        }
+
+        return $stats;
     }
 
     /**
@@ -250,8 +283,8 @@ class SawCalculationService
                 // Presisi penuh di sini; pembulatan 6 desimal hanya saat disimpan/ditampilkan,
                 // supaya Vi = Σ Wj·Rij tidak menyimpang karena pembulatan bertingkat.
                 $normalized[$medicineId][$code] = $isCost
-                    ? $min / $score
-                    : ($max > 0 ? $score / $max : 0);
+                ? $min / $score
+                : ($max > 0 ? $score / $max : 0);
             }
         }
 
@@ -294,7 +327,7 @@ class SawCalculationService
 
         usort($entries, function (array $a, array $b) {
             return [$b['value'], $a['c1'], $b['c2'], $a['c3'], $a['medicine_id']]
-                <=> [$a['value'], $b['c1'], $a['c2'], $b['c3'], $b['medicine_id']];
+            <=> [$a['value'], $b['c1'], $a['c2'], $b['c3'], $b['medicine_id']];
         });
 
         $ranked = [];

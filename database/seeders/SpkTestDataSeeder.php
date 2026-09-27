@@ -34,7 +34,7 @@ use Illuminate\Support\Str;
  * Faktur meniru pola PBF: satu RO = satu faktur ≤ 14 baris (R10), harga per kemasan, ED bulan-tahun.
  * Idempotent: obat demo dikenali lewat storage/app/spk-test-data.json; RO/order lewat prefiks.
  *
- * Jalankan: php artisan db:seed --class=SpkTestDataSeeder && php artisan sipokat:recalculate-saw
+ * Jalankan: php artisan db:seed --class=SpkTestDataSeeder
  */
 class SpkTestDataSeeder extends Seeder
 {
@@ -87,7 +87,7 @@ class SpkTestDataSeeder extends Seeder
         $this->movement->refreshStockStatus(array_keys($this->plans));
 
         $this->command?->info(sprintf(
-            'Selesai: %d obat, %d faktur, %d penjualan. Jalankan: php artisan sipokat:recalculate-saw',
+            'Selesai: %d obat, %d faktur, %d penjualan. Peringkat SAW ikut terbarui sendiri saat dashboard dibuka.',
             count($this->plans), $this->roSeq, $this->orderSeq,
         ));
     }

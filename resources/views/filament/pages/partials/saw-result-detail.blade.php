@@ -1,6 +1,9 @@
 @php
-    /** @var \App\Models\SawCalculationResult $result */
-    $criteria = collect($result->calculation->criteria_snapshot ?? [])->keyBy('code');
+    /**
+     * @var \Illuminate\Support\Fluent $result  satu baris hasil perhitungan (array, bukan model)
+     * @var \Illuminate\Support\Collection $criteria  kriteria aktif saat dihitung, keyed by code
+     * @var array $columnStats  min/max skor per kriteria dari seluruh alternatif
+     */
     $weights = $criteria->mapWithKeys(fn ($c) => [$c['code'] => (float) $c['weight']]);
     $codes = ['C1', 'C2', 'C3', 'C4'];
 
@@ -11,16 +14,8 @@
         'C4' => ['label' => 'Harga Pokok',       'raw_unit' => 'Rp',     'raw_label' => 'HPP rata-rata bergerak per satuan jual'],
     ];
 
-    // K10: Min/Max acuan kolom dari seluruh alternatif pada snapshot yang sama (skor 0 dikecualikan dari Min).
-    $columnStats = [];
-    $allScores = \App\Models\SawCalculationResult::query()
-        ->where('saw_calculation_id', $result->saw_calculation_id)
-        ->get(['c1_score', 'c2_score', 'c3_score', 'c4_score']);
-    foreach ($codes as $code) {
-        $col = $allScores->pluck(strtolower($code).'_score')->map(fn ($s) => (int) $s);
-        $positive = $col->filter(fn ($s) => $s > 0);
-        $columnStats[$code] = ['min' => $positive->isEmpty() ? 0 : $positive->min(), 'max' => $col->isEmpty() ? 0 : $col->max()];
-    }
+    // K10: Min/Max acuan kolom dari seluruh alternatif pada perhitungan yang sama
+    // (skor 0 dikecualikan dari Min), dihitung di service dan diterima lewat $columnStats.
 
     $vBreakdown = [];
     $vTotal = 0;
@@ -47,11 +42,11 @@
         </div>
         <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
             <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Kode</div>
-            <div class="text-sm font-mono mt-1">{{ $result->medicine?->code ?? '-' }}</div>
+            <div class="text-sm font-mono mt-1">{{ $result->code ?? '-' }}</div>
         </div>
         <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 col-span-2">
             <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Nama Obat</div>
-            <div class="font-medium mt-1">{{ $result->medicine?->name ?? '-' }}</div>
+            <div class="font-medium mt-1">{{ $result->name ?? '-' }}</div>
         </div>
         <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 col-span-2 sm:col-span-4">
             <div class="text-xs text-amber-700 dark:text-amber-300 uppercase tracking-wide">Nilai Prioritas (V<sub>i</sub>)</div>
@@ -176,9 +171,8 @@
     </div>
 
     <div class="text-xs text-gray-500 dark:text-gray-400 italic px-1">
-        ℹ️ Snapshot perhitungan #{{ $result->saw_calculation_id }} &middot;
-        Periode: {{ \Illuminate\Support\Carbon::parse($result->calculation->period_start)->format('d M Y') }}
-        s/d {{ \Illuminate\Support\Carbon::parse($result->calculation->period_end)->format('d M Y') }}
-        &middot; Trigger: {{ $result->calculation->trigger_type }}
+        ℹ️ Dihitung langsung atas kondisi saat ini &middot;
+        Periode permintaan: {{ \Illuminate\Support\Carbon::parse($periodStart)->format('d M Y') }}
+        s/d {{ \Illuminate\Support\Carbon::parse($periodEnd)->format('d M Y') }}
     </div>
 </div>

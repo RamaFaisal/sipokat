@@ -67,14 +67,12 @@ it('merender daftar dan detail penjualan (tanpa halaman edit)', function () {
     $this->get('/admin/medicine-stock-opnames')->assertOk();
 });
 
-it('merender halaman SPK: kriteria, hitung prioritas, riwayat', function () {
+it('merender halaman SPK: kriteria dan hitung prioritas', function () {
     $this->seed(\Database\Seeders\SawCriteriaSeeder::class);
     $m = makeMedicine();
     receiveInto($m, 10);
-    $calc = app(\App\Services\SawCalculationService::class)->execute(today()->subDays(29), today());
 
     $this->get('/admin/saw-criterias')->assertOk();
+    // Peringkat dihitung saat halaman dibuka tidak ada snapshot yang perlu dibuat dulu.
     $this->get('/admin/saw-calculation')->assertOk();
-    $this->get('/admin/saw-calculations')->assertOk();
-    $this->get("/admin/saw-calculations/{$calc->id}")->assertOk();
 });

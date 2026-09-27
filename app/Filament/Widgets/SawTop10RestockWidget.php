@@ -2,14 +2,17 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\SawCalculation;
-use App\Models\SawCalculationResult;
+use App\Services\SawCalculationService;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
+/**
+ * Top 10 prioritas restock. Sejak 2026-09-27 dihitung langsung saat dashboard dibuka
+ * (tidak lagi membaca snapshot), sehingga selalu mencerminkan stok dan penjualan terkini.
+ */
 class SawTop10RestockWidget extends BaseWidget
 {
     use HasWidgetShield;
@@ -20,47 +23,42 @@ class SawTop10RestockWidget extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $latest = SawCalculation::orderByDesc('calculated_at')->first();
-
-        $description = $latest
-            ? 'Hasil SAW terakhir: '.$latest->calculated_at->format('d M Y')
-                .' (periode '.$latest->period_start->format('d M Y')
-                .' - '.$latest->period_end->format('d M Y').')'
-            : 'Belum ada perhitungan SAW. Jalankan via menu SPK Restock → Hitung Prioritas Restock.';
-
-        $calculationId = $latest?->id ?? 0;
+        try {
+            $result = app(SawCalculationService::class)->calculate(today()->subDays(29), today());
+            // 10 baris teratas menurut urutan tampil, bukan "semua tingkat ≤ 10" (K9).
+            $rows = array_slice($result['rows'], 0, 10);
+            $description = 'Dihitung '.$result['calculated_at']->format('d M Y H:i')
+            .' atas kondisi terkini (periode permintaan '.$result['period_start']->format('d M Y')
+            .' - '.$result['period_end']->format('d M Y').')';
+        } catch (\Throwable $e) {
+            $rows = [];
+            $description = 'Perhitungan tidak dapat dijalankan: '.$e->getMessage();
+        }
 
         return $table
             ->heading('Top 10 Prioritas Restock (SAW)')
             ->description($description)
-            ->query(function () use ($calculationId): Builder {
-                $query = SawCalculationResult::query()
-                    ->where('saw_calculation_id', $calculationId)
-                    ->with('medicine:id,code,name')
-                    ->orderBy('sort_order'); // 10 baris teratas menurut urutan tampil, bukan "semua tingkat ≤ 10" (K9)
-
-                $query->limit(10);
-
-                return $query;
-            })
+            ->records(fn (): Collection => collect($rows))
             ->paginated(false)
             ->columns([
                 TextColumn::make('rank')
                     ->label('Tingkat')
                     ->tooltip('Nilai prioritas sama = tingkat sama')
                     ->badge()
-                    ->color(fn (int $state): string => match (true) {
-                        $state <= 3 => 'danger',
-                        $state <= 7 => 'warning',
+                    ->color(fn ($state): string => match (true) {
+                        (int) $state <= 3 => 'danger',
+                        (int) $state <= 7 => 'warning',
                         default => 'gray',
                     })
                     ->width(1),
-                TextColumn::make('medicine.name')
+                TextColumn::make('name')
                     ->label('Nama Obat')
                     ->wrap(),
                 TextColumn::make('c1_raw')
                     ->label('Stok / Min')
-                    ->state(fn (SawCalculationResult $r) => $r->c1_stock === null ? number_format((float) $r->c1_raw, 2, ',', '.') : $r->c1_stock.' / '.$r->c1_min_stock)
+                    ->state(fn (array $record) => $record['c1_stock'] === null
+                    ? number_format((float) $record['c1_raw'], 2, ',', '.')
+                    : $record['c1_stock'].' / '.$record['c1_min_stock'])
                     ->alignEnd(),
                 TextColumn::make('c2_raw')
                     ->label('Permintaan/Bln')
@@ -69,7 +67,7 @@ class SawTop10RestockWidget extends BaseWidget
                 TextColumn::make('c3_raw')
                     ->label('Sisa ED (hari)')
                     ->numeric()
-                    ->placeholder('—')
+                    ->placeholder('')
                     ->alignEnd(),
                 TextColumn::make('preference_value')
                     ->label('Nilai Prioritas')

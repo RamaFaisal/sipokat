@@ -153,3 +153,23 @@ function sellFrom(Medicine $medicine, int $qty): Order
 
     return $order;
 }
+
+/**
+ * Jalankan SAW dan kembalikan hasilnya dalam bentuk objek yang enak dibaca di tes.
+ * SAW tidak lagi menyimpan snapshot (2026-09-27), jadi baris hasil berupa array
+ * dibungkus Fluent supaya tetap bisa diakses seperti `$row->c1_score`.
+ */
+function sawRun(
+    App\Services\SawCalculationService $service,
+    ?Illuminate\Support\Carbon $start = null,
+    ?Illuminate\Support\Carbon $end = null,
+): object {
+    $result = $service->calculate($start ?? today()->subDays(29), $end ?? today());
+
+    return (object) [
+        'total_alternatives' => $result['total_alternatives'],
+        'excluded_count' => $result['excluded_count'],
+        'column_stats' => $result['column_stats'],
+        'results' => collect($result['rows'])->map(fn (array $row) => new Illuminate\Support\Fluent($row)),
+    ];
+}

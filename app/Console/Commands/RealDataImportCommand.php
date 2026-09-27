@@ -36,7 +36,7 @@ class RealDataImportCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info($this->option('dry-run') ? 'Validasi lolos (dry-run, tidak disimpan).' : 'Impor selesai. Jalankan: php artisan sipokat:recalculate-saw');
+        $this->info($this->option('dry-run') ? 'Validasi lolos (dry-run, tidak disimpan).' : 'Impor selesai. Peringkat SAW ikut terbarui sendiri saat dashboard dibuka.');
 
         return self::SUCCESS;
     }

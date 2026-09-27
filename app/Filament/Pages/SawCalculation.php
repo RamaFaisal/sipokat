@@ -6,8 +6,6 @@ use App\Filament\Resources\PurchaseOrders\Schemas\PurchaseOrderForm;
 use App\Models\Medicine;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
-use App\Models\SawCalculation as SawCalculationModel;
-use App\Models\SawCalculationResult;
 use App\Models\Supplier;
 use App\Services\SawCalculationService;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
@@ -27,15 +25,18 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Fluent;
 
 /**
  * Halaman ranking SAW (rencana-revisi-2026-09 Bagian 7): periode "sampai" dikunci hari ini (K2),
  * kolom "Tingkat" = peringkat padat (K9), penanda "sudah dipesan" (P10), dan bulk "Buat PO" (P9)
  * jembatan dari rekomendasi ke tindakan; apoteker yang mencentang, sistem tidak memutuskan.
+ *
+ * Sejak 2026-09-27 perhitungan dilakukan **saat halaman dibuka**, tidak lagi membaca snapshot
+ * angka yang tampil selalu mencerminkan stok dan penjualan terkini.
  */
 class SawCalculation extends Page implements HasSchemas, HasTable
 {
@@ -57,7 +58,8 @@ class SawCalculation extends Page implements HasSchemas, HasTable
 
     public ?array $data = [];
 
-    public ?SawCalculationModel $latest = null;
+    /** Hasil perhitungan untuk render ini; dihitung sekali lalu dipakai ulang dalam satu permintaan. */
+    protected ?array $result = null;
 
     public function mount(): void
     {
@@ -65,13 +67,52 @@ class SawCalculation extends Page implements HasSchemas, HasTable
             'period_start' => today()->subDays(29)->toDateString(),
             'period_end' => today()->toDateString(),
         ];
-
-        $this->refreshLatest();
     }
 
-    protected function refreshLatest(): void
+    /**
+     * Hitung SAW atas kondisi saat ini. Kegagalan (mis. Σ bobot ≠ 1) tidak boleh
+     * menjatuhkan halaman tabel ditampilkan kosong dengan peringatan.
+     */
+    protected function result(): array
     {
-        $this->latest = SawCalculationModel::orderByDesc('calculated_at')->orderByDesc('id')->first();
+        if ($this->result !== null) {
+            return $this->result;
+        }
+
+        $start = Carbon::parse($this->data['period_start'] ?? today()->subDays(29)->toDateString());
+
+        try {
+            return $this->result = app(SawCalculationService::class)->calculate($start, today());
+        } catch (\Throwable $e) {
+            $this->result = [
+                'period_start' => $start,
+                'period_end' => today(),
+                'calculated_at' => now(),
+                'criteria' => [],
+                'column_stats' => [],
+                'total_alternatives' => 0,
+                'excluded_count' => 0,
+                'rows' => [],
+                'error' => $e->getMessage(),
+            ];
+
+            return $this->result;
+        }
+    }
+
+    /** Ringkasan untuk ditampilkan di view halaman. */
+    public function summary(): array
+    {
+        $result = $this->result();
+
+        return [
+            'calculated_at' => $result['calculated_at'],
+            'period_start' => $result['period_start'],
+            'period_end' => $result['period_end'],
+            'total_alternatives' => $result['total_alternatives'],
+            'excluded_count' => $result['excluded_count'],
+            'error' => $result['error'] ?? null,
+        ];
     }
 
     public function form(Schema $schema): Schema
@@ -100,41 +141,38 @@ class SawCalculation extends Page implements HasSchemas, HasTable
 
     public function table(Table $table): Table
     {
-        $calculationId = $this->latest?->id ?? 0;
+        $result = $this->result();
         $ordered = $this->orderedMedicineIds();
 
         return $table
-            ->query(fn (): Builder => SawCalculationResult::query()
-                ->where('saw_calculation_id', $calculationId)
-                ->with('medicine:id,code,name,unit_id,pack_unit_id,pack_size,min_stock'))
-            ->defaultSort('sort_order')
+            ->records(fn (): Collection => collect($result['rows']))
             ->columns([
                 TextColumn::make('rank')
                     ->label('Tingkat')
                     ->tooltip('Peringkat padat: obat dengan Nilai Prioritas sama berada di tingkat yang sama.')
                     ->badge()
-                    ->color(fn (int $state) => match (true) {
-                        $state <= 3 => 'danger',
-                        $state <= 7 => 'warning',
+                    ->color(fn ($state) => match (true) {
+                        (int) $state <= 3 => 'danger',
+                        (int) $state <= 7 => 'warning',
                         default => 'gray',
                     })
                     ->sortable(),
-                TextColumn::make('medicine.code')
+                TextColumn::make('code')
                     ->label('Kode')
                     ->searchable(),
-                TextColumn::make('medicine.name')
+                TextColumn::make('name')
                     ->label('Nama Obat')
                     ->searchable()
                     ->wrap()
-                    ->description(fn (SawCalculationResult $record) => in_array($record->medicine_id, $ordered, true) ? 'Sudah dipesan (PO terbuka)' : null)
-                    ->icon(fn (SawCalculationResult $record) => in_array($record->medicine_id, $ordered, true) ? Heroicon::OutlinedShoppingCart : null)
+                    ->description(fn (array $record) => in_array($record['medicine_id'], $ordered, true) ? 'Sudah dipesan (PO terbuka)' : null)
+                    ->icon(fn (array $record) => in_array($record['medicine_id'], $ordered, true) ? Heroicon::OutlinedShoppingCart : null)
                     ->iconColor('info'),
                 TextColumn::make('c1_raw')
                     ->label('Stok / Min (C1)')
                     ->tooltip('Rasio stok tersedia terhadap batas minimum obat')
-                    ->state(fn (SawCalculationResult $record) => $record->c1_stock === null
-                        ? number_format((float) $record->c1_raw, 2, ',', '.')
-                        : sprintf('%d / %d = %s', $record->c1_stock, $record->c1_min_stock, number_format((float) $record->c1_raw, 2, ',', '.')))
+                    ->state(fn (array $record) => $record['c1_stock'] === null
+                    ? number_format((float) $record['c1_raw'], 2, ',', '.')
+                    : sprintf('%d / %d = %s', $record['c1_stock'], $record['c1_min_stock'], number_format((float) $record['c1_raw'], 2, ',', '.')))
                     ->alignEnd(),
                 TextColumn::make('c2_raw')
                     ->label('Permintaan/Bln (C2)')
@@ -160,14 +198,20 @@ class SawCalculation extends Page implements HasSchemas, HasTable
                 ViewAction::make()
                     ->label('Detail Hitungan')
                     ->icon(Heroicon::OutlinedCalculator)
-                    ->modalHeading(fn (SawCalculationResult $record) => 'Detail SAW: '.($record->medicine->name ?? '-'))
+                    ->modalHeading(fn (array $record) => 'Detail SAW: '.($record['name'] ?? '-'))
                     ->modalDescription('Rincian perhitungan V_i langkah demi langkah sesuai Bab 3.4.3–3.4.4.')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
                     ->modalWidth('5xl')
-                    ->modalContent(fn (SawCalculationResult $record) => view(
+                    ->modalContent(fn (array $record) => view(
                         'filament.pages.partials.saw-result-detail',
-                        ['result' => $record->load('medicine', 'calculation')]
+                        [
+                            'result' => new Fluent($record),
+                            'criteria' => collect($result['criteria'])->keyBy('code'),
+                            'columnStats' => $result['column_stats'],
+                            'periodStart' => $result['period_start'],
+                            'periodEnd' => $result['period_end'],
+                        ]
                     )),
             ])
             ->toolbarActions([
@@ -175,9 +219,11 @@ class SawCalculation extends Page implements HasSchemas, HasTable
                     ->label('Buat PO dari yang dicentang')
                     ->icon(Heroicon::OutlinedShoppingCart)
                     ->color('primary')
+                // Pemilik/Manajer hanya memantau ranking (Tabel 3.2), yang memesan Petugas.
+                    ->visible(fn (): bool => auth()->user()?->can('create', PurchaseOrder::class) ?? false)
                     ->modalHeading('Buat PO')
                     ->modalDescription('Setelah ketersediaan dikonfirmasi ke sales PBF. Jumlah bawaan = mengisi sampai batas minimum; ubah di halaman PO bila perlu.')
-                    ->form([
+                    ->schema([
                         Select::make('supplier_id')
                             ->label('PBF')
                             ->options(fn () => Supplier::where('status', 'active')->orderBy('name')->pluck('name', 'id'))
@@ -189,7 +235,13 @@ class SawCalculation extends Page implements HasSchemas, HasTable
                             ->required(),
                     ])
                     ->action(function (Collection $records, array $data) {
-                        $po = $this->createPurchaseOrder($records, (int) $data['supplier_id'], Carbon::parse($data['po_date']));
+                        $medicineIds = $records
+                            ->map(fn ($record) => (int) (is_array($record) ? $record['medicine_id'] : $record->medicine_id))
+                            ->unique()
+                            ->values()
+                            ->all();
+
+                        $po = $this->createPurchaseOrder($medicineIds, (int) $data['supplier_id'], Carbon::parse($data['po_date']));
 
                         Notification::make()
                             ->success()
@@ -204,9 +256,11 @@ class SawCalculation extends Page implements HasSchemas, HasTable
     }
 
     /** P9: PO dari ranking baris dalam kemasan bawaan obat, jumlah ⌈min_stock ÷ isi⌉ (P5), harga perkiraan (P6). */
-    protected function createPurchaseOrder(Collection $records, int $supplierId, Carbon $poDate): PurchaseOrder
+    protected function createPurchaseOrder(array $medicineIds, int $supplierId, Carbon $poDate): PurchaseOrder
     {
-        return DB::transaction(function () use ($records, $supplierId, $poDate) {
+        abort_unless(auth()->user()?->can('create', PurchaseOrder::class) ?? false, 403);
+
+        return DB::transaction(function () use ($medicineIds, $supplierId, $poDate) {
             $po = PurchaseOrder::create([
                 'po_number' => PurchaseOrderForm::generatePONumber($poDate),
                 'supplier_id' => $supplierId,
@@ -214,15 +268,7 @@ class SawCalculation extends Page implements HasSchemas, HasTable
                 'created_by' => auth()->id(),
             ]);
 
-            $seen = [];
-            foreach ($records as $record) {
-                /** @var Medicine|null $medicine */
-                $medicine = $record->medicine;
-                if (! $medicine || isset($seen[$medicine->id])) {
-                    continue;
-                }
-                $seen[$medicine->id] = true;
-
+            foreach (Medicine::query()->whereKey($medicineIds)->get() as $medicine) {
                 $packSize = max(1, (int) $medicine->pack_size);
                 $packQty = (int) ceil(max(1, (int) $medicine->min_stock) / $packSize);
                 $unitPrice = $medicine->latestPurchasePrice() ?? 0;
@@ -256,39 +302,34 @@ class SawCalculation extends Page implements HasSchemas, HasTable
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('calculate')
-                ->label('Hitung Sekarang')
-                ->icon(Heroicon::OutlinedPlay)
+            Action::make('recalculate')
+                ->label('Refresh')
+                ->icon(Heroicon::OutlinedArrowPath)
                 ->color('primary')
-                ->requiresConfirmation()
-                ->modalDescription('Hitung ulang SAW untuk seluruh obat aktif yang punya riwayat kartu stok dan simpan sebagai snapshot baru?')
-                ->action(fn () => $this->runCalculation()),
+                ->action(fn () => $this->recalculate()),
         ];
     }
 
-    public function runCalculation(): void
+    /** Muat ulang perhitungan dengan periode yang sedang dipilih. */
+    public function recalculate(): void
     {
-        $data = $this->form->getState();
+        $this->form->getState();
+        $this->result = null;
+        $this->resetTable();
 
-        try {
-            $calc = app(SawCalculationService::class)->execute(
-                Carbon::parse($data['period_start']),
-                today(),
-                'manual',
-                auth()->id(),
-            );
+        $result = $this->result();
 
-            $this->refreshLatest();
-            $this->resetTable();
+        if (isset($result['error'])) {
+            Notification::make()->danger()->title('Gagal menghitung SAW')->body($result['error'])->persistent()->send();
 
-            $body = "{$calc->total_alternatives} alternatif diranking. Snapshot #{$calc->id}.";
-            if ($calc->excluded_count > 0) {
-                $body .= " {$calc->excluded_count} obat tanpa riwayat kartu stok dikecualikan.";
-            }
-
-            Notification::make()->success()->title('Perhitungan SAW selesai')->body($body)->send();
-        } catch (\Throwable $e) {
-            Notification::make()->danger()->title('Gagal menghitung SAW')->body($e->getMessage())->persistent()->send();
+            return;
         }
+
+        $body = "{$result['total_alternatives']} alternatif diranking.";
+        if ($result['excluded_count'] > 0) {
+            $body .= " {$result['excluded_count']} obat tanpa riwayat kartu stok dikecualikan.";
+        }
+
+        Notification::make()->success()->title('Perhitungan SAW diperbarui')->body($body)->send();
     }
 }

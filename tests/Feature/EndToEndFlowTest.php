@@ -10,7 +10,6 @@ use App\Models\MedicineStock;
 use App\Models\Order;
 use App\Models\PurchaseOrder;
 use App\Models\ReceiveOrder;
-use App\Models\SawCalculation;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\StockCardService;
@@ -127,11 +126,12 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
 
     // 4. SAW: obat alur (rasio 5/20 = 0,25, permintaan 15, ED dekat) di tingkat 1 dari 2 alternatif.
     $saw = Livewire::test(SawCalculationPage::class)
-        ->callAction('calculate')
+        ->callAction('recalculate')
         ->assertHasNoErrors();
 
-    $calc = SawCalculation::latest('id')->firstOrFail();
-    $result = $calc->results()->where('medicine_id', $obat->id)->firstOrFail();
+    // Peringkat dihitung langsung (tanpa snapshot) baca hasilnya dari service.
+    $calc = sawRun(app(\App\Services\SawCalculationService::class));
+    $result = $calc->results->firstWhere('medicine_id', $obat->id);
     expect($calc->total_alternatives)->toBe(2)
         ->and($result->rank)->toBe(1)
         ->and($result->c1_stock)->toBe(5)
@@ -139,7 +139,7 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
         ->and((int) $result->c4_raw)->toBe(4000);
 
     // 5. "Buat PO" dari ranking: jumlah bawaan ⌈20 ÷ 10⌉ = 2 Box, harga perkiraan = harga beli terakhir.
-    $saw->callTableBulkAction('create_po', [$result->id], data: [
+    $saw->callTableBulkAction('create_po', [(string) $obat->id], data: [
         'supplier_id' => $this->supplier->id,
         'po_date' => today()->toDateString(),
     ])->assertHasNoTableBulkActionErrors();
@@ -176,7 +176,7 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
     $po->refresh();
     expect($po->status_receive_order)->toBe(PurchaseOrder::STATUS_RECEIVED)
         ->and($stockCard->physicalStock($obat->id))->toBe(25)
-        // HPP: (5×4.000 + 20×4.500) ÷ 25 = 4.400
+    // HPP: (5×4.000 + 20×4.500) ÷ 25 = 4.400
         ->and($stockCard->currentHpp($obat->id))->toBe(4400);
 
     // 7. Jual 22 → FEFO: 5 dari B1 (ED dekat) + 17 dari B2; permintaan qty > tersedia ditolak.
@@ -222,12 +222,11 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
         ->and(\App\Models\MedicineStockOpnameItem::first()->note)->toBe('Rusak');
 
     // 9. SAW ulang: PO sudah lengkap → tidak ada PO terbuka; obat alur tetap tingkat 1,
-    //    C3 = ED batch B2 (terjauh yang bersisa), permintaan 37/30 hari.
-    Livewire::test(SawCalculationPage::class)->callAction('calculate')->assertHasNoErrors();
-    $calc2 = SawCalculation::latest('id')->firstOrFail();
-    $r2 = $calc2->results()->where('medicine_id', $obat->id)->firstOrFail();
-    expect($calc2->id)->toBeGreaterThan($calc->id)
-        ->and($r2->rank)->toBe(1)
+    // C3 = ED batch B2 (terjauh yang bersisa), permintaan 37/30 hari.
+    Livewire::test(SawCalculationPage::class)->callAction('recalculate')->assertHasNoErrors();
+    $calc2 = sawRun(app(\App\Services\SawCalculationService::class));
+    $r2 = $calc2->results->firstWhere('medicine_id', $obat->id);
+    expect($r2->rank)->toBe(1)
         ->and($r2->c1_stock)->toBe(1)
         ->and((int) $r2->c3_raw)->toBe((int) today()->diffInDays($edFar))
         ->and((int) $r2->c2_raw)->toBe(37)

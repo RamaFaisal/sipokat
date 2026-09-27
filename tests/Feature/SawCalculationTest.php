@@ -45,7 +45,7 @@ it('mereproduksi contoh 5 alternatif (calon Bab 3.4.4) sel per sel', function ()
     $a4 = alternative('A4 LANSOPRAZOLE', 30, 10, 60, 100, 30000);
     $a5 = alternative('A5 LIPITOR', 4, 6, 15, 800, 165000);
 
-    $calc = $this->service->execute(today()->subDays(29), today());
+    $calc = sawRun($this->service, today()->subDays(29), today());
     $r = $calc->results->keyBy('medicine_id');
 
     // Nilai mentah & skor (Tabel 3.5–3.8 versi wawancara; C1 = stok ÷ min)
@@ -97,7 +97,7 @@ it('mengecualikan obat aktif tanpa riwayat kartu stok dan menghitungnya (K0)', f
     alternative('ADA LEDGER', 10, 20, 0, 300, 1000);
     makeMedicine(['name' => 'BARU TANPA LEDGER']);
 
-    $calc = $this->service->execute(today()->subDays(29), today());
+    $calc = sawRun($this->service, today()->subDays(29), today());
 
     expect($calc->total_alternatives)->toBe(1)->and($calc->excluded_count)->toBe(1);
 });
@@ -105,7 +105,7 @@ it('mengecualikan obat aktif tanpa riwayat kartu stok dan menghitungnya (K0)', f
 it('memberi C3 = 0 hari (skor 1) dan C4 dari HPP terakhir untuk obat yang stoknya habis (T2, K4)', function () {
     $m = alternative('HABIS', 0, 20, 30, 300, 5000);
 
-    $calc = $this->service->execute(today()->subDays(29), today());
+    $calc = sawRun($this->service, today()->subDays(29), today());
     $row = $calc->results->firstWhere('medicine_id', $m->id);
 
     expect((int) $row->c3_raw)->toBe(0)->and($row->c3_score)->toBe(1)
@@ -117,14 +117,14 @@ it('menolak perhitungan bila total bobot bukan 1,000 juga di jalur service/terja
     alternative('X', 10, 20, 0, 300, 1000);
     SawCriteria::where('code', 'C4')->update(['weight' => 0.100]);
 
-    expect(fn () => $this->service->execute(today()->subDays(29), today()))
+    expect(fn () => sawRun($this->service, today()->subDays(29), today()))
         ->toThrow(RuntimeException::class, '0.900');
 });
 
 it('menghitung pembagi hari sebagai bilangan bulat inklusif walau periode diberi jam (T5, K2)', function () {
     $m = alternative('PERIODE', 10, 20, 60, 300, 1000); // 60 terjual hari ini
 
-    $calc = $this->service->execute(
+    $calc = sawRun($this->service,
         Carbon::today()->subDays(29)->startOfDay(),
         Carbon::today()->endOfDay(), // jalur terjadwal lama memberi 23:59:59
     );
@@ -140,7 +140,7 @@ it('memberi tingkat yang sama untuk Vi identik dan mengurutkan dalam tingkat ole
     $c = alternative('SERI C', 10, 20, 5, 300, 1000); // rasio 0,50
     $d = alternative('BEDA', 60, 20, 5, 300, 1000);   // rasio 3,00 → skor 3 → Vi lebih rendah
 
-    $calc = $this->service->execute(today()->subDays(29), today());
+    $calc = sawRun($this->service, today()->subDays(29), today());
     $rows = $calc->results->sortBy('sort_order')->values();
 
     expect($rows->pluck('medicine_id')->all())->toBe([$b->id, $c->id, $a->id, $d->id])
