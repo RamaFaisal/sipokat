@@ -22,8 +22,8 @@
 | Dashboard & widget | ✅ | Top-10 SAW, stok kritis, PO terbuka, batch mendekati ED, grafik penjualan |
 | Laporan | ✅ | Kartu stok per obat (per batch + HPP), Rekap penjualan/pembelian, Fast/slow moving Excel & PDF |
 | Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat sintetis) · `FakturNpmSeeder` (14 faktur asli NPM Mei 2024 → bulan berjalan, 137 lapisan untuk 127 obat riil) · template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
-| Pengujian | ✅ | 84 tes Pest / 826 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament |
-| Roles & Permissions | ⏸️ | Ditangani peneliti via Filament Shield (D7). Permission di DB sudah bersih dari halaman yang dihapus |
+| Pengujian | ✅ | 137 tes Pest / 1.385 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
+| Roles & Permissions | ✅ | `RoleSeeder` (2026-09-24, B1): `admin` akses penuh, `petugas` transaksi + SPK dengan master baca-saja, `pemilik` baca-saja. Nama peran lama diganti oleh migrasi. Halaman & widget sudah memakai trait Shield |
 | Deploy VPS (MySQL) + cron | 🔜 | E9 jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |
 
 ---
@@ -37,8 +37,8 @@
 | F-03 | Catat obat masuk & keluar | ✅ | Masuk: RO → baris D per batch. Keluar: penjualan → baris C FEFO per lapisan. Semua lewat `StockMovementService` |
 | F-04 | Notifikasi stok minimum & ED | ✅ | Stok tersedia < `min_stock`; batch bersisa dengan ED ≤ 90 hari |
 | F-05 | Laporan inventory | ✅ | Kartu stok, Rekap, Moving, dashboard |
-| F-06 | SAW prioritas restock | ✅ | `SawCalculationService` + halaman "Hitung Prioritas Restock" + terjadwal 06:00 |
-| F-07 | Tampilan perangkingan | ✅ | Tabel ranking (Tingkat, Stok/Min, C1–C4, V), detail hitungan per obat, riwayat snapshot |
+| F-06 | SAW prioritas restock | ✅ | `SawCalculationService` + halaman "Hitung Prioritas Restock"; dihitung langsung saat halaman/dashboard dibuka (tanpa jadwal, tanpa snapshot sejak 2026-09-27) |
+| F-07 | Tampilan perangkingan | ✅ | Tabel ranking (Tingkat, Stok/Min, C1–C4, V) + detail hitungan per obat, selalu atas kondisi terkini |
 
 ---
 
@@ -101,13 +101,13 @@ Batasan yang tetap ditulis di Bab 1.4: skala C2 satu set untuk semua satuan.
 |---|---|---|
 | Service | `app/Services/StockMovementService.php` | Satu-satunya penulis ledger: `recordReceipt/reverseReceipt/syncReceipt`, `recordSale/reverseSale` (FEFO), `recordOpname/reverseOpname`, `replayHpp`, `refreshStockStatus` |
 | Service | `app/Services/StockCardService.php` | Pembaca: `physicalStock`, `availableStock`, `layers`, `sellableLayers`, `currentHpp`, kartu stok berjalan |
-| Service | `app/Services/SawCalculationService.php` | Pipeline SAW: alternatif → nilai mentah → skor → normalisasi → Vi → peringkat padat → snapshot |
+| Service | `app/Services/SawCalculationService.php` | Pipeline SAW: alternatif → nilai mentah → skor → normalisasi → Vi → peringkat padat. `calculate()` tidak menyimpan apa pun |
 | Service | `app/Services/RealDataImporter.php`, `app/Support/RealDataTemplate.php` | Template & importer data riil (Obat → SaldoAwal → Faktur → Penjualan) |
 | Form | `app/Filament/Forms/PackLine.php` | Baris kemasan bersama PO & RO: satuan/isi/jumlah/harga → konversi ke satuan jual |
 | Model | `MedicineStock` | Scope `layers()`, `withRemainingStock()`; accessor `remaining`; `isExpired()` |
 | Model | `Order`, `ReceiveOrder`, `MedicineStockOpname` | Hook `deleting` → balikkan ledger lewat service |
 | Halaman | `app/Filament/Pages/SawCalculation.php` | Hitung, tabel ranking, detail hitungan, aksi massal "Buat PO" |
-| Perintah | `sipokat:recalculate-saw`, `sipokat:check-stock-and-expiry`, `sipokat:data-riil:template`, `sipokat:data-riil:import` | Jadwal: 06:00 & 08:00 (`routes/console.php`) |
+| Perintah | `sipokat:check-stock-and-expiry`, `sipokat:data-riil:template`, `sipokat:data-riil:import` | Satu jadwal: 08:00 (`routes/console.php`) |
 | Migrasi revisi | `database/migrations/2026_09_13_00000{1..5}_*.php` | Master → lapisan & HPP → pengadaan → penjualan/opname FEFO (backfill lapisan) → hasil SAW |
 
 Tes (`tests/Feature`): `MedicineMasterTest`, `HppMovingAverageTest` (tabel §4.3 rencana),
@@ -137,9 +137,8 @@ Tes (`tests/Feature`): `MedicineMasterTest`, `HppMovingAverageTest` (tabel §4.3
 ## 7. Cara Uji Manual (demo)
 
 ```bash
-php artisan migrate --seed                       # master + kriteria SAW
-php artisan db:seed --class=SpkTestDataSeeder    # 150 obat demo (idempoten)
-php artisan sipokat:recalculate-saw
+php artisan migrate --seed # master + kriteria SAW
+php artisan db:seed --class=SpkTestDataSeeder # 150 obat demo (idempoten)
 php artisan sipokat:check-stock-and-expiry
 ```
 
@@ -177,3 +176,27 @@ sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → ta
 - Ringkasan **berbahasa Inggris**, huruf kecil, kalimat imperatif, tanpa titik di akhir (diperbarui 2026-09-16).
 - **Tanpa body**, **tanpa trailer/atribusi Claude** (tidak ada `Co-Authored-By`, tidak ada tanda "generated with").
 - Alur: kerjakan → suite tes hijau → laporkan. **Commit dan push keduanya ditahan** sampai peneliti menyatakan "oke commit" / "oke push" (diperbarui 2026-09-17). Perubahan dibiarkan di working tree; sebutkan berkas yang menunggu di laporan.
+
+## 10. Aturan Penulisan Teks (wajib, permintaan peneliti 2026-09-27)
+
+Berlaku untuk **semua** yang ditulis ke berkas: dokumen `.md`, komentar kode, docblock, pesan
+commit, label UI, dan pesan notifikasi. Tujuannya supaya naskah dan repo tidak berbau teks
+hasil AI.
+
+**Dilarang:**
+
+| Karakter | Nama | Pakai ini |
+|---|---|---|
+| `` | em dash | Hilangkan saja, atau ganti koma/titik dua/kurung bila kalimatnya jadi rancu |
+| `“ ” ‘ ’` | kutip melengkung | Kutip lurus `"` dan `'` |
+| `…` | elipsis satu karakter | Tiga titik `...` |
+| ` ` | spasi tanpa pemisah (nbsp) | Spasi biasa |
+
+**Boleh dipakai** karena bermakna di domain ini, bukan hiasan: `–` pada rentang (`C1–C4`,
+`1–5`, `E0–E9`), `→` pada alur (`PO → RO`), lambang hitung (`≤ ≥ × ÷ Σ`), dan penanda status
+`✅ 🔜 ⏸️` di tabel ringkasan.
+
+**Gaya kalimat:** langsung ke pokoknya. Hindari pembuka hampa ("Berikut adalah", "Penting untuk
+dicatat bahwa", "Secara keseluruhan") dan penutup yang mengulang isi. Satu gagasan satu kalimat.
+
+Sudah pernah dibersihkan sekali di commit `e4e953a` (66 berkas). Jangan dimasukkan lagi.
