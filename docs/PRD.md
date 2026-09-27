@@ -18,7 +18,7 @@ Sipokat adalah sistem manajemen inventaris obat berbasis web untuk Apotek Anugra
 
 1. **Manajemen Inventaris Modern** kartu stok per batch (lapisan D/C), konversi kemasan beli → satuan jual, HPP rata-rata bergerak, penjualan FEFO, opname per batch, notifikasi otomatis.
 2. **Sistem Pendukung Keputusan (SPK) berbasis Simple Additive Weighting (SAW)** rekomendasi prioritas restock obat berdasarkan 4 kriteria (rasio stok terhadap batas minimum, permintaan, sisa kedaluwarsa, HPP) dengan bobot dan skala yang dapat dikonfigurasi, dan pembuatan PO langsung dari ranking.
-3. **Laporan & Audit Trail** laporan rekap penjualan/pembelian, analisis fast/slow moving, riwayat snapshot SAW, breakdown perhitungan V_i per obat.
+3. **Laporan & Audit Trail** laporan rekap penjualan/pembelian, analisis fast/slow moving, breakdown perhitungan V_i per obat.
 
 Sistem dibangun dengan Laravel 12, Filament 4, MySQL, dan Tailwind CSS sesuai stack yang ditentukan di proposal Tugas Akhir.
 
@@ -49,7 +49,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 | Akurasi data stok | Stok di sistem ≡ stok fisik (selisih 0 setelah opname) |
 | Kecepatan deteksi stok menipis | < 1 hari (scheduled scan harian 08:00) |
 | Kecepatan perhitungan SAW | < 5 detik untuk 150+ obat |
-| Transparansi keputusan restock | 100% rekomendasi dapat ditelusuri via snapshot historis + breakdown V_i per obat |
+| Transparansi keputusan restock | Setiap rekomendasi dapat ditelusuri lewat breakdown V_i per obat (nilai mentah → skor → normalisasi → Vi) |
 | Waktu generate laporan rekap | < 3 detik untuk periode 30 hari (153 obat, 250+ transaksi) |
 
 ---
@@ -78,7 +78,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 - **Notifikasi**: scheduled daily check stok min + ED ≤ 90 hari → Filament database notifications
 - **Dashboard**: 5 widget (SAW Top 10, Low Stock, Pending PO, Expiring, Sales Summary 30 hari)
 - **Laporan**: rekap penjualan/pembelian, fast/slow/dead-stock analysis, kartu stok per obat
-- **Audit trail SAW**: riwayat snapshot historis + breakdown V_i per obat
+- **Transparansi SAW**: breakdown V_i per obat (nilai mentah → skor → normalisasi → kontribusi tiap kriteria)
 - **Import/Export**: Import obat & supplier via Excel/CSV template, export Receive Order
 - **Pengaturan Umum**: Nama aplikasi, email kontak, telepon, website, tarif PPN (Spatie Laravel Settings)
 - Authentication: Laravel auth + Filament login panel
@@ -158,18 +158,17 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 - Page **"Hitung Prioritas Restock"** dengan periode permintaan: "Sampai" selalu hari ini (terkunci), "Dari" bawaan 30 hari ke belakang
 - Tombol "Hitung Sekarang" dengan modal konfirmasi → `SawCalculationService::execute()`
 - Alternatif = obat aktif dengan ≥ 1 baris kartu stok; yang belum punya riwayat dikecualikan dan dihitung di `excluded_count`
-- Snapshot tersimpan ke `saw_calculations` dengan `trigger_type` + `criteria_snapshot` (freeze config)
+- Hasil perhitungan tidak disimpan: `calculate()` mengembalikan peringkat di memori, dihitung ulang tiap kali dibaca
 - Pre-flight check di service (berlaku juga untuk CLI): tolak jika `Σ weight kriteria aktif ≠ 1.000` atau ada kriteria C1–C4 yang tidak aktif
-- Scheduled command `sipokat:recalculate-saw` daily 06:00 (hasil dipakai dashboard widget)
+- Tanpa command terjadwal: dashboard & halaman SAW memanggil `calculate()` sehingga angkanya selalu terkini
 - Aksi massal **"Buat PO dari yang dicentang"** → PO per PBF berisi obat terpilih; obat yang sudah ada di PO terbuka ditandai "sudah dipesan"
 
 ### F-07 Tampilan Hasil Perangkingan Obat
 **As a** pemilik, **I want to** melihat ranking semua obat + breakdown perhitungan untuk audit/verifikasi.
 - Table paginated 25/halaman, urut `sort_order` (V desc, tie-breaker rasio → permintaan → ED)
 - Kolom: **Tingkat** (peringkat padat: V sama → tingkat sama), kode, nama, Stok / Min (C1 rasio), permintaan/bln (C2), sisa ED batch terjauh (C3), HPP (C4), **Nilai Prioritas (V_i)**, penanda "sudah dipesan"
-- Widget dashboard "Top 10 Prioritas Restock (SAW)" sync dengan snapshot terakhir
+- Widget dashboard "Top 10 Prioritas Restock (SAW)" dihitung saat dashboard dibuka
 - **ViewAction "Detail Hitungan"** per row: modal breakdown V_i step-by-step (matriks per kriteria + rumus `V = W₁×R₁ + W₂×R₂ + W₃×R₃ + W₄×R₄`) match contoh Bab 3.4.4 proposal
-- **Resource "Riwayat Perhitungan"** untuk audit trail: list semua snapshot historis dengan filter trigger_type + date range, view detail per snapshot
 
 ### F-08 Pengaturan Umum Aplikasi
 **As an** admin, **I want to** mengatur informasi dasar aplikasi dari panel admin.
@@ -188,7 +187,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 | **Usability** | Antarmuka mudah dipakai tanpa pelatihan khusus | Filament panel + custom theme Awin (Emerald) + font Poppins + bahasa Indonesia konsisten |
 | **Reliability** | Data konsisten, tidak ada race condition | DB transactions, soft deletes, validasi server-side |
 | **Maintainability** | Code terstruktur, testable | Service layer (SawCalculationService, StockCardService), schema classes terpisah (Schemas/ + Tables/ per resource), Pest test framework |
-| **Auditability** | Setiap perubahan ter-track | `created_by`, `received_by`, `calculated_by` di tabel transaksional + `criteria_snapshot` di SAW |
+| **Auditability** | Setiap perubahan ter-track | `created_by`, `received_by` di tabel transaksional |
 
 ---
 
@@ -209,7 +208,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 ### Folder Structure (key directories)
 ```
 app/
-├── Console/Commands/      sipokat:check-stock-and-expiry, sipokat:recalculate-saw
+├── Console/Commands/      sipokat:check-stock-and-expiry
 ├── Filament/
 │   ├── Exports/           ReceiveOrderExporter
 │   ├── Imports/           MedicineImporter, SupplierImporter
@@ -250,7 +249,6 @@ medicines (code OBT####, unit_id = satuan jual, pack_unit_id + pack_size = kemas
    ├─ medicine_stocks ledger lapisan:
    │     D: batch_number, expired_date, hpp (harga beli/satuan jual), hpp_avg, receive_order_item_id
    │     C: layer_stock_id → lapisan yang dikonsumsi (FEFO), hpp = HPP saat itu
-   └─ saw_calculation_results (c1_stock, c1_min_stock, c1..c4 raw/score/norm, preference_value, rank padat, sort_order)
 
 suppliers ── purchase_orders (po_number, po_date, status_receive_order: pending|partial|received|closed)
            └─ receive_orders (receive_order_number, invoice_number unik per PBF, receive_date, purchase_order_id nullable)
@@ -259,7 +257,7 @@ orders (order_code, order_date, grand_total, note) ── order_items ── med
 
 medicine_stock_opnames ── medicine_stock_opname_items (layer_stock_id | batch baru) ── medicine_stocks (C/D pada lapisan)
 
-saw_criteria ── saw_calculations (period, trigger_type, criteria_snapshot, total_alternatives, excluded_count) ── saw_calculation_results
+saw_criteria (bobot & skala; hasil perhitungan tidak disimpan)
 
 medicine_categories (3 golongan), units (master lookup)   ·   general_settings (app_name, kontak, ppn_rate)
 
@@ -317,7 +315,7 @@ Input: period_start (bawaan 30 hari lalu), period_end = hari ini, trigger_type, 
   │
   ├─ rank() peringkat PADAT (V sama → tingkat sama); sort_order = V desc, rasio asc, permintaan desc, ED asc
   │
-  └─ persist (DB transaction): saw_calculations + saw_calculation_results
+  └─ hasil dikembalikan di memori (tidak disimpan) untuk ditampilkan halaman & widget
 ```
 
 ### Konfigurasi Editable Admin
@@ -327,8 +325,7 @@ Input: period_start (bawaan 30 hari lalu), period_end = hari ini, trigger_type, 
 
 ### Output
 - **Page Hitung Prioritas Restock** tabel ranking (Tingkat, Stok/Min, C2–C4, V), ViewAction Detail, penanda "sudah dipesan", aksi massal Buat PO
-- **Widget Dashboard Top 10** 10 baris teratas snapshot terakhir
-- **Resource Riwayat Perhitungan** list snapshot historis dengan filter, view detail per snapshot
+- **Widget Dashboard Top 10** 10 baris teratas hasil perhitungan saat itu
 - **Modal Detail V_i** matriks per kriteria (raw dengan rincian C1 = stok ÷ min, skor, Min/Max kolom, R dengan label min/X atau X/max) + rumus step-by-step
 
 ### Catatan Resolusi Inkonsistensi Proposal
@@ -374,7 +371,7 @@ Tabel 3.10 draf proposal memuat konversi terbalik dari Tabel 3.5–3.8. Sistem m
 2. Edit salah satu kriteria (mis. C1)
 3. Modifikasi bobot atau scale_rules (Repeater; min ≤ max)
 4. Save → ditolak bila Σ bobot ≠ 1.000
-5. Hitung Prioritas Restock → snapshot baru memakai konfigurasi itu (criteria_snapshot)
+5. Hitung Prioritas Restock → peringkat langsung memakai konfigurasi itu
 ```
 
 ### Flow 6: Stok Opname per Batch (Petugas)
@@ -403,7 +400,6 @@ Tabel 3.10 draf proposal memuat konversi terbalik dari Tabel 3.5–3.8. Sistem m
 | Rekap Penjualan & Pembelian | `app/Filament/Pages/LaporanRekap.php` | Summary cards + tabel agregasi 50 top obat + total, export Excel |
 | Fast / Slow / Dead Stock | `app/Filament/Pages/LaporanMoving.php` | 3 kategori dengan filter top N, multi-sheet Excel |
 | Export Receive Order | `app/Filament/Exports/ReceiveOrderExporter.php` | Export data RO (nomor RO, faktur, PO, PBF, tanggal, total) |
-| Riwayat Snapshot SAW | `app/Filament/Resources/SawCalculations/` | Audit trail snapshot + ranking lengkap per snapshot |
 | Dashboard Widgets | `app/Filament/Widgets/` | 5 widget real-time (Top 10 SAW, LowStock, PendingPO, Expiring, SalesSummary) |
 
 ---
@@ -412,7 +408,6 @@ Tabel 3.10 draf proposal memuat konversi terbalik dari Tabel 3.5–3.8. Sistem m
 
 | Job | Schedule | Behavior |
 |-----|----------|----------|
-| `sipokat:recalculate-saw` | Daily 06:00 | Run SAW dengan period 30 hari, trigger_type=scheduled, hasil dipakai dashboard widget |
 | `sipokat:check-stock-and-expiry` | Daily 08:00 | Scan low-stock + expiring batches ≤ 90 hari, kirim Filament DB notification ke semua user |
 
 **Deployment**: cron host harus setup `* * * * * cd /path && php artisan schedule:run >> /dev/null 2>&1`.
@@ -434,7 +429,6 @@ sengaja terpisah. Data riil apotek dimuat lewat `sipokat:data-riil:template` →
 Run:
 ```bash
 php artisan db:seed --class=SpkTestDataSeeder
-php artisan sipokat:recalculate-saw
 ```
 
 ---
@@ -467,9 +461,9 @@ Item yang masih perlu dikerjakan **manual oleh peneliti** (tidak bisa di-generat
 | 2 | Naskah Bab 1.4, Bab III (Tabel 3.4–3.8, definisi C1–C4, FEFO/HPP), Bab 3.4.4, Bab IV | Ikuti `docs/update-dari-wawancara.md` §3 & `docs/rencana-revisi-2026-09.md` Bagian 7; Winong tidak dicantumkan | ⏳ |
 | 3 | Data riil apotek (kartu stok, faktur) | Isi template `sipokat:data-riil:template`, impor dengan `--dry-run` dulu | ⏳ |
 | 4 | Deploy VPS MySQL + cron | Lihat README "Deployment" | ⏳ |
-| 5 | Setup Roles & Permissions via Filament Shield | `shield:generate --all`, susun Admin / Petugas / Pemilik (Tabel 3.2) | ⏳ |
+| 5 | Setup Roles & Permissions via Filament Shield | `RoleSeeder`: admin / petugas / pemilik dengan matriks izin Tabel 3.2, ikut `db:seed` | ✅ |
 | 6 | Smoke test browser end-to-end | Alur sudah diuji otomatis (`EndToEndFlowTest`); ulangi manual di browser sebelum sidang | ⏳ |
-| 7 | ~~Write Pest tests~~ | ✅ 84 tes / 826 asersi | ✅ |
+| 7 | ~~Write Pest tests~~ | ✅ 137 tes / 1.385 asersi | ✅ |
 
 ---
 
@@ -502,7 +496,7 @@ Sistem dianggap memenuhi requirement TA jika:
 - [x] PO per PBF (juga dari ranking SAW) dan RO satu per faktur dengan konversi kemasan
 - [x] Notifikasi otomatis berjalan (terdaftar di scheduler)
 - [x] Laporan rekap + fast/slow moving + kartu stok, export Excel & PDF
-- [x] Audit trail SAW dengan snapshot historis + breakdown V_i
+- [x] Transparansi SAW lewat breakdown V_i per obat (snapshot historis dihapus 2026-09-27)
 - [x] Tech stack: Laravel 12 + Filament 4 + MySQL 8 + Tailwind CSS 4; zona waktu Asia/Jakarta
 - [x] Data demo 150 obat (jalur service) + template & importer data riil
 - [x] Import obat & supplier via Excel/CSV; export Receive Order

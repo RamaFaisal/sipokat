@@ -111,7 +111,7 @@ diakui sebagai batasan pada Bab 1.4 dan diusulkan pada saran Bab 5.2.
 
 - ✅ `database/seeders/SawCriteriaSeeder.php` sudah memuat tabel di atas (commit E5, 2026-09-13).
 - Tabel 3.5–3.8 pada naskah ikuti tabel di atas (C1 rasio, C4 HPP).
-- `php artisan sipokat:recalculate-saw` dijalankan setelah seeder diperbarui.
+- Peringkat SAW ikut terbarui sendiri saat dashboard dibuka (sejak 2026-09-27 dihitung langsung, tanpa perintah terjadwal).
 
 Bobot pada seeder **tidak perlu disentuh**.
 

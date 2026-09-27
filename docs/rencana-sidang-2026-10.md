@@ -54,7 +54,7 @@
 
 | # | Pekerjaan | Pemilik | Tenggat |
 |---|---|---|---|
-| B1 | **Role sesuai Tabel 3.2**: seeder role Admin / Petugas / Pemilik dengan matriks permission (Admin semua; Petugas: master, PO/RO, penjualan, opname, kartu stok, laporan; Pemilik: dashboard, SAW, laporan, baca-saja). Ganti nama role lama atau petakan keputusan K2 | Claude | Kam 24 Sep |
+| B1 | ✅ **2026-09-24** `RoleSeeder` + migrasi `rename_roles_to_thesis_terms`: `admin` (146 izin), `petugas` (46: PO/RO/penjualan/opname penuh, master obat-satuan-PBF **baca-saja**, jalankan SPK, laporan), `pemilik` (33: baca-saja, tanpa satu pun izin tulis). Tombol "Hitung Sekarang" dan "Buat PO" di halaman SPK diberi guard izin + `abort_unless` pada metode Livewire-nya. `Dashboard` ikut memakai `HasPageShield`. 26 tes di `RolePermissionTest` | Claude | Kam 24 Sep |
 | B2 | **Protokol blackbox** Tabel 3.17 → dokumen langkah demi langkah (7 skenario, tiap skenario: data awal, langkah klik, hasil diharapkan, kolom hasil aktual + nama berkas screenshot). Skenario 4 dan 6 menuntut kasus gagal (stok kurang, Σ bobot ≠ 1) | Claude | Jum 25 Sep |
 | B3 | **Eksekusi blackbox** di browser, isi hasil aktual + screenshot bukti | peneliti | Rab 30 Sep |
 | B4 | Jendela perbaikan cacat dari B3 dan pemakaian harian; suite tes tetap hijau | Claude | Rab 30 Sep |
@@ -207,7 +207,7 @@ lokal, R3), **bukan** kesesuaian Bab III dengan sistem (R4).
 | # | Keputusan | Tenggat | Kalau tidak diputuskan |
 |---|---|---|---|
 | K1 | Setujui rancangan simulasi penjualan A2 (lalu ajukan ke pembimbing) | Rab 23 Sep | Simulasi dibuat sesuai A2, disetujui pembimbing belakangan |
-| K2 | Role: ganti nama `super_admin/manajer/staff` → Admin/Petugas/Pemilik, atau pertahankan nama dan tulis pemetaannya di naskah | Kam 24 Sep | Diganti nama sesuai Tabel 3.2 |
+| K2 | ✅ **Diputuskan 2026-09-24**: diganti nama menjadi `admin` / `petugas` / `pemilik` sesuai Tabel 3.2 (B1) | Kam 24 Sep | |
 | K3 | Blackbox dijalankan peneliti sendiri, atau bersama petugas apotek (bila prodi meminta bukti pengguna) | Jum 25 Sep | Peneliti sendiri; bukti = screenshot |
 | K4 | Jawaban 3 konfirmasi data (Box 17 obat, pil KB, Kaleng) | Kam 24 Sep | Asumsi sekarang dipertahankan dan dicatat |
 | K5 | Penyedia VPS + domain | Jum 25 Sep | Deploy bergeser; demo lokal jadi utama |

@@ -17,7 +17,7 @@ bulan, sisa kedaluwarsa, dan harga pokok persediaan.
 - **Kartu stok per batch**: setiap penerimaan menjadi lapisan dengan nomor batch, ED, dan harga beli; **HPP rata-rata bergerak** dihitung per obat.
 - **Penjualan FEFO**: stok keluar otomatis dari batch dengan ED terdekat (bisa memecah ke beberapa batch); harga jual ≥ HPP; jumlah ≤ stok tersedia. Salah input → hapus dan buat ulang.
 - **Stok Opname per batch**: hitung fisik tiap batch, selisih menjadi penyesuaian pada batch itu sekaligus jalur retur/pemusnahan obat kedaluwarsa.
-- **SPK SAW**: bobot dan skala konversi 1–5 dapat diubah admin (Σ bobot harus 1,000), perhitungan manual & terjadwal, peringkat padat ("Tingkat"), tanda "sudah dipesan", aksi massal **Buat PO** dari ranking, riwayat snapshot, dan rincian perhitungan V per obat.
+- **SPK SAW**: bobot dan skala konversi 1–5 dapat diubah admin (Σ bobot harus 1,000), peringkat padat ("Tingkat"), tanda "sudah dipesan", aksi massal **Buat PO** dari ranking, dan rincian perhitungan V per obat. Peringkat dihitung langsung saat halaman/dashboard dibuka sehingga selalu mencerminkan kondisi terkini (tanpa snapshot tersimpan).
 - **Notifikasi** harian stok di bawah batas minimum dan batch yang mendekati kedaluwarsa.
 - **Dashboard**: Top-10 prioritas restock, stok kritis, PO terbuka, batch mendekati ED, grafik penjualan.
 - **Laporan**: kartu stok (per batch + HPP), rekap penjualan/pembelian, fast/slow/dead moving Excel & PDF.
@@ -60,9 +60,8 @@ php artisan key:generate
 # 3. Migrasi + master data + kriteria SAW
 php artisan migrate --seed
 
-# 4. (Opsional) data demo 150 obat, lalu hitung SAW
+# 4. (Opsional) data demo 150 obat
 php artisan db:seed --class=SpkTestDataSeeder
-php artisan sipokat:recalculate-saw
 
 # 5. Asset frontend
 npm run build      # atau: npm run dev
@@ -80,7 +79,6 @@ php artisan sipokat:data-riil:template            # storage/app/import/template-
 # isi sheet Obat → SaldoAwal → Faktur → Penjualan (baris 2 = petunjuk, baris contoh dihapus)
 php artisan sipokat:data-riil:import berkas.xlsx --period-start=2026-08-01 --dry-run
 php artisan sipokat:data-riil:import berkas.xlsx --period-start=2026-08-01
-php artisan sipokat:recalculate-saw
 ```
 
 Impor transaksional: satu baris salah → tidak ada yang tersimpan, semua masalah dicetak.
@@ -89,7 +87,6 @@ Impor transaksional: satu baris salah → tidak ada yang tersimpan, semua masala
 
 | Jadwal | Perintah | Fungsi |
 |--------|----------|--------|
-| 06:00 | `sipokat:recalculate-saw` | Snapshot SAW harian (dipakai widget dashboard) |
 | 08:00 | `sipokat:check-stock-and-expiry` | Notifikasi stok minimum & batch mendekati ED |
 
 Cron di server:

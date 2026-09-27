@@ -1,6 +1,6 @@
 # Deploy Sipokat ke VPS (MySQL 8) catatan E9
 
-Dicek 2026-09-14: rantai migrasi dari nol + `--seed` + `SpkTestDataSeeder` + `sipokat:recalculate-saw`
+Dicek 2026-09-14: rantai migrasi dari nol + `--seed` + `SpkTestDataSeeder` 
 + `sipokat:check-stock-and-expiry` + `sipokat:data-riil:import` berjalan bersih pada database MySQL kosong.
 
 ## 1. Server
@@ -24,14 +24,19 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 cp .env.example .env && php artisan key:generate
 # .env: APP_ENV=production APP_DEBUG=false APP_URL=https://... DB_* sesuai §2
-php artisan migrate --force --seed        # akun awal, master, 127 obat riil, faktur RO, contoh PO, simulasi penjualan
-php artisan shield:generate --all          # permission untuk semua resource/halaman/widget
+php artisan migrate --force --seed        # peran, akun awal, master, 127 obat riil, faktur RO, contoh PO, simulasi penjualan
+# shield:generate sudah dipanggil RoleSeeder; jalankan manual hanya bila menambah resource/halaman baru
 php artisan optimize
 chown -R www-data:www-data storage bootstrap/cache
 ```
 
-Akun awal ada di `database/seeders/UserSeeder.php` **ganti password** lewat menu Users setelah login pertama.
-Susun role Admin / Petugas / Pemilik di menu **Roles** (Tabel 3.2).
+Akun awal ada di `database/seeders/UserSeeder.php` satu per peran (Admin / Petugas Apotek / Pemilik
+Apotek) **ganti password** lewat menu Users setelah login pertama.
+
+Peran `admin` / `petugas` / `pemilik` beserta matriks izinnya (Tabel 3.2) dibuat `RoleSeeder`, jadi tidak
+perlu disusun manual di menu **Roles**. Basis data yang masih memakai nama lama
+(`super_admin` / `staff` / `manajer`) diganti namanya oleh migrasi
+`2026_09_24_000001_rename_roles_to_thesis_terms` penting untuk `mysqldump` dari mesin lokal (R2).
 
 `DatabaseSeeder` sekarang memuat semua menu sekaligus lewat `--seed` di atas tidak perlu lagi
 memanggil seeder data riil satu-satu: `MedicineDataSeeder` (127 obat, dari
@@ -50,7 +55,7 @@ awal/percobaan sebelum angka dibekukan, atau untuk instalasi baru di luar keperl
 Data demo sintetis (150 obat contoh, terpisah dari data riil) hanya bila diperlukan:
 `php artisan db:seed --class=SpkTestDataSeeder --force`.
 Data riil dari berkas Excel lain (bukan CSV bawaan di atas):
-`sipokat:data-riil:template` → isi → `sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → tanpa `--dry-run` → `sipokat:recalculate-saw`.
+`sipokat:data-riil:template` → isi → `sipokat:data-riil:import berkas.xlsx --period-start=YYYY-MM-DD --dry-run` → tanpa `--dry-run`. Peringkat SAW ikut terbarui sendiri saat dashboard dibuka.
 
 ## 4. Nginx (ringkas)
 
@@ -74,7 +79,7 @@ HTTPS: `certbot --nginx`.
 * * * * * cd /var/www/sipokat && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Verifikasi: `php artisan schedule:list` → `0 6 * * * sipokat:recalculate-saw`, `0 8 * * * sipokat:check-stock-and-expiry`.
+Verifikasi: `php artisan schedule:list` → satu baris, `0 8 * * * sipokat:check-stock-and-expiry`. (SAW tidak dijadwalkan: peringkat dihitung saat halaman dibuka.)
 
 ## 6. Rilis berikutnya
 
