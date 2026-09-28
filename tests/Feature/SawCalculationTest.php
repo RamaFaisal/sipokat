@@ -6,6 +6,7 @@ use App\Models\SawCriteria;
 use App\Services\SawCalculationService;
 use Database\Seeders\SawCriteriaSeeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Karakterisasi SAW (rencana-revisi-2026-09 Bagian 7). Contoh 5 alternatif di bawah adalah
@@ -146,4 +147,76 @@ it('memberi tingkat yang sama untuk Vi identik dan mengurutkan dalam tingkat ole
     expect($rows->pluck('medicine_id')->all())->toBe([$b->id, $c->id, $a->id, $d->id])
         ->and($rows->pluck('rank')->all())->toBe([1, 1, 1, 2])
         ->and($rows->pluck('sort_order')->all())->toBe([1, 2, 3, 4]);
+});
+
+/*
+|--------------------------------------------------------------------------
+| calculateCached(): pemakaian ulang hasil untuk halaman & widget
+|--------------------------------------------------------------------------
+|
+| calculate() memakai 4 + 5N query, sedangkan halaman SAW menghitung ulang tiap render
+| Livewire dan widget dashboard memanggilnya tiap dashboard dibuka. Cache hanya boleh
+| memakai ulang hasil selama dasar hitungannya tidak berubah; tes berikut memastikan
+| pemakaian ulang itu benar-benar terjadi, dan ikut batal begitu datanya berubah.
+|
+*/
+
+it('memakai ulang hasil selama tidak ada perubahan data', function () {
+    alternative('CACHE A', 10, 20, 30, 300, 1000);
+    alternative('CACHE B', 40, 20, 5, 600, 8000);
+
+    $pertama = $this->service->calculateCached(today()->subDays(29), today());
+
+    $query = 0;
+    DB::listen(function () use (&$query) {
+        $query++;
+    });
+    $kedua = $this->service->calculateCached(today()->subDays(29), today());
+
+    // 3 agregat cap kondisi + 1 baca cache; tanpa cache jumlahnya 4 + 5N.
+    expect($query)->toBeLessThanOrEqual(5)
+        ->and(array_column($kedua['rows'], 'preference_value'))
+        ->toBe(array_column($pertama['rows'], 'preference_value'));
+});
+
+it('menghitung ulang setelah ada penjualan baru', function () {
+    $m = alternative('CACHE JUAL', 100, 20, 0, 300, 1000);
+
+    $sebelum = $this->service->calculateCached(today()->subDays(29), today());
+    sellFrom($m, 60);
+    $sesudah = $this->service->calculateCached(today()->subDays(29), today());
+
+    $ambil = fn (array $hasil) => collect($hasil['rows'])->firstWhere('medicine_id', $m->id);
+
+    expect((float) $ambil($sebelum)['c1_raw'])->toBe(5.0)   // 100 ÷ 20
+        ->and((float) $ambil($sesudah)['c1_raw'])->toBe(2.0) // 40 ÷ 20
+        ->and((int) $ambil($sesudah)['c2_raw'])->toBe(60);
+});
+
+it('menghitung ulang setelah bobot kriteria diubah', function () {
+    alternative('CACHE BOBOT A', 10, 20, 30, 300, 1000);
+    alternative('CACHE BOBOT B', 80, 20, 5, 900, 90000);
+
+    $sebelum = $this->service->calculateCached(today()->subDays(29), today());
+
+    SawCriteria::where('code', 'C1')->update(['weight' => 0.500]);
+    SawCriteria::where('code', 'C2')->update(['weight' => 0.100]);
+
+    $sesudah = $this->service->calculateCached(today()->subDays(29), today());
+
+    expect(array_column($sesudah['rows'], 'preference_value'))
+        ->not->toBe(array_column($sebelum['rows'], 'preference_value'));
+});
+
+it('memisahkan hasil antar periode', function () {
+    $m = alternative('CACHE PERIODE', 50, 20, 30, 300, 1000); // 30 terjual hari ini
+
+    $tigaPuluhHari = $this->service->calculateCached(today()->subDays(29), today());
+    $satuHari = $this->service->calculateCached(today(), today());
+
+    $ambil = fn (array $hasil) => collect($hasil['rows'])->firstWhere('medicine_id', $m->id);
+
+    // Permintaan sama, pembagi hari beda: 30 ÷ 30 × 30 = 30 lawan 30 ÷ 1 × 30 = 900.
+    expect((int) $ambil($tigaPuluhHari)['c2_raw'])->toBe(30)
+        ->and((int) $ambil($satuHari)['c2_raw'])->toBe(900);
 });

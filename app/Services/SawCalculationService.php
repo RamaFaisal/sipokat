@@ -8,6 +8,8 @@ use App\Models\OrderItem;
 use App\Models\SawCriteria;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * SPK SAW (rencana-revisi-2026-09 Bagian 7).
@@ -20,16 +22,78 @@ use Illuminate\Support\Collection;
  * peringkat padat + tie-breaker rasio C1 → permintaan → ED (K9).
  *
  * Sejak 2026-09-27 hasil perhitungan **tidak disimpan**: halaman dan widget memanggil
- * calculate() sehingga angka yang tampil selalu mencerminkan kondisi saat itu juga.
+ * calculateCached() sehingga angka yang tampil selalu mencerminkan kondisi saat itu juga.
+ * Cache hanya memakai ulang hasil selama masukannya belum berubah, bukan menyimpan riwayat.
  * Riwayat snapshot dihapus bukti angka untuk naskah dibekukan sebagai berkas terpisah.
  */
 class SawCalculationService
 {
     public const CRITERIA_CODES = ['C1', 'C2', 'C3', 'C4'];
 
+    /** Jaring pengaman bila cap kondisi meleset; invalidasi sebenarnya lewat stateStamp(). */
+    private const CACHE_TTL_SECONDS = 300;
+
     public function __construct(
         private StockCardService $stockCard,
     ) {}
+
+    /**
+     * Versi calculate() untuk halaman dan widget: hasil dipakai ulang selama dasar
+     * hitungannya belum berubah.
+     *
+     * Perlu karena calculate() memakai 4 + 5N query (127 obat = sekitar 639), sedangkan
+     * halaman SAW menghitung ulang tiap render Livewire (ganti periode, sort, centang baris)
+     * dan widget dashboard ikut memanggilnya tiap dashboard dibuka.
+     *
+     * Kunci memuat periode + cap kondisi kartu stok, master obat, dan kriteria, jadi begitu
+     * ada penerimaan, penjualan, opname, perubahan batas minimum, atau perubahan bobot,
+     * kuncinya berubah dan perhitungan diulang. Angka yang tampil tetap kondisi terkini
+     * (keputusan 2026-09-27); yang dihindari hanya menghitung ulang hal yang sama persis.
+     */
+    public function calculateCached(Carbon $periodStart, Carbon $periodEnd): array
+    {
+        $key = 'saw:ranking:'.md5(implode('|', [
+            $periodStart->toDateString(),
+            $periodEnd->toDateString(),
+            $this->stateStamp(),
+        ]));
+
+        return Cache::remember(
+            $key,
+            self::CACHE_TTL_SECONDS,
+            fn (): array => $this->calculate($periodStart, $periodEnd),
+        );
+    }
+
+    /**
+     * Cap kondisi seluruh masukan SAW dalam tiga query murah.
+     *
+     * `updated_at` saja tidak cukup: kolomnya berpresisi detik, sedangkan penyuntingan lalu
+     * render ulang Livewire terjadi dalam detik yang sama (ubah bobot → tabel langsung
+     * digambar ulang). Karena itu dua tabel kecil disidik isinya, dan kartu stok yang bisa
+     * ribuan baris diwakili agregat kolom yang benar-benar dipakai SAW: jumlah baris
+     * menangkap penghapusan (baris ledger dihapus sungguhan, B5), id terakhir menangkap
+     * penambahan, sum(qty)/sum(hpp_avg)/max(expired_date) menangkap penyuntingan di tempat
+     * (mis. syncReceipt mengubah harga lalu replayHpp menulis ulang hpp_avg).
+     */
+    private function stateStamp(): string
+    {
+        $ledger = DB::table('medicine_stocks')->selectRaw(
+            'count(*) as jumlah, max(id) as id_terakhir, max(updated_at) as diubah,'
+            .' sum(qty) as total_qty, sum(hpp_avg) as total_hpp, max(expired_date) as ed_terjauh'
+        )->first();
+
+        $medicines = DB::table('medicines')->orderBy('id')
+            ->get(['id', 'min_stock', 'status', 'deleted_at']);
+
+        $criteria = DB::table('saw_criteria')->orderBy('id')->get();
+
+        return implode('|', [
+            json_encode($ledger),
+            md5((string) json_encode($medicines)),
+            md5((string) json_encode($criteria)),
+        ]);
+    }
 
     /**
      * Hitung peringkat SAW atas kondisi saat ini. **Tidak menyimpan apa pun** hasilnya

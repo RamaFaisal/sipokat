@@ -22,7 +22,7 @@
 | Dashboard & widget | ✅ | Top-10 SAW, stok kritis, PO terbuka, batch mendekati ED, grafik penjualan |
 | Laporan | ✅ | Kartu stok per obat (per batch + HPP), Rekap penjualan/pembelian, Fast/slow moving Excel & PDF |
 | Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat sintetis) · `FakturNpmSeeder` (14 faktur asli NPM Mei 2024 → bulan berjalan, 137 lapisan untuk 127 obat riil) · template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
-| Pengujian | ✅ | 137 tes Pest / 1.385 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
+| Pengujian | ✅ | 140 tes Pest / 1.407 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
 | Roles & Permissions | ✅ | `RoleSeeder` (2026-09-24, B1): `admin` akses penuh, `petugas` transaksi + SPK dengan master baca-saja, `pemilik` baca-saja. Nama peran lama diganti oleh migrasi. Halaman & widget sudah memakai trait Shield |
 | Deploy VPS (MySQL) + cron | 🔜 | E9 jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |
 
@@ -37,7 +37,7 @@
 | F-03 | Catat obat masuk & keluar | ✅ | Masuk: RO → baris D per batch. Keluar: penjualan → baris C FEFO per lapisan. Semua lewat `StockMovementService` |
 | F-04 | Notifikasi stok minimum & ED | ✅ | Stok tersedia < `min_stock`; batch bersisa dengan ED ≤ 90 hari |
 | F-05 | Laporan inventory | ✅ | Kartu stok, Rekap, Moving, dashboard |
-| F-06 | SAW prioritas restock | ✅ | `SawCalculationService` + halaman "Hitung Prioritas Restock"; dihitung langsung saat halaman/dashboard dibuka (tanpa jadwal, tanpa snapshot sejak 2026-09-27) |
+| F-06 | SAW prioritas restock | ✅ | `SawCalculationService` + halaman "Hitung Prioritas Restock"; dihitung langsung saat halaman/dashboard dibuka (tanpa jadwal, tanpa snapshot sejak 2026-09-27). `calculateCached()` memakai ulang hasil selama masukannya belum berubah |
 | F-07 | Tampilan perangkingan | ✅ | Tabel ranking (Tingkat, Stok/Min, C1–C4, V) + detail hitungan per obat, selalu atas kondisi terkini |
 
 ---
@@ -101,7 +101,7 @@ Batasan yang tetap ditulis di Bab 1.4: skala C2 satu set untuk semua satuan.
 |---|---|---|
 | Service | `app/Services/StockMovementService.php` | Satu-satunya penulis ledger: `recordReceipt/reverseReceipt/syncReceipt`, `recordSale/reverseSale` (FEFO), `recordOpname/reverseOpname`, `replayHpp`, `refreshStockStatus` |
 | Service | `app/Services/StockCardService.php` | Pembaca: `physicalStock`, `availableStock`, `layers`, `sellableLayers`, `currentHpp`, kartu stok berjalan |
-| Service | `app/Services/SawCalculationService.php` | Pipeline SAW: alternatif → nilai mentah → skor → normalisasi → Vi → peringkat padat. `calculate()` tidak menyimpan apa pun |
+| Service | `app/Services/SawCalculationService.php` | Pipeline SAW: alternatif → nilai mentah → skor → normalisasi → Vi → peringkat padat. `calculate()` tidak menyimpan apa pun; `calculateCached()` (dipakai halaman & widget) memakai ulang hasil selama cap kondisi kartu stok, master obat, dan kriteria belum berubah |
 | Service | `app/Services/RealDataImporter.php`, `app/Support/RealDataTemplate.php` | Template & importer data riil (Obat → SaldoAwal → Faktur → Penjualan) |
 | Form | `app/Filament/Forms/PackLine.php` | Baris kemasan bersama PO & RO: satuan/isi/jumlah/harga → konversi ke satuan jual |
 | Model | `MedicineStock` | Scope `layers()`, `withRemainingStock()`; accessor `remaining`; `isExpired()` |

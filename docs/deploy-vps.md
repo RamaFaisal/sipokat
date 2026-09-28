@@ -23,7 +23,7 @@ cd /var/www && git clone <repo> sipokat && cd sipokat
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 cp .env.example .env && php artisan key:generate
-# .env: APP_ENV=production APP_DEBUG=false APP_URL=https://... DB_* sesuai §2
+# .env: APP_ENV=production APP_DEBUG=false APP_URL=https://... DB_* sesuai §2 QUEUE_CONNECTION=sync
 php artisan migrate --force --seed        # peran, akun awal, master, 127 obat riil, faktur RO, contoh PO, simulasi penjualan
 # shield:generate sudah dipanggil RoleSeeder; jalankan manual hanya bila menambah resource/halaman baru
 php artisan optimize
@@ -73,13 +73,19 @@ server {
 
 HTTPS: `certbot --nginx`.
 
-## 5. Cron (wajib tanpa ini SAW terjadwal & notifikasi tidak jalan)
+## 5. Cron (wajib tanpa ini notifikasi harian tidak jalan)
 
 ```
 * * * * * cd /var/www/sipokat && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 Verifikasi: `php artisan schedule:list` → satu baris, `0 8 * * * sipokat:check-stock-and-expiry`. (SAW tidak dijadwalkan: peringkat dihitung saat halaman dibuka.)
+
+**Antrean: tidak perlu worker.** `.env.example` memakai `QUEUE_CONNECTION=sync`, jadi impor dan ekspor
+Excel Filament berjalan langsung di dalam request. Volumenya kecil (127 obat) sehingga selesai dalam
+hitungan detik. Kalau suatu saat diubah ke `database`, wajib memasang worker
+(`php artisan queue:work` lewat supervisor atau systemd) tanpa itu impor akan menggantung di status
+antre tanpa pesan galat.
 
 ## 6. Rilis berikutnya
 

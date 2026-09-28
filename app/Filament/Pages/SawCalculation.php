@@ -82,7 +82,7 @@ class SawCalculation extends Page implements HasSchemas, HasTable
         $start = Carbon::parse($this->data['period_start'] ?? today()->subDays(29)->toDateString());
 
         try {
-            return $this->result = app(SawCalculationService::class)->calculate($start, today());
+            return $this->result = app(SawCalculationService::class)->calculateCached($start, today());
         } catch (\Throwable $e) {
             $this->result = [
                 'period_start' => $start,

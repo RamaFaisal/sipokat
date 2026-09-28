@@ -24,7 +24,7 @@ class SawTop10RestockWidget extends BaseWidget
     public function table(Table $table): Table
     {
         try {
-            $result = app(SawCalculationService::class)->calculate(today()->subDays(29), today());
+            $result = app(SawCalculationService::class)->calculateCached(today()->subDays(29), today());
             // 10 baris teratas menurut urutan tampil, bukan "semua tingkat ≤ 10" (K9).
             $rows = array_slice($result['rows'], 0, 10);
             $description = 'Dihitung '.$result['calculated_at']->format('d M Y H:i')
