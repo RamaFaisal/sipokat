@@ -36,11 +36,9 @@ class LaporanRekap extends Page implements HasSchemas
 
     protected static ?string $title = 'Laporan Rekap Penjualan & Pembelian';
 
-    protected static ?string $navigationLabel = 'Rekap Penjualan & Pembelian';
+    protected static ?string $navigationLabel = 'Laporan';
 
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentChartBar;
-
-    protected static string|\UnitEnum|null $navigationGroup = 'Laporan';
 
     protected static ?int $navigationSort = 1;
 

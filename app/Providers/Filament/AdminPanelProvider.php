@@ -95,7 +95,6 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 'Inventory',
                 'SPK Restock',
-                'Laporan',
                 'Penjualan',
                 'Pembelian',
                 'Master Data',

@@ -33,11 +33,9 @@ class LaporanMoving extends Page implements HasSchemas
 
     protected static ?string $title = 'Laporan Fast/Slow Moving';
 
-    protected static ?string $navigationLabel = 'Fast / Slow Moving';
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
-
-    protected static string|\UnitEnum|null $navigationGroup = 'Laporan';
 
     protected static ?int $navigationSort = 2;
 

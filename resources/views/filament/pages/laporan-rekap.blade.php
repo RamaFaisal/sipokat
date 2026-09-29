@@ -1,4 +1,6 @@
 <x-filament::page>
+    @include('filament.pages.partials.laporan-tabs', ['halamanAktif' => static::class])
+
     <x-filament::section>
         <x-slot name="heading">Filter Periode</x-slot>
         <x-slot name="description">Pilih rentang tanggal + tipe laporan, lalu klik "Tampilkan Laporan" di header. Klik "Export Excel" untuk download.</x-slot>

@@ -1,4 +1,6 @@
 <x-filament::page>
+    @include('filament.pages.partials.laporan-tabs', ['halamanAktif' => static::class])
+
     <x-filament::section>
         {{ $this->form }}
     </x-filament::section>

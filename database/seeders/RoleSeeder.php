@@ -101,6 +101,10 @@ class RoleSeeder extends Seeder
             'View:Dashboard',
             'View:MedicineStockDetail',
             'View:LaporanRekap',
+            'View:LaporanKedaluwarsa',
+            'View:LaporanStokObat',
+            'View:LaporanPembelianPbf',
+            'View:LaporanOpname',
             'View:LaporanMoving',
             // Halaman peringkat SAW. Sejak snapshot dihapus (2026-09-27) membukanya tidak
             // menulis apa pun, jadi cukup izin baca termasuk untuk Pemilik.
