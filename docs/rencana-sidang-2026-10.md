@@ -17,8 +17,8 @@
 | Data yang belum dikonfirmasi apotek | Isi Box 17 obat (diasumsikan 100); pil KB (strip 28 vs box); isi Kaleng (diasumsikan 1000 → HPP CTM/GG Triman/Ifidex ~Rp4–6/tablet, mencurigakan) | Mempengaruhi HPP (C4) dan stok tersedia (C1) obat-obat itu |
 | Role & hak akses | DB: `super_admin / manajer / staff` + 146 permission Shield; naskah Tabel 3.2: Admin / Petugas / Pemilik | Penguji akan mencocokkan; perlu disamakan atau naskah menyebut pemetaannya |
 | Deploy | Jalur migrasi dari nol diverifikasi di MySQL kosong (`docs/deploy-vps.md`); belum dieksekusi di server | Dikerjakan sesudah push 1 Okt |
-| Naskah Bab I–III | `draft_isi_ta.md` §3.4.2 **masih skala lama** (C1 stok absolut, C2 >80, C4 ≤10.000) sistem memakai C1 rasio, C2 ≤10/11–30/31–65/66–100/≥101, C4 ≤2.000/…; definisi C1/C3/C4 dan contoh 3.4.4 belum ditulis ulang; Bab 1.4 belum diperbarui; checklist format poin 3–8 (`revisi-penulisan-bab1-3.md`) belum; narasumber belum dikonfirmasi | **Ketidaksesuaian paling berbahaya di sidang**: tabel naskah ≠ tabel sistem |
-| Naskah Bab IV–V | `draft_isi_ta_4-5.md` basi (rak, harga di master, tanggal produksi, keterbatasan "tanpa stok per batch" yang sudah dibangun); semua placeholder `【…】` kosong | Ditulis ulang dari sistem aktual sesudah data dan screenshot ada |
+| Naskah Bab I–III | `draft_isi_ta.md` §3.4.2 **masih skala lama** (C1 stok absolut, C2 >80, C4 ≤10.000) sistem memakai C1 rasio, C2 ≤10/11–30/31–65/66–100/≥101, C4 ≤2.000/...; definisi C1/C3/C4 dan contoh 3.4.4 belum ditulis ulang; Bab 1.4 belum diperbarui; checklist format poin 3–8 (`revisi-penulisan-bab1-3.md`) belum; narasumber belum dikonfirmasi | **Ketidaksesuaian paling berbahaya di sidang**: tabel naskah ≠ tabel sistem |
+| Naskah Bab IV–V | `draft_isi_ta_4-5.md` basi (rak, harga di master, tanggal produksi, keterbatasan "tanpa stok per batch" yang sudah dibangun); semua placeholder `【...】` kosong | Ditulis ulang dari sistem aktual sesudah data dan screenshot ada |
 
 ---
 
@@ -103,6 +103,10 @@ Urutan disarankan (masing-masing bergantung pada jalur A/B):
 ---
 
 ## 4. Timeline Mingguan
+
+> **Digantikan oleh §8 (timeline revisi 2026-09-29).** Bagian ini dipertahankan sebagai jejak
+> rencana awal. Lingkup bertambah setelah daftar permintaan peneliti 2026-09-28
+> ([analisa-tambahan-2026-09.md](analisa-tambahan-2026-09.md)), sehingga tanggalnya tidak lagi berlaku.
 
 Ringkasan: **4 minggu penuh + sisa akhir pekan ini.** Minggu dihitung Senin–Minggu.
 
@@ -237,3 +241,75 @@ lokal, R3), **bukan** kesesuaian Bab III dengan sistem (R4).
 - Aturan commit/push tetap CLAUDE.md §9: Claude mengerjakan → tes hijau → lapor; commit dan push
   menunggu "oke commit" / "oke push".
 - Perubahan asumsi (tanggal sidang, keputusan K1–K6) dicatat di bagian atas dokumen ini.
+
+---
+
+## 8. Timeline Revisi 2026-09-29
+
+> Menggantikan §4. Disusun ulang setelah lingkup bertambah
+> ([analisa-tambahan-2026-09.md](analisa-tambahan-2026-09.md)) dan setelah butir penomoran dokumen
+> selesai. Pembekuan angka **tidak lagi jadi gerbang tanggal 29 Sep**; angka dibekukan bersama
+> pengambilan tangkapan layar pada 4 Oktober.
+> Titik mula: Selasa 29 September 2026. Sidang 12–16 Oktober.
+
+### 8.1 Dua jalur yang berjalan bersamaan
+
+Naskah Bab I–III **tidak menunggu kode**: definisi kriteria sudah final di CLAUDE.md §4 sejak revisi
+September, jadi penyelarasannya bisa dikerjakan hari ini juga. Hanya Bab IV yang menunggu sistem dan
+tangkapan layar. Memisahkan dua jalur ini yang membuat jadwal muat.
+
+### 8.2 Jadwal harian
+
+| Hari | Jalur kode (Claude) | Jalur naskah (peneliti) |
+|---|---|---|
+| **Sel 29 Sep** | Butir 2 detail penjualan, butir 4 menu obat + PBF | Baca §15 analisa-tambahan; mulai **Bab III 3.4.2** (tabel skala C1–C4 diganti versi sistem) |
+| **Rab 30 Sep** | Butir 3 kolom ED + ambang warna terpusat, butir 5 format tanggal | **Bab III 3.4.3** (aturan skor 0, peringkat padat) dan **3.4.4** (contoh 5 alternatif versi baru) |
+| **Kam 1 Okt** | Butir 6 dashboard: gabung kartu statistik, tiga widget sebaris, buang PO Terbuka, Shield | Checklist formatting 3–6 (`revisi-penulisan-bab1-3.md`): nomor gambar, daftar isi, sub-bab 2.2, typo |
+| **Jum 2 Okt** | Butir 7a wadah Laporan bertab, 7b akan kedaluwarsa, 7c rekap stok per obat | Checklist 7–8 (sitasi); **Bab 1.3** tambah batasan satuan strip; isi placeholder Bab I data lapangan |
+| **Sab 3 Okt** | Butir 7d pembelian per PBF, 7e hasil opname; suite penuh; Pint | Rampungkan Bab I–III; baca ulang untuk konsistensi istilah |
+| **Min 4 Okt** | Perbaikan sisa, **code freeze**, data final, dampingi pengambilan tangkapan layar | **Bab I–III final**; ambil seluruh tangkapan layar menurut daftar |
+| **Sen 5 Okt** | **Deploy VPS**, cron, HTTPS, uji login dari HP | Mulai **Bab IV**: 4.1 implementasi sistem + gambar |
+| **Sel 6 Okt** | Siapkan ekspor tabel Bab IV (matriks, skor, normalisasi, Vi), hanya `fix:` kecil | Bab IV 4.2 hasil SAW + verifikasi manual satu obat |
+| **Rab 7 Okt** | Jalankan protokol blackbox, serahkan hasilnya | Bab IV lanjut; masukkan hasil blackbox |
+| **Kam 8 Okt** | Siaga perbaikan | **Bab V** + baca ulang menyeluruh |
+| **Jum 9 Okt** | Siaga | **Naskah ke pembimbing** |
+| **Sab 10 – Min 11 Okt** | Perbaikan dari pembimbing (`fix:` saja) | Gladi bersih demo 2× di VPS dan laptop cadangan |
+| **Sen 12 – Jum 16 Okt** | Siaga | **Sidang** |
+
+### 8.3 Yang paling berbahaya, dikerjakan paling awal
+
+Bab III 3.4.2 dan 3.4.4 **masih memakai skema lama**: C1 sebagai jumlah stok absolut dengan skala
+≤ 10 / 11–30 / 31–60 / 61–100 / > 100, dan contoh perhitungan yang menghasilkan V1 = 0,96. Sistem
+memakai C1 sebagai **rasio stok ÷ batas minimum** dengan skala ≤ 1,00 / 1,01–2,00 / 2,01–3,50 /
+3,51–5,00 / ≥ 5,01. Skala C2, C3, dan C4 juga sudah berubah, dan C3 kini didefinisikan sebagai sisa
+hari ke ED batch terjauh yang masih bersisa.
+
+Kalau penguji membuka Tabel 3.5 lalu membandingkannya dengan layar, ketidaksesuaian itu langsung
+terlihat. Karena itu penyelarasan Bab III ditaruh di dua hari pertama, bukan di akhir.
+
+Catatan: `revisi-penulisan-bab1-3.md` masih menyatakan tabel skala dan contoh 3.4.4 "sudah sesuai
+kode". Pernyataan itu ditulis sebelum revisi September dan **tidak lagi benar**; checklist itu perlu
+diperbarui bersamaan.
+
+Bahan yang sudah tersedia untuk penulisan ulang: tabel skala final ada di CLAUDE.md §4, dan contoh
+lima alternatif versi baru beserta hasilnya (A1 0,90 · A2 0,74 · A4 0,5467 · A5 0,54 · A3 0,42) ada di
+`tests/Feature/SawCalculationTest.php`, dihitung sel per sel di komentarnya.
+
+### 8.4 Jalur kritis dan pengungkitnya
+
+Jalur kritis: **butir 7 (menu Laporan) → tangkapan layar → Bab IV**. Empat laporan baru adalah
+pekerjaan terbesar yang tersisa, dan Bab IV tidak bisa ditulis sebelum layarnya ada.
+
+| Kalau tertinggal | Pengungkit | Akibat |
+|---|---|---|
+| Butir 7 belum selesai 3 Okt | Kurangi jadi dua laporan (akan kedaluwarsa + rekap stok per obat) | Menu Laporan tetap utuh bentuknya, dua laporan menyusul sesudah sidang |
+| Butir 6 dashboard meleset | Tunda ke sesudah sidang | Dashboard lama tetap berfungsi, hanya tidak sesuai permintaan |
+| Bab IV belum selesai 8 Okt | Serahkan Bab I–IV dulu, Bab V menyusul | Pembimbing sudah bisa mulai membaca |
+| Deploy bermasalah 5 Okt | Demo dari laptop, deploy jadi lampiran | Sidang tidak bergantung pada VPS |
+
+### 8.5 Yang sudah beres dan tidak perlu masuk jadwal lagi
+
+- Penomoran dokumen seragam + migrasi, data riil sudah dikonversi (28 Sep).
+- Penanda simulasi dihapus dari data; satuan obat kaleng diperbaiki (29 Sep).
+- Dua penghalang deploy: `ext-pdo_pgsql` dicabut, antrean diputus ke `sync` (28 Sep).
+- SAW dihitung dengan cache ber-invalidasi sehingga dashboard tidak lagi memakai 639 query (28 Sep).
