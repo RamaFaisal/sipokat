@@ -25,16 +25,20 @@ class LowStockMedicinesWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
+    /** Baris yang ditampilkan; pencarian menyaring seluruh obat dulu, baru dipotong sebanyak ini. */
+    private const BARIS = 10;
+
     public function table(Table $table): Table
     {
         return $table
             ->heading('Stok Obat')
-            ->description('Seluruh obat aktif, stok tersedia paling sedikit di atas.')
+            ->description(self::BARIS.' obat dengan stok tersedia paling sedikit. Pakai pencarian untuk obat lain.')
             ->query(fn (): Builder => Medicine::query()
                 ->withAvailableStock()
                 ->where('status', 'active')
                 ->orderBy('stok_tersedia')
-                ->orderBy('name'))
+                ->orderBy('name')
+                ->limit(self::BARIS))
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Obat')

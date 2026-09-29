@@ -27,13 +27,14 @@ class SawTop10RestockWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
-    public ?string $cari = null;
+    /** Baris yang ditampilkan; pencarian menyaring seluruh peringkat dulu, baru dipotong sebanyak ini. */
+    private const BARIS = 5;
 
     public function table(Table $table): Table
     {
         try {
             $result = app(SawCalculationService::class)->calculateCached(today()->subDays(29), today());
-            $rows = $this->saring($result['rows']);
+            $rows = array_slice($this->saring($result['rows']), 0, self::BARIS);
             $description = 'Dihitung '.$result['calculated_at']->translatedFormat(Tanggal::TAMPIL_JAM)
             .' atas kondisi terkini (periode permintaan '.$result['period_start']->translatedFormat(Tanggal::TAMPIL)
             .' - '.$result['period_end']->translatedFormat(Tanggal::TAMPIL).')';

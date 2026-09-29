@@ -16,7 +16,7 @@
 | K2 | Grafik Penjualan & PO Terbuka | **Grafik Penjualan tetap, PO Terbuka dibuang** dari dashboard | §1 |
 | K3 | Singkatan bulan | **"07 Sep 2026"** (singkatan Indonesia) | §3.3, §8 |
 | K4 | Data isi per strip | **Tidak tersedia**, jadi satuan jual per strip **tidak dibangun**, ditulis sebagai batasan naskah | §13 |
-| K5 | Isi widget dashboard | **Semua data, bisa dicari, tinggi setara 10 baris**, digulir di dalam widget | §1.1 |
+| K5 | Isi widget dashboard | **Stok 10 baris, Kedaluwarsa 5, Prioritas Restock 5**; bisa dicari dan digulir, tinggi ketiganya sama (direvisi 2026-09-29) | §1.1 |
 | K6 | Ambang warna ED | **30 / 60 / 90 hari**, seragam di widget, kartu stok, dan notifikasi | §1.2 |
 | K7 | Laporan baru | **Keempatnya**: akan kedaluwarsa, rekap stok per obat, pembelian per PBF, hasil stok opname. **Semua sebelum sidang** | §4 |
 | K8 | Catatan kosong di detail penjualan | **Belum dicek peneliti**, jadi diperiksa sendiri ke data | §5 |
@@ -48,16 +48,21 @@ SAW Top-10, Stok Menipis, Mendekati ED, Grafik Penjualan, PO Terbuka.
 Penggabungan 4 kartu statistik jadi satu widget diperlukan supaya grid bisa dijadikan 3 kolom tanpa
 menyisakan kartu yang timpang (4 kartu di grid 3 menyisakan 3 + 1).
 
-**Aturan seragam ketiga widget tengah (K5):** menampilkan **seluruh** data yang relevan, punya kotak
-pencarian, tinggi kotak dikunci setara 10 baris, dan isinya digulir di dalam widget.
+**Aturan ketiga widget tengah (K5, direvisi 2026-09-29):** jumlah barisnya dibatasi (Stok 10,
+Kedaluwarsa 5, Prioritas Restock 5), punya kotak pencarian, tinggi kotak dikunci sama, dan isinya
+digulir di dalam widget.
 
-Dua konsekuensi yang diterima:
+**Pencarian menyaring seluruh data lebih dulu, baru hasilnya dipotong sebanyak batas itu.** Urutan
+ini yang membuat batas baris tetap berupa peringkas, bukan penghalang: obat di peringkat 50 tetap
+bisa ditemukan lewat kotak pencarian meski tidak muncul di daftar bawaan. Ada tesnya di
+`DashboardWidgetTest`, satu untuk batasnya dan satu untuk pencariannya, per widget.
 
-1. **Beban render.** Menggulir berarti seluruh baris ikut dirender. Dengan 127 obat aktif, tiga
-   widget berarti sekitar 380 baris di satu halaman. Dashboard jadi lebih berat dibuka dibanding
-   memakai halaman 10 baris. Kalau nanti terasa lambat saat demo, penggantinya sudah jelas, yaitu
-   pagination 10 baris, tanpa mengubah apa pun yang lain.
-2. **Pencarian di widget SAW harus ditulis manual.** Dua widget lain berbasis query Eloquent
+Revisi ini sekaligus menghapus kekhawatiran beban render pada rancangan sebelumnya: dashboard kini
+merender 20 baris, bukan sekitar 380.
+
+Satu konsekuensi yang tetap berlaku:
+
+1. **Pencarian di widget SAW harus ditulis manual.** Dua widget lain berbasis query Eloquent
    sehingga `->searchable()` bekerja sendiri. Widget SAW memakai `Table::records()` berbasis array
    (keputusan 2026-09-27), jadi penyaringan menurut kata kunci harus dikerjakan di closure-nya.
    Bukan hambatan, hanya kerja tambahan yang perlu diingat.
@@ -67,7 +72,7 @@ Tinggi kotak yang dikunci belum ada bawaannya di Filament, jadi perlu kelas CSS 
 
 ### 1.1 Widget Stok
 
-Isi: nama obat dan sisa stok, diurutkan dari **stok tersedia paling sedikit**, seluruh obat aktif
+Isi: nama obat dan sisa stok, diurutkan dari **stok tersedia paling sedikit**, sepuluh baris teratas,
 termasuk yang stoknya 0, bisa dicari.
 
 Ada ganjalan teknis yang harus diselesaikan dulu. "Sisa stok" yang benar adalah **stok tersedia**
@@ -88,8 +93,8 @@ seluruh widget, bukan 127, dan `FIELD()` yang khusus MySQL itu ikut hilang.
 
 ### 1.2 Widget Kedaluwarsa
 
-Isi: nama obat dan sisa kedaluwarsa, urut ED terdekat, seluruh batch bersisa yang masuk ambang, bisa
-dicari, baris diberi warna.
+Isi: nama obat dan sisa kedaluwarsa, urut ED terdekat, lima batch terdekat dari yang masuk ambang,
+bisa dicari, baris diberi warna.
 
 Widget sudah ada dan sudah urut ED terdekat. Yang kurang: kolomnya delapan, terlalu ramai untuk
 sepertiga lebar, dan belum ada pewarnaan baris. `->recordClasses()` tersedia di Filament 4 yang
@@ -108,7 +113,7 @@ tidak ada lagi dua definisi "mendesak" yang berbeda di dua layar.
 
 ### 1.3 Widget Tingkatan SAW
 
-Isi: nama obat saja, urut peringkat, seluruh obat yang diperingkat, bisa dicari (manual, lihat §1).
+Isi: nama obat saja, urut peringkat, lima teratas, bisa dicari (manual, lihat §1).
 Sejak `calculateCached()` dipakai (commit `d74d355`), menampilkan ini di dashboard sudah tidak mahal.
 
 ### 1.4 Efek samping

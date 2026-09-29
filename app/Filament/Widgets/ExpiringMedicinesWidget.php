@@ -19,6 +19,9 @@ class ExpiringMedicinesWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
+    /** Baris yang ditampilkan; pencarian menyaring seluruh batch dulu, baru dipotong sebanyak ini. */
+    private const BARIS = 5;
+
     public function table(Table $table): Table
     {
         $today = now()->startOfDay();
@@ -26,7 +29,7 @@ class ExpiringMedicinesWidget extends BaseWidget
 
         return $table
             ->heading('Obat Mendekati Kedaluwarsa')
-            ->description('Batch yang masih bersisa dengan masa kedaluwarsa ≤ '.AmbangEd::PANTAU.' hari.')
+            ->description(self::BARIS.' batch paling dekat kedaluwarsa (ambang '.AmbangEd::PANTAU.' hari). Pakai pencarian untuk batch lain.')
             ->recordClasses(fn (MedicineStock $record): ?string => AmbangEd::kelasBaris(self::sisaHari($record)))
             ->query(function () use ($today, $threshold): Builder {
                 // F5: lapisan (baris D kartu stok) yang sisanya > 0 bukan item RO yang mungkin sudah habis terjual.
@@ -41,7 +44,7 @@ class ExpiringMedicinesWidget extends BaseWidget
                     ])
                     ->orderBy('expired_date');
 
-                $query->limit(5);
+                $query->limit(self::BARIS);
 
                 return $query;
             })
