@@ -11,9 +11,9 @@
     `npm run build` dan langsung terlihat.
 --}}
 <x-filament-widgets::widget>
-    <div class="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         @foreach ($this->kartu() as $kartu)
-            <div class="flex h-full flex-col gap-3 rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+            <div class="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
                 <div class="flex items-center gap-2">
                     <x-filament::icon
                         :icon="$kartu['ikon']"

@@ -16,8 +16,8 @@ use Illuminate\Support\Collection;
  * Dihitung langsung saat dashboard dibuka (2026-09-27), memakai `calculateCached()` sehingga
  * pembukaan berulang tidak mengulang 4 + 5N query.
  *
- * Tabelnya berbasis array (`records()`), bukan query Eloquent, jadi pencarian harus disaring
- * sendiri di sini; `->searchable()` bawaan Filament hanya bekerja pada kolom database.
+ * Tabelnya berbasis array (`records()`), bukan query Eloquent: seluruh peringkat dimuat sekaligus
+ * dan digulir di dalam kartu, tanpa halaman maupun kotak pencarian.
  */
 class SawTop10RestockWidget extends BaseWidget
 {
@@ -35,11 +35,9 @@ class SawTop10RestockWidget extends BaseWidget
         return $table
             ->heading('Prioritas Restock (SAW)')
             ->description(fn (): string => $this->keterangan())
-            // Penyaringan dilakukan **di dalam** closure, bukan sebelum tabel dibangun: objek tabel
-            // di-cache oleh Filament, sehingga baris yang dihitung di luar closure akan tetap berisi
-            // hasil render pertama dan kotak pencarian tidak pernah berpengaruh.
-            ->records(fn (): Collection => collect($this->saring($this->hasil()['rows'])))
-            ->searchable()
+            // Baris diambil di dalam closure, bukan sebelum tabel dibangun: objek tabel di-cache
+            // Filament, sehingga baris yang dihitung di luar closure akan membeku pada render pertama.
+            ->records(fn (): Collection => collect($this->hasil()['rows']))
             ->paginated(false)
             ->extraAttributes(['class' => 'sipokat-widget-gulir'])
             ->columns([
@@ -78,25 +76,8 @@ class SawTop10RestockWidget extends BaseWidget
             return 'Perhitungan tidak dapat dijalankan: '.$hasil['galat'];
         }
 
-        return 'PMeriode permintaan '.$hasil['period_start']->translatedFormat(Tanggal::TAMPIL)
+        return 'Dihitung '.$hasil['calculated_at']->translatedFormat(Tanggal::TAMPIL_JAM)
+            .', periode permintaan '.$hasil['period_start']->translatedFormat(Tanggal::TAMPIL)
             .' sampai '.$hasil['period_end']->translatedFormat(Tanggal::TAMPIL).'.';
-    }
-
-    /**
-     * Saring baris menurut kata kunci pencarian tabel. Tabel berbasis array tidak punya query,
-     * jadi Filament tidak bisa menyaringnya sendiri.
-     */
-    protected function saring(array $rows): array
-    {
-        $kata = trim((string) $this->getTableSearch());
-
-        if ($kata === '') {
-            return $rows;
-        }
-
-        return array_values(array_filter($rows, fn (array $row): bool => str_contains(
-            mb_strtolower((string) $row['name'].' '.(string) $row['code']),
-            mb_strtolower($kata),
-        )));
     }
 }

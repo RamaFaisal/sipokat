@@ -198,12 +198,19 @@ body {
     transform: translateY(-1px) !important;
 }
 /* 9. Widget dashboard bertinggi tetap
-   Ketiga widget tabel di baris tengah digulir di dalam kotaknya, bukan dipotong per halaman.
-   Memakai height, bukan max-height: max-height hanya membatasi, sehingga widget berisi sedikit
-   baris tetap lebih pendek dan ketiganya tidak sejajar.
+   Yang dikunci adalah tinggi KARTUNYA, bukan tinggi isinya. Mengunci isi saja tidak cukup: kepala
+   kartu (judul dan keterangan) berbeda tinggi begitu satu kalimat membungkus ke dua baris,
+   sehingga ketiganya tetap tidak sejajar. Dengan kartu sebagai kolom fleks, area isi mengambil
+   sisa ruang berapa pun tinggi kepalanya, dan ketiganya dijamin sama tinggi.
    Yang menggulir adalah .fi-ta-content-ctn; .fi-ta-content adalah elemen tabelnya sendiri dan
    pembatasan tinggi di sana tidak menghasilkan scrollbar. */
+.sipokat-widget-gulir .fi-ta-ctn {
+    display: flex;
+    flex-direction: column;
+    height: 32rem;
+}
+
 .sipokat-widget-gulir .fi-ta-content-ctn {
-    height: 30rem;
+    flex: 1;
     overflow-y: auto;
 }

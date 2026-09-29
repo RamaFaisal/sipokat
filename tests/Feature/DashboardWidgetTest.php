@@ -9,11 +9,11 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 
 /**
- * Ketiga widget dashboard memuat **seluruh** datanya dan digulir di dalam kotaknya; angka 10 pada
- * kelas CSS hanya menentukan berapa baris yang terlihat sekaligus, bukan berapa baris yang dimuat.
+ * Ketiga widget dashboard memuat **seluruh** datanya dan digulir di dalam kartunya. Tidak ada
+ * kotak pencarian dan tidak ada pemotongan jumlah baris, sehingga tidak ada data yang hanya bisa
+ * dicapai lewat kata kunci; tinggi kartu dikunci lewat CSS, bukan lewat jumlah baris.
  *
- * Yang dijaga di sini: tidak ada baris yang hilang dari widget, urutannya benar (paling mendesak di
- * atas), dan pencarian bekerja atas seluruh data. Tinggi kotaknya urusan CSS, bukan tes.
+ * Yang dijaga di sini: tidak ada baris yang hilang, dan urutannya benar (paling mendesak di atas).
  */
 beforeEach(function () {
     seedMasterFixtures();
@@ -21,7 +21,7 @@ beforeEach(function () {
     $this->actingAs(User::factory()->create());
 });
 
-it('memuat seluruh obat aktif di widget stok, bukan hanya yang terlihat', function () {
+it('memuat seluruh obat aktif di widget stok, paling tipis di atas', function () {
     // Stok menaik: OBAT STOK 01 paling sedikit, OBAT STOK 14 paling banyak.
     foreach (range(1, 14) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT STOK %02d', $i)]);
@@ -34,27 +34,11 @@ it('memuat seluruh obat aktif di widget stok, bukan hanya yang terlihat', functi
         expect($render)->toContain(sprintf('OBAT STOK %02d', $i));
     }
 
-    // Yang paling tipis harus berada di atas yang paling banyak.
     expect(strpos($render, 'OBAT STOK 01'))->toBeLessThan(strpos($render, 'OBAT STOK 14'));
 });
 
-it('menemukan obat lewat pencarian di widget stok', function () {
-    foreach (range(1, 14) as $i) {
-        $obat = makeMedicine(['name' => sprintf('OBAT STOK %02d', $i)]);
-        receiveInto($obat, $i);
-    }
-
-    Livewire::test(LowStockMedicinesWidget::class)
-        ->set('tableSearch', 'OBAT STOK 14')
-        ->assertOk()
-        ->assertSee('OBAT STOK 14')
-        ->assertDontSee('OBAT STOK 01');
-});
-
-it('menampilkan sepuluh batch paling dekat kedaluwarsa, termasuk yang di luar ambang', function () {
-    // Jarak 40 hari: batch ke-3 dan seterusnya sudah lewat ambang 90 hari. Widget tetap
-    // menampilkannya, karena pertanyaannya "mana yang paling dulu kedaluwarsa", bukan
-    // "mana yang sudah masuk ambang".
+it('memuat seluruh batch bersisa di widget kedaluwarsa, terdekat di atas', function () {
+    // Jarak 40 hari: batch ke-3 dan seterusnya sudah lewat ambang 90 hari, tetapi tetap dimuat.
     foreach (range(1, 12) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT ED %02d', $i)]);
         receiveInto($obat, 10, today()->addDays($i * 40)->toDateString(), sprintf('B-ED-%02d', $i));
@@ -62,26 +46,11 @@ it('menampilkan sepuluh batch paling dekat kedaluwarsa, termasuk yang di luar am
 
     $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->html();
 
-    foreach (range(1, 10) as $i) {
+    foreach (range(1, 12) as $i) {
         expect($render)->toContain(sprintf('B-ED-%02d', $i));
     }
 
-    expect($render)->not->toContain('B-ED-11')
-        ->and($render)->not->toContain('B-ED-12')
-        ->and(strpos($render, 'B-ED-01'))->toBeLessThan(strpos($render, 'B-ED-10'));
-});
-
-it('menemukan batch lewat pencarian di widget kedaluwarsa', function () {
-    foreach (range(1, 12) as $i) {
-        $obat = makeMedicine(['name' => sprintf('OBAT ED %02d', $i)]);
-        receiveInto($obat, 10, today()->addDays($i * 40)->toDateString(), sprintf('B-ED-%02d', $i));
-    }
-
-    Livewire::test(ExpiringMedicinesWidget::class)
-        ->set('tableSearch', 'OBAT ED 12')
-        ->assertOk()
-        ->assertSee('B-ED-12')
-        ->assertDontSee('B-ED-01');
+    expect(strpos($render, 'B-ED-01'))->toBeLessThan(strpos($render, 'B-ED-12'));
 });
 
 it('memuat seluruh peringkat di widget prioritas restock', function () {
@@ -100,29 +69,41 @@ it('memuat seluruh peringkat di widget prioritas restock', function () {
     }
 });
 
-it('menemukan obat lewat pencarian di widget prioritas restock', function () {
+it('menyebutkan waktu perhitungan dan periode permintaan di widget prioritas restock', function () {
     $this->seed(SawCriteriaSeeder::class);
-
-    foreach (range(1, 12) as $i) {
-        $obat = makeMedicine(['name' => sprintf('OBAT SAW %02d', $i), 'min_stock' => 20]);
-        receiveInto($obat, $i * 20);
-        sellFrom($obat, $i);
-    }
+    $obat = makeMedicine(['min_stock' => 20]);
+    receiveInto($obat, 100);
+    sellFrom($obat, 10);
 
     Livewire::test(SawTop10RestockWidget::class)
-        ->set('tableSearch', 'OBAT SAW 12')
         ->assertOk()
-        ->assertSee('OBAT SAW 12')
-        ->assertDontSee('OBAT SAW 01');
+        ->assertSee('Dihitung')
+        ->assertSee('periode permintaan');
 });
+
+it('tidak lagi menampilkan kotak pencarian di ketiga widget', function (string $kelas) {
+    $obat = makeMedicine();
+    receiveInto($obat, 10, today()->addDays(30)->toDateString());
+
+    if ($kelas === SawTop10RestockWidget::class) {
+        $this->seed(SawCriteriaSeeder::class);
+    }
+
+    $render = Livewire::test($kelas)->assertOk()->html();
+
+    expect($render)->not->toContain('fi-ta-search-field');
+})->with([
+    'stok' => LowStockMedicinesWidget::class,
+    'kedaluwarsa' => ExpiringMedicinesWidget::class,
+    'prioritas restock' => SawTop10RestockWidget::class,
+]);
 
 it('menyusun kartu statistik bertahap menurut lebar layar', function () {
     $render = Livewire::test(App\Filament\Widgets\RingkasanStatWidget::class)->assertOk()->html();
 
     // Grid ditulis sendiri di blade, bukan lewat variabel CSS Filament: satu kolom di ponsel,
-    // dua mulai md (768px), empat mulai xl (1280px), dengan jarak gap-8.
+    // dua mulai md (768px), empat mulai xl (1280px).
     expect($render)->toContain('grid-cols-1')
         ->and($render)->toContain('md:grid-cols-2')
-        ->and($render)->toContain('xl:grid-cols-4')
-        ->and($render)->toContain('gap-8');
+        ->and($render)->toContain('xl:grid-cols-4');
 });

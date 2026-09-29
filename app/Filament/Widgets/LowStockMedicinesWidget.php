@@ -38,7 +38,6 @@ class LowStockMedicinesWidget extends BaseWidget
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Obat')
-                    ->searchable()
                     ->wrap(),
                 TextColumn::make('stok_tersedia')
                     ->label('Sisa')

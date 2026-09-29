@@ -16,7 +16,7 @@
 | K2 | Grafik Penjualan & PO Terbuka | **Grafik Penjualan tetap, PO Terbuka dibuang** dari dashboard | §1 |
 | K3 | Singkatan bulan | **"07 Sep 2026"** (singkatan Indonesia) | §3.3, §8 |
 | K4 | Data isi per strip | **Tidak tersedia**, jadi satuan jual per strip **tidak dibangun**, ditulis sebagai batasan naskah | §13 |
-| K5 | Isi widget dashboard | Stok dan SAW memuat **seluruh data**, Kedaluwarsa **10 batch terdekat**; ketiganya setinggi sama, digulir, bisa dicari (direvisi 2026-09-29) | §1.1 |
+| K5 | Isi widget dashboard | **Ketiganya memuat seluruh data, tanpa kotak pencarian**, digulir dalam kartu bertinggi tetap 32rem (direvisi 2026-09-29) | §1.1 |
 | K6 | Ambang warna ED | **30 / 60 / 90 hari**, seragam di widget, kartu stok, dan notifikasi | §1.2 |
 | K7 | Laporan baru | **Keempatnya**: akan kedaluwarsa, rekap stok per obat, pembelian per PBF, hasil stok opname. **Semua sebelum sidang** | §4 |
 | K8 | Catatan kosong di detail penjualan | **Belum dicek peneliti**, jadi diperiksa sendiri ke data | §5 |
@@ -48,27 +48,32 @@ SAW Top-10, Stok Menipis, Mendekati ED, Grafik Penjualan, PO Terbuka.
 Penggabungan 4 kartu statistik jadi satu widget diperlukan supaya grid bisa dijadikan 3 kolom tanpa
 menyisakan kartu yang timpang (4 kartu di grid 3 menyisakan 3 + 1).
 
-**Aturan ketiga widget tengah (K5, direvisi 2026-09-29):** punya kotak pencarian, digulir di dalam
-kotaknya, dan tingginya dikunci sama lewat `height` (bukan `max-height`, yang hanya membatasi
-sehingga widget berisi sedikit baris tetap lebih pendek).
+**Aturan ketiga widget tengah (K5, direvisi 2026-09-29):** memuat seluruh datanya, tanpa kotak
+pencarian, dan digulir di dalam kartunya.
 
-Widget Stok dan Prioritas Restock memuat seluruh datanya. Widget Kedaluwarsa menampilkan **10 batch
-dengan ED terdekat, tanpa memandang ambang**. Ambang 90 hari tetap menentukan warna baris dan isi
-notifikasi harian, tetapi tidak memotong isi widget: pada data riil 2026-09-29 hanya 1 dari 138
-lapisan yang ED-nya dalam 90 hari, sehingga widget yang ikut ambang akan tampil hampir kosong justru
-ketika stok apotek sehat. Pertanyaan yang dijawab widget ini adalah "batch mana yang paling dulu
-kedaluwarsa", dan itu selalu punya jawaban.
+Yang dikunci adalah tinggi **kartunya** (32rem), bukan tinggi isinya. Mengunci isi saja tidak cukup:
+kepala kartu berbeda tinggi begitu satu keterangan membungkus ke dua baris, sehingga ketiganya tetap
+tidak sejajar. Kartu dijadikan kolom fleks dan area isi mengambil sisa ruang, jadi kesamaan tinggi
+dijamin oleh struktur, bukan oleh kebetulan panjang kalimat.
+
+Kotak pencarian dihapus atas permintaan peneliti. Konsekuensinya batas jumlah baris ikut dilepas di
+ketiga widget: kalau isinya dipotong sementara pencarian tidak ada, sebagian data tidak akan bisa
+dicapai dari dashboard sama sekali. Mencari obat tetap bisa lewat menu Obat dan Kartu Stok.
+
+Ambang 90 hari tetap menentukan warna baris dan isi notifikasi harian, tetapi tidak memotong isi
+widget Kedaluwarsa: pada data riil 2026-09-29 hanya 1 dari 138 lapisan yang ED-nya dalam 90 hari,
+sehingga widget yang ikut ambang akan tampil hampir kosong justru ketika stok apotek sehat.
+Pertanyaan yang dijawab widget itu adalah "batch mana yang paling dulu kedaluwarsa", dan itu selalu
+punya jawaban.
 
 Pencarian bekerja atas seluruh data, bukan atas baris yang kebetulan terlihat. Ada tesnya di
 `DashboardWidgetTest`, dua per widget: satu memastikan tidak ada baris yang hilang dan urutannya
 benar, satu memastikan pencarian menemukan baris yang berada jauh di bawah.
 
-Satu konsekuensi yang tetap berlaku:
-
-1. **Pencarian di widget SAW harus ditulis manual.** Dua widget lain berbasis query Eloquent
-   sehingga `->searchable()` bekerja sendiri. Widget SAW memakai `Table::records()` berbasis array
-   (keputusan 2026-09-27), jadi penyaringan menurut kata kunci harus dikerjakan di closure-nya.
-   Bukan hambatan, hanya kerja tambahan yang perlu diingat.
+Catatan untuk widget SAW: tabelnya berbasis array (`Table::records()`, keputusan 2026-09-27), bukan
+query Eloquent. Selama sempat ada kotak pencarian, penyaringannya harus ditulis manual dan **harus di
+dalam closure `records()`**, karena objek tabel di-cache Filament sehingga baris yang dihitung di luar
+closure membeku pada render pertama. Sesudah pencarian dihapus, penyaring manual itu ikut dihapus.
 
 Tinggi kotak yang dikunci belum ada bawaannya di Filament, jadi perlu kelas CSS pembungkus dengan
 `max-height` dan `overflow-y: auto`. Kecil, tapi bukan satu baris konfigurasi.
@@ -76,7 +81,7 @@ Tinggi kotak yang dikunci belum ada bawaannya di Filament, jadi perlu kelas CSS 
 ### 1.1 Widget Stok
 
 Isi: nama obat dan sisa stok, diurutkan dari **stok tersedia paling sedikit**, seluruh obat aktif
-termasuk yang stoknya 0, bisa dicari.
+termasuk yang stoknya 0.
 
 Ada ganjalan teknis yang harus diselesaikan dulu. "Sisa stok" yang benar adalah **stok tersedia**
 (lapisan yang belum kedaluwarsa), dan itu sekarang dihitung di PHP lewat
@@ -96,8 +101,8 @@ seluruh widget, bukan 127, dan `FIELD()` yang khusus MySQL itu ikut hilang.
 
 ### 1.2 Widget Kedaluwarsa
 
-Isi: nama obat dan sisa kedaluwarsa, urut ED terdekat, sepuluh batch terdekat tanpa memandang
-ambang, bisa dicari, baris diberi warna menurut ambang.
+Isi: nama obat dan sisa kedaluwarsa, urut ED terdekat, seluruh batch bersisa tanpa memandang ambang,
+baris diberi warna menurut ambang.
 
 Widget sudah ada dan sudah urut ED terdekat. Yang kurang: kolomnya delapan, terlalu ramai untuk
 sepertiga lebar, dan belum ada pewarnaan baris. `->recordClasses()` tersedia di Filament 4 yang
@@ -116,7 +121,7 @@ tidak ada lagi dua definisi "mendesak" yang berbeda di dua layar.
 
 ### 1.3 Widget Tingkatan SAW
 
-Isi: nama obat saja, urut peringkat, seluruh obat yang diperingkat, bisa dicari (manual, lihat §1).
+Isi: nama obat saja, urut peringkat, seluruh obat yang diperingkat.
 Sejak `calculateCached()` dipakai (commit `d74d355`), menampilkan ini di dashboard sudah tidak mahal.
 
 ### 1.4 Efek samping
