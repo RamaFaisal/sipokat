@@ -52,10 +52,12 @@ menyisakan kartu yang timpang (4 kartu di grid 3 menyisakan 3 + 1).
 kotaknya, dan tingginya dikunci sama lewat `height` (bukan `max-height`, yang hanya membatasi
 sehingga widget berisi sedikit baris tetap lebih pendek).
 
-Widget Stok dan Prioritas Restock memuat seluruh datanya. Widget Kedaluwarsa dipotong pada **10
-batch terdekat**: batch yang masih jauh dari ED tidak menambah informasi, hanya memanjangkan daftar.
-Pencarian tetap menjangkau seluruh batch dalam ambang, karena penyaringan berjalan sebelum
-pemotongan.
+Widget Stok dan Prioritas Restock memuat seluruh datanya. Widget Kedaluwarsa menampilkan **10 batch
+dengan ED terdekat, tanpa memandang ambang**. Ambang 90 hari tetap menentukan warna baris dan isi
+notifikasi harian, tetapi tidak memotong isi widget: pada data riil 2026-09-29 hanya 1 dari 138
+lapisan yang ED-nya dalam 90 hari, sehingga widget yang ikut ambang akan tampil hampir kosong justru
+ketika stok apotek sehat. Pertanyaan yang dijawab widget ini adalah "batch mana yang paling dulu
+kedaluwarsa", dan itu selalu punya jawaban.
 
 Pencarian bekerja atas seluruh data, bukan atas baris yang kebetulan terlihat. Ada tesnya di
 `DashboardWidgetTest`, dua per widget: satu memastikan tidak ada baris yang hilang dan urutannya
@@ -94,8 +96,8 @@ seluruh widget, bukan 127, dan `FIELD()` yang khusus MySQL itu ikut hilang.
 
 ### 1.2 Widget Kedaluwarsa
 
-Isi: nama obat dan sisa kedaluwarsa, urut ED terdekat, sepuluh batch terdekat dari yang masuk
-ambang, bisa dicari, baris diberi warna.
+Isi: nama obat dan sisa kedaluwarsa, urut ED terdekat, sepuluh batch terdekat tanpa memandang
+ambang, bisa dicari, baris diberi warna menurut ambang.
 
 Widget sudah ada dan sudah urut ED terdekat. Yang kurang: kolomnya delapan, terlalu ramai untuk
 sepertiga lebar, dan belum ada pewarnaan baris. `->recordClasses()` tersedia di Filament 4 yang

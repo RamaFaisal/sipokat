@@ -83,13 +83,17 @@ it('menjalankan query widget kedaluwarsa dan mewarnai barisnya', function () {
         ->assertSee('B-SEGERA');
 });
 
-it('tidak menampilkan batch di luar ambang pantauan', function () {
+it('menampilkan batch di luar ambang tetapi tanpa warna peringatan', function () {
+    // Ambang menentukan warna dan notifikasi, bukan keanggotaan widget: widget selalu menjawab
+    // "batch mana yang paling dulu kedaluwarsa", meski semuanya masih jauh.
     $obat = makeMedicine(['name' => 'OBAT MASIH LAMA']);
     receiveInto($obat, 10, today()->addDays(AmbangEd::PANTAU + 30)->toDateString(), 'B-LAMA');
 
-    Livewire::test(ExpiringMedicinesWidget::class)
-        ->assertOk()
-        ->assertDontSee('B-LAMA');
+    $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->assertSee('B-LAMA')->html();
+
+    expect($render)->not->toContain('bg-danger-50')
+        ->and($render)->not->toContain('bg-warning-50')
+        ->and($render)->not->toContain('bg-success-50');
 });
 
 it('menghitung stok awal dan stok akhir periode lewat subquery, bukan panggilan per baris', function () {
