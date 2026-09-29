@@ -102,6 +102,29 @@ class Medicine extends Model
         return max(1, $packSize);
     }
 
+    /**
+     * Stok tersedia (B4) sebagai kolom SQL `stok_tersedia`: sisa lapisan yang belum kedaluwarsa,
+     * dikurangi baris C lama yang tidak teratribusi ke lapisan mana pun.
+     *
+     * Ada sebagai SQL, bukan hanya di StockCardService, supaya tabel dan widget bisa mengurutkan
+     * dan menyaringnya tanpa memanggil service per baris (127 obat = 127 panggilan).
+     * Tanpa penjepit ke nol di SQL (`greatest` tidak ada di SQLite); penjepitan dilakukan saat tampil.
+     */
+    public function scopeWithAvailableStock(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        $sisaLapisan = '(select coalesce(sum(l.qty - coalesce((select sum(c.qty) from medicine_stocks c'
+            .' where c.layer_stock_id = l.id), 0)), 0) from medicine_stocks l'
+            .' where l.medicine_id = medicines.id and l.type_account = ?'
+            .' and (l.expired_date is null or l.expired_date > ?))';
+
+        $takTeratribusi = '(select coalesce(sum(u.qty), 0) from medicine_stocks u'
+            .' where u.medicine_id = medicines.id and u.type_account = ? and u.layer_stock_id is null)';
+
+        return $query
+            ->select('medicines.*')
+            ->selectRaw("{$sisaLapisan} - {$takTeratribusi} as stok_tersedia", ['D', today()->toDateString(), 'C']);
+    }
+
     public function category()
     {
         return $this->belongsTo(MedicineCategories::class);

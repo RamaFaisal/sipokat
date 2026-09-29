@@ -38,7 +38,6 @@ class ExpiringMedicinesWidget extends BaseWidget
                     ->withSum('consumptions', 'qty')
                     ->with([
                         'medicine:id,code,name,stock_status',
-                        'receiveOrder.supplier:id,name',
                     ])
                     ->orderBy('expired_date');
 

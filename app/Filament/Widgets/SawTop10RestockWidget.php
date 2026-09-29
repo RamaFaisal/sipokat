@@ -10,36 +10,44 @@ use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Support\Collection;
 
 /**
- * Top 10 prioritas restock. Sejak 2026-09-27 dihitung langsung saat dashboard dibuka
- * (tidak lagi membaca snapshot), sehingga selalu mencerminkan stok dan penjualan terkini.
+ * Peringkat prioritas restock, seluruh obat yang masuk perhitungan (K5).
+ *
+ * Dihitung langsung saat dashboard dibuka (2026-09-27), memakai `calculateCached()` sehingga
+ * pembukaan berulang tidak mengulang 4 + 5N query.
+ *
+ * Tabelnya berbasis array (`records()`), bukan query Eloquent, jadi pencarian harus disaring
+ * sendiri di sini; `->searchable()` bawaan Filament hanya bekerja pada kolom database.
  */
 class SawTop10RestockWidget extends BaseWidget
 {
     use HasWidgetShield;
 
-    protected static ?int $sort = 0;
+    protected static ?int $sort = 3;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
+
+    public ?string $cari = null;
 
     public function table(Table $table): Table
     {
         try {
             $result = app(SawCalculationService::class)->calculateCached(today()->subDays(29), today());
-            // 10 baris teratas menurut urutan tampil, bukan "semua tingkat ≤ 10" (K9).
-            $rows = array_slice($result['rows'], 0, 10);
-            $description = 'Dihitung '.$result['calculated_at']->format('d M Y H:i')
-            .' atas kondisi terkini (periode permintaan '.$result['period_start']->format('d M Y')
-            .' - '.$result['period_end']->format('d M Y').')';
+            $rows = $this->saring($result['rows']);
+            $description = 'Dihitung '.$result['calculated_at']->translatedFormat(Tanggal::TAMPIL_JAM)
+            .' atas kondisi terkini (periode permintaan '.$result['period_start']->translatedFormat(Tanggal::TAMPIL)
+            .' - '.$result['period_end']->translatedFormat(Tanggal::TAMPIL).')';
         } catch (\Throwable $e) {
             $rows = [];
             $description = 'Perhitungan tidak dapat dijalankan: '.$e->getMessage();
         }
 
         return $table
-            ->heading('Top 10 Prioritas Restock (SAW)')
+            ->heading('Prioritas Restock (SAW)')
             ->description($description)
             ->records(fn (): Collection => collect($rows))
+            ->searchable()
             ->paginated(false)
+            ->extraAttributes(['class' => 'sipokat-widget-gulir'])
             ->columns([
                 TextColumn::make('rank')
                     ->label('Tingkat')
@@ -54,27 +62,24 @@ class SawTop10RestockWidget extends BaseWidget
                 TextColumn::make('name')
                     ->label('Nama Obat')
                     ->wrap(),
-                TextColumn::make('c1_raw')
-                    ->label('Stok / Min')
-                    ->state(fn (array $record) => $record['c1_stock'] === null
-                    ? number_format((float) $record['c1_raw'], 2, ',', '.')
-                    : $record['c1_stock'].' / '.$record['c1_min_stock'])
-                    ->alignEnd(),
-                TextColumn::make('c2_raw')
-                    ->label('Permintaan/Bln')
-                    ->numeric()
-                    ->alignEnd(),
-                TextColumn::make('c3_raw')
-                    ->label('Sisa ED (hari)')
-                    ->numeric()
-                    ->placeholder('')
-                    ->alignEnd(),
-                TextColumn::make('preference_value')
-                    ->label('Nilai Prioritas')
-                    ->tooltip('Nilai preferensi SAW (V_i = Σ Wj × Rij). Semakin tinggi = semakin prioritas restock.')
-                    ->numeric(decimalPlaces: 4)
-                    ->alignEnd()
-                    ->weight('bold'),
             ]);
+    }
+
+    /**
+     * Saring baris menurut kata kunci pencarian tabel. Tabel berbasis array tidak punya query,
+     * jadi Filament tidak bisa menyaringnya sendiri.
+     */
+    protected function saring(array $rows): array
+    {
+        $kata = trim((string) $this->getTableSearch());
+
+        if ($kata === '') {
+            return $rows;
+        }
+
+        return array_values(array_filter($rows, fn (array $row): bool => str_contains(
+            mb_strtolower((string) $row['name'].' '.(string) $row['code']),
+            mb_strtolower($kata),
+        )));
     }
 }

@@ -111,14 +111,10 @@ class RoleSeeder extends Seeder
     private function widgets(): array
     {
         return [
-            'View:StatTotalMedicinesWidget',
-            'View:StatCriticalStockWidget',
-            'View:StatExpiringSoonWidget',
-            'View:StatMonthlySalesWidget',
+            'View:RingkasanStatWidget',
             'View:SawTop10RestockWidget',
             'View:LowStockMedicinesWidget',
             'View:ExpiringMedicinesWidget',
-            'View:PendingPurchaseOrdersWidget',
             'View:SalesSummaryWidget',
         ];
     }

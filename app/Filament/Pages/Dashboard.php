@@ -11,12 +11,14 @@ class Dashboard extends BaseDashboard
     // Tabel 3.2 memilikinya; user tanpa peran memang tidak seharusnya melihat apa pun.
     use HasPageShield;
 
+    // Tiga kolom supaya Stok, Kedaluwarsa, dan Tingkatan SAW muat sebaris (K5). Kartu statistik
+    // digabung jadi satu widget selebar penuh, jadi tidak ada baris timpang 3 + 1.
     public function getColumns(): int|array
     {
         return [
             'default' => 1,
             'md' => 2,
-            'xl' => 4,
+            'xl' => 3,
         ];
     }
 }

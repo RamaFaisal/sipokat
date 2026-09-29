@@ -197,3 +197,10 @@ body {
     box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
     transform: translateY(-1px) !important;
 }
+/* 9. Widget dashboard bertinggi tetap (K5)
+   Ketiga widget tabel di baris tengah menampilkan seluruh datanya dan digulir di dalam kotaknya,
+   bukan dipotong per halaman. Tingginya dikunci setara sepuluh baris supaya ketiganya sejajar. */
+.sipokat-widget-gulir .fi-ta-content {
+    max-height: 26rem;
+    overflow-y: auto;
+}

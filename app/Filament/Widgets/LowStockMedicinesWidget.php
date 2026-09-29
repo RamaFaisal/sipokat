@@ -9,53 +9,52 @@ use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * Stok seluruh obat aktif, yang paling sedikit di paling atas (K5).
+ *
+ * Pengurutan memakai kolom SQL `stok_tersedia` dari `Medicine::scopeWithAvailableStock()`, bukan
+ * `StockCardService::availableStock()` per baris. Selain jauh lebih murah, ini juga menghapus
+ * `orderByRaw("FIELD(...)")` yang khusus MySQL dan mengurutkan menurut tiga ember status, bukan
+ * menurut sisa stok yang sebenarnya.
+ */
 class LowStockMedicinesWidget extends BaseWidget
 {
     use HasWidgetShield;
 
     protected static ?int $sort = 1;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
 
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Obat Stok Menipis / Habis')
-            ->description('Obat dengan status stok habis atau hampir habis (di bawah min stock).')
-            ->query(function (): Builder {
-                $query = Medicine::query()
-                    ->whereIn('stock_status', ['empty', 'almost_empty'])
-                    ->where('status', 'active')
-                    ->orderByRaw("FIELD(stock_status, 'empty', 'almost_empty')")
-                    ->orderBy('name');
-
-                $query->limit(5);
-
-                return $query;
-            })
+            ->heading('Stok Obat')
+            ->description('Seluruh obat aktif, stok tersedia paling sedikit di atas.')
+            ->query(fn (): Builder => Medicine::query()
+                ->withAvailableStock()
+                ->where('status', 'active')
+                ->orderBy('stok_tersedia')
+                ->orderBy('name'))
             ->columns([
-                TextColumn::make('code')
-                    ->label('Kode'),
                 TextColumn::make('name')
                     ->label('Nama Obat')
+                    ->searchable()
                     ->wrap(),
-                TextColumn::make('min_stock')
-                    ->label('Min Stok')
-                    ->numeric()
-                    ->alignEnd(),
-                TextColumn::make('stock_status')
-                    ->label('Status')
+                TextColumn::make('stok_tersedia')
+                    ->label('Sisa')
+                    ->sortable()
                     ->badge()
-                    ->colors([
-                        'danger' => 'empty',
-                        'warning' => 'almost_empty',
-                    ])
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'empty' => 'Habis',
-                        'almost_empty' => 'Menipis',
-                        default => $state,
-                    }),
+                    ->color(fn ($state, Medicine $record): string => match (true) {
+                        (int) $state <= 0 => 'danger',
+                        (int) $state < (int) $record->min_stock => 'warning',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state, Medicine $record): string => max(0, (int) $state)
+                        .' '.($record->unit?->name ?? ''))
+                    ->alignEnd(),
             ])
-            ->paginated(false);
+            ->defaultSort('stok_tersedia')
+            ->paginated(false)
+            ->extraAttributes(['class' => 'sipokat-widget-gulir']);
     }
 }
