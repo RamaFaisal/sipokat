@@ -201,7 +201,7 @@ body {
    Ketiga widget tabel di baris tengah dibatasi jumlah barisnya (Stok 10, Kedaluwarsa 5, SAW 5) dan
    digulir di dalam kotaknya, bukan dipotong per halaman. Tingginya dikunci sama supaya ketiganya
    sejajar, dan sengaja lebih pendek daripada isi widget Stok agar gulirnya memang terpakai. */
-.sipokat-widget-gulir .fi-ta-content {
+.sipokat-widget-gulir .fi-ta-content-ctn {
     max-height: 16rem;
     overflow-y: auto;
 }
