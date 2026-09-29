@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Medicines\Tables;
 
-use App\Models\Medicine;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -30,15 +29,6 @@ class MedicinesTable
                 TextColumn::make('category.name')
                     ->label('Kategori')
                     ->sortable(),
-                TextColumn::make('unit.name')
-                    ->label('Satuan Jual'),
-                TextColumn::make('pack_size')
-                    ->label('Kemasan Beli')
-                    ->formatStateUsing(fn (Medicine $record) => $record->packLabel()),
-                TextColumn::make('min_stock')
-                    ->label('Stok Min.')
-                    ->numeric()
-                    ->sortable(),
                 TextColumn::make('stock_status')
                     ->label('Status Stok')
                     ->badge()
@@ -55,7 +45,7 @@ class MedicinesTable
                         default => $state,
                     }),
                 TextColumn::make('status')
-                    ->label('Status')
+                    ->label('Status Obat')
                     ->badge()
                     ->color(fn ($state) => match ($state) {
                         'active' => 'success',
