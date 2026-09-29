@@ -172,7 +172,7 @@
 
     <div class="text-xs text-gray-500 dark:text-gray-400 italic px-1">
         ℹ️ Dihitung langsung atas kondisi saat ini &middot;
-        Periode permintaan: {{ \Illuminate\Support\Carbon::parse($periodStart)->format('d M Y') }}
-        s/d {{ \Illuminate\Support\Carbon::parse($periodEnd)->format('d M Y') }}
+        Periode permintaan: {{ \Illuminate\Support\Carbon::parse($periodStart)->translatedFormat(\App\Support\Tanggal::TAMPIL) }}
+        s/d {{ \Illuminate\Support\Carbon::parse($periodEnd)->translatedFormat(\App\Support\Tanggal::TAMPIL) }}
     </div>
 </div>

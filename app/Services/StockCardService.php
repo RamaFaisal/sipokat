@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Tanggal;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
 use Carbon\Carbon;
@@ -106,7 +107,7 @@ class StockCardService
                 'hpp' => $transaction->hpp,
                 'hpp_avg' => $transaction->hpp_avg,
                 'batch_number' => $transaction->batch_number,
-                'expired_date' => $transaction->expired_date?->format('m-Y'),
+                'expired_date' => $transaction->expired_date?->translatedFormat(Tanggal::BULAN_TAHUN),
                 'record' => $transaction,
             ];
         });
@@ -219,8 +220,8 @@ class StockCardService
         return [
             'medicine_name' => $medicineName,
             'period' => [
-                'start' => $startDate?->format('d/m/Y'),
-                'end' => $endDate?->format('d/m/Y'),
+                'start' => $startDate?->translatedFormat(Tanggal::TAMPIL),
+                'end' => $endDate?->translatedFormat(Tanggal::TAMPIL),
             ],
             'opening_stock' => $stockData['opening_stock'],
             'details' => $stockData['transactions']->map(function ($item) {

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\SawCriterias\Tables;
 
+use App\Support\Tanggal;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -44,7 +45,7 @@ class SawCriteriaTable
                     ->alignEnd(),
                 TextColumn::make('updated_at')
                     ->label('Diperbarui')
-                    ->dateTime('d M Y H:i')
+                    ->dateTime(Tanggal::TAMPIL_JAM)
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

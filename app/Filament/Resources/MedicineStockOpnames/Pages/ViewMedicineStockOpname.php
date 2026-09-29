@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MedicineStockOpnames\Pages;
 
+use App\Support\Tanggal;
 use App\Filament\Resources\MedicineStockOpnames\MedicineStockOpnameResource;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Infolists\Components\TextEntry;
@@ -50,7 +51,7 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
 
                         TextEntry::make('opname_date')
                             ->label('Tanggal Opname')
-                            ->dateTime('d M Y'),
+                            ->date(Tanggal::TAMPIL),
 
                         TextEntry::make('total_items')
                             ->label('Total Item')
@@ -84,7 +85,7 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
                         $batch = $record->batch_number ?? $record->layer?->batch_number ?? '-';
                         $ed = $record->expired_date ?? $record->layer?->expired_date;
 
-                        return $batch.($ed ? ' · '.$ed->format('m-Y') : '');
+                        return $batch.($ed ? ' · '.$ed->translatedFormat(Tanggal::BULAN_TAHUN) : '');
                     }),
 
                 TextColumn::make('qty')

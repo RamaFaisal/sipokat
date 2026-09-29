@@ -39,7 +39,7 @@ class SalesSummaryWidget extends ChartWidget
         for ($i = 0; $i < 30; $i++) {
             $date = $start->copy()->addDays($i);
             $key = $date->toDateString();
-            $labels[] = $date->format('d M');
+            $labels[] = $date->translatedFormat('d M');
             $data[] = (float) ($totals[$key] ?? 0);
         }
 

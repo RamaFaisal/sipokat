@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
+use App\Support\Tanggal;
 use Barryvdh\DomPDF\Facade\Pdf;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
@@ -197,7 +198,7 @@ class LaporanRekap extends Page implements HasSchemas
             'jumlah_transaksi_jual' => Order::whereDate('order_date', '>=', $start->toDateString())->whereDate('order_date', '<=', $end->toDateString())->count(),
             'jumlah_transaksi_beli' => ReceiveOrder::whereDate('receive_date', '>=', $start->toDateString())->whereDate('receive_date', '<=', $end->toDateString())->count(),
             'margin_kotor' => $this->rows->sum('margin_kotor'),
-            'periode' => $start->format('d M Y').' s/d '.$end->format('d M Y'),
+            'periode' => $start->translatedFormat(Tanggal::TAMPIL).' s/d '.$end->translatedFormat(Tanggal::TAMPIL),
             'tipe' => $tipe,
         ]);
     }
@@ -218,7 +219,7 @@ class LaporanRekap extends Page implements HasSchemas
             'rows' => $this->rows,
             'summary' => $this->summary,
             'tipeLabel' => $tipeLabel,
-            'printedAt' => now()->format('d M Y H:i'),
+            'printedAt' => now()->translatedFormat(Tanggal::TAMPIL_JAM),
         ])->setPaper('a4', 'landscape');
 
         return response()->streamDownload(

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders\Tables;
 
+use App\Support\Tanggal;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -23,7 +24,7 @@ class OrdersTable
                     ->sortable(),
                 TextColumn::make('order_date')
                     ->label('Tanggal')
-                    ->date('d-m-Y')
+                    ->date(Tanggal::TAMPIL)
                     ->sortable(),
                 TextColumn::make('items_count')
                     ->label('Item')
@@ -36,7 +37,7 @@ class OrdersTable
                 TextColumn::make('note')
                     ->label('Catatan')
                     ->limit(40)
-                    ->placeholder('—'),
+                    ->placeholder('-'),
             ])
             ->recordActions([
                 ViewAction::make(),

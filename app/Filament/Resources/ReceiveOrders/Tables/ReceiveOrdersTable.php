@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ReceiveOrders\Tables;
 
+use App\Support\Tanggal;
 use App\Models\ReceiveOrder;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
@@ -31,17 +32,19 @@ class ReceiveOrdersTable
                 TextColumn::make('invoice_number')
                     ->label('Nomor faktur')
                     ->searchable(),
-                TextColumn::make('supplier.name')
+                // Kode PBF, bukan nama: nama resminya panjang dan merebut lebar kolom lain.
+                TextColumn::make('supplier.code')
                     ->label('PBF')
+                    ->tooltip(fn (ReceiveOrder $record) => $record->supplier?->name)
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('purchaseOrder.po_number')
                     ->label('Dari PO')
-                    ->placeholder('—')
+                    ->placeholder('-')
                     ->sortable(),
                 TextColumn::make('receive_date')
                     ->label('Tanggal terima')
-                    ->date('d-m-Y')
+                    ->date(Tanggal::TAMPIL)
                     ->sortable(),
                 TextColumn::make('total')
                     ->label('Total faktur')

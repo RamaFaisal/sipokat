@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Medicine;
 use App\Models\OrderItem;
+use App\Support\Tanggal;
 use Barryvdh\DomPDF\Facade\Pdf;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
@@ -187,7 +188,7 @@ class LaporanMoving extends Page implements HasSchemas
             ->values();
 
         $this->meta = [
-            'periode' => $start->format('d M Y').' s/d '.$end->format('d M Y'),
+            'periode' => $start->translatedFormat(Tanggal::TAMPIL).' s/d '.$end->translatedFormat(Tanggal::TAMPIL),
             'days' => $days,
             'total_obat_aktif' => $allMedicines->count(),
             'obat_dengan_transaksi' => $rows->where('total_qty', '>', 0)->count(),
@@ -204,7 +205,7 @@ class LaporanMoving extends Page implements HasSchemas
         $pdf = Pdf::loadView('pdf.laporan-moving', [
             'meta' => $this->meta,
             'topN' => (int) ($this->data['top_n'] ?? 20),
-            'printedAt' => now()->format('d M Y H:i'),
+            'printedAt' => now()->translatedFormat(Tanggal::TAMPIL_JAM),
             'sections' => [
                 [
                     'title' => 'FAST MOVING',

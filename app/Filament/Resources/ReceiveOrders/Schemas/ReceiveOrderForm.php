@@ -330,6 +330,7 @@ class ReceiveOrderForm
     public static function hydrateItem(array $data): array
     {
         $data = PackLine::hydrate($data);
+        // Nilai input MM-YYYY, bukan teks tampilan: diurai balik oleh parseExpiredMonth().
         $data['expired_month'] = isset($data['expired_date']) ? Carbon::parse($data['expired_date'])->format('m-Y') : null;
 
         return $data;

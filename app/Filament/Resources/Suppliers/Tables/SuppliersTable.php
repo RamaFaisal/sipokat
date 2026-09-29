@@ -33,10 +33,10 @@ class SuppliersTable
                 TextColumn::make('phone')
                     ->label('Telp')
                     ->searchable()
-                    ->placeholder('—'),
+                    ->placeholder('-'),
                 TextColumn::make('fax')
                     ->label('Fax')
-                    ->placeholder('—'),
+                    ->placeholder('-'),
                 TextColumn::make('status')
                     ->label('Status')
                     ->searchable()

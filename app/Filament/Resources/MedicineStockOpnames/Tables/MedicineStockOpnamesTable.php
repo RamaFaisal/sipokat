@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MedicineStockOpnames\Tables;
 
+use App\Support\Tanggal;
 use App\Models\MedicineStockOpname;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -20,7 +21,7 @@ class MedicineStockOpnamesTable
                     ->searchable(),
                 TextColumn::make('opname_date')
                     ->label('Tanggal Opname')
-                    ->dateTime('d F Y')
+                    ->date(Tanggal::TAMPIL)
                     ->sortable(),
                 TextColumn::make('creator.name')
                     ->label('Dibuat Oleh')

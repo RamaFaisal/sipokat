@@ -17,11 +17,11 @@
     @else
         <x-filament::section>
             <x-slot name="heading">
-                Peringkat Prioritas Restock &mdash; per {{ $summary['calculated_at']->format('d M Y H:i') }}
+                Peringkat Prioritas Restock - per {{ $summary['calculated_at']->translatedFormat(\App\Support\Tanggal::TAMPIL_JAM) }}
             </x-slot>
             <x-slot name="description">
-                Periode permintaan: {{ $summary['period_start']->format('d M Y') }}
-                s/d {{ $summary['period_end']->format('d M Y') }}
+                Periode permintaan: {{ $summary['period_start']->translatedFormat(\App\Support\Tanggal::TAMPIL) }}
+                s/d {{ $summary['period_end']->translatedFormat(\App\Support\Tanggal::TAMPIL) }}
                 &middot; Alternatif: {{ $summary['total_alternatives'] }} obat
                 @if ($summary['excluded_count'] > 0)
                     &middot; <span class="text-warning-600">{{ $summary['excluded_count'] }} obat tanpa riwayat kartu stok dikecualikan</span>

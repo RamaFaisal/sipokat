@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PurchaseOrders\Tables;
 
+use App\Support\Tanggal;
 use App\Models\PurchaseOrder;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
@@ -29,10 +30,14 @@ class PurchaseOrdersTable
                     ->sortable(),
                 TextColumn::make('po_date')
                     ->label('Tanggal pesan')
-                    ->date('d-m-Y')
+                    ->date(Tanggal::TAMPIL)
                     ->sortable(),
-                TextColumn::make('supplier.name')
+                // Kode PBF, bukan nama: nama resmi PBF panjang sekali ("PT Millenium Pharmacon
+                // International Tbk") dan merebut lebar dari kolom lain. Nama penuh ada di tooltip,
+                // halaman detail, dan cetakan.
+                TextColumn::make('supplier.code')
                     ->label('PBF')
+                    ->tooltip(fn (PurchaseOrder $record) => $record->supplier?->name)
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('items_count')

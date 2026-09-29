@@ -252,7 +252,7 @@
                 <div class="info-value">{{ $record->supplier->name ?? '-' }}</div>
 
                 <div class="info-label">Tanggal Penerimaan</div>
-                <div class="info-value">{{ $record->receive_date?->format('d F Y') ?? '-' }}</div>
+                <div class="info-value">{{ $record->receive_date?->translatedFormat(\App\Support\Tanggal::TAMPIL) ?? '-' }}</div>
             </div>
             <div class="info-col">
                 <div class="info-label">Referensi PO</div>
@@ -346,7 +346,7 @@
         </div>
 
         <div class="print-info">
-            Dicetak pada {{ now()->format('d/m/Y H:i') }} - SIPOKAT
+            Dicetak pada {{ now()->translatedFormat(\App\Support\Tanggal::TAMPIL_JAM) }} - SIPOKAT
         </div>
     </div>
 </body>
