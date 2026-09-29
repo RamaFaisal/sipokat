@@ -70,3 +70,21 @@ it('idempoten: diulang tidak melipatgandakan data', function () {
         ->and(PurchaseOrder::count())->toBe($poCount)
         ->and(Order::count())->toBe($orderCount);
 });
+
+it('menomori dokumen seeder sesuai tanggal dokumennya, bukan tanggal seeder dijalankan', function () {
+    $this->seed(MedicineDataSeeder::class);
+    $this->seed(FakturNpmSeeder::class);
+    $this->seed(SimulasiPenjualanSeeder::class);
+
+    // Penjualan simulasi tersebar ke belakang; nomornya harus ikut tanggal penjualan
+    // supaya lampiran Bab IV tidak memperlihatkan dokumen bertanggal Mei bernomor September.
+    Order::query()->get(['order_code', 'order_date'])->each(function (Order $order) {
+        expect(substr($order->order_code, strlen(Order::CODE_PREFIX), 8))
+            ->toBe($order->order_date->format('Ymd'));
+    });
+
+    ReceiveOrder::query()->get(['receive_order_number', 'receive_date'])->each(function (ReceiveOrder $ro) {
+        expect(substr($ro->receive_order_number, strlen(ReceiveOrder::CODE_PREFIX), 8))
+            ->toBe($ro->receive_date->format('Ymd'));
+    });
+});
