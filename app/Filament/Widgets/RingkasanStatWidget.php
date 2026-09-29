@@ -29,6 +29,19 @@ class RingkasanStatWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    /**
+     * Bawaan Filament untuk empat stat adalah empat kolom pada hampir semua lebar, sehingga di layar
+     * sempit kartunya terhimpit dan angkanya terpotong. Di sini dibuat bertahap: satu kolom di ponsel,
+     * dua di tablet, empat di layar lebar.
+     *
+     * @var array<string, int>
+     */
+    protected int|array|null $columns = [
+        'default' => 1,
+        'sm' => 2,
+        'xl' => 4,
+    ];
+
     protected function getStats(): array
     {
         return [

@@ -115,3 +115,12 @@ it('menemukan obat lewat pencarian di widget prioritas restock', function () {
         ->assertSee('OBAT SAW 12')
         ->assertDontSee('OBAT SAW 01');
 });
+
+it('menyusun kartu statistik bertahap menurut lebar layar', function () {
+    $render = Livewire::test(App\Filament\Widgets\RingkasanStatWidget::class)->assertOk()->html();
+
+    // Satu kolom di ponsel (bawaan grid), dua mulai sm, empat mulai xl. Tanpa ini Filament
+    // memakai empat kolom di hampir semua lebar dan kartunya terhimpit di layar sempit.
+    expect($render)->toContain('sm:fi-grid-cols')
+        ->and($render)->toContain('xl:fi-grid-cols');
+});
