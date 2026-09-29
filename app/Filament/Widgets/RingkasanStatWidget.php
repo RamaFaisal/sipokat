@@ -32,13 +32,13 @@ class RingkasanStatWidget extends BaseWidget
     /**
      * Bawaan Filament untuk empat stat adalah empat kolom pada hampir semua lebar, sehingga di layar
      * sempit kartunya terhimpit dan angkanya terpotong. Di sini dibuat bertahap: satu kolom di ponsel,
-     * dua di tablet, empat di layar lebar.
+     * dua mulai tablet (768px), empat di layar lebar (1280px).
      *
      * @var array<string, int>
      */
     protected int|array|null $columns = [
         'default' => 1,
-        'sm' => 2,
+        'md' => 2,
         'xl' => 4,
     ];
 
@@ -59,7 +59,8 @@ class RingkasanStatWidget extends BaseWidget
         return Stat::make('Total Obat Aktif', number_format($jumlah, 0, ',', '.'))
             ->description('Jumlah obat aktif')
             ->icon(Heroicon::OutlinedRectangleStack)
-            ->color('primary');
+            ->color('primary')
+            ->extraAttributes(['class' => 'pl-2']);
     }
 
     private function stokKritis(): Stat
