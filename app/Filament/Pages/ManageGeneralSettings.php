@@ -37,7 +37,7 @@ class ManageGeneralSettings extends SettingsPage
                             ->maxLength(255)
                             ->columnSpanFull(),
 
-                        Grid::make(3)->schema([
+                        Grid::make(4)->schema([
                             TextInput::make('contact_email')
                                 ->label('Email Kontak')
                                 ->email()
@@ -62,8 +62,7 @@ class ManageGeneralSettings extends SettingsPage
                                 ->minValue(0)
                                 ->maxValue(100)
                                 ->suffix('%')
-                                ->label('Tarif PPN bawaan')
-                                ->helperText('Nilai awal kolom PPN saat membuat penerimaan. Tarif yang dipakai mencetak diambil dari fakturnya masing-masing.'),
+                                ->label('Tarif PPN bawaan'),
                         ]),
                     ])
                     ->columnSpanFull(),
