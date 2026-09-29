@@ -25,20 +25,19 @@ class LowStockMedicinesWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
-    /** Baris yang ditampilkan; pencarian menyaring seluruh obat dulu, baru dipotong sebanyak ini. */
-    private const BARIS = 10;
+    /** Tinggi kotak, dalam jumlah baris yang terlihat sekaligus. Sisanya dicapai dengan menggulir. */
+    private const BARIS_TERLIHAT = 10;
 
     public function table(Table $table): Table
     {
         return $table
             ->heading('Stok Obat')
-            ->description(self::BARIS.' obat dengan stok tersedia paling sedikit. Pakai pencarian untuk obat lain.')
+            ->description('Seluruh obat aktif, stok tersedia paling sedikit di atas. Gulir atau cari untuk sisanya.')
             ->query(fn (): Builder => Medicine::query()
                 ->withAvailableStock()
                 ->where('status', 'active')
                 ->orderBy('stok_tersedia')
-                ->orderBy('name')
-                ->limit(self::BARIS))
+                ->orderBy('name'))
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Obat')
@@ -59,6 +58,6 @@ class LowStockMedicinesWidget extends BaseWidget
             ])
             ->defaultSort('stok_tersedia')
             ->paginated(false)
-            ->extraAttributes(['class' => 'sipokat-widget-gulir']);
+            ->extraAttributes(['class' => 'sipokat-widget-gulir sipokat-gulir-'.self::BARIS_TERLIHAT]);
     }
 }

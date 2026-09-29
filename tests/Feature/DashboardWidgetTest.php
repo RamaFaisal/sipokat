@@ -9,11 +9,11 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 
 /**
- * Batas baris tiap widget dashboard: Stok 10, Kedaluwarsa 5, Prioritas Restock 5.
+ * Ketiga widget dashboard memuat **seluruh** datanya dan digulir di dalam kotaknya; angka 10 pada
+ * kelas CSS hanya menentukan berapa baris yang terlihat sekaligus, bukan berapa baris yang dimuat.
  *
- * Yang dijaga bukan sekadar jumlah barisnya, melainkan bahwa **pencarian menyaring seluruh data
- * dulu, baru dipotong**. Kalau urutannya terbalik, obat di luar sepuluh teratas tidak akan pernah
- * bisa ditemukan lewat kotak pencarian, dan batas baris berubah dari peringkas menjadi penghalang.
+ * Yang dijaga di sini: tidak ada baris yang hilang dari widget, urutannya benar (paling mendesak di
+ * atas), dan pencarian bekerja atas seluruh data. Tinggi kotaknya urusan CSS, bukan tes.
  */
 beforeEach(function () {
     seedMasterFixtures();
@@ -21,87 +21,92 @@ beforeEach(function () {
     $this->actingAs(User::factory()->create());
 });
 
-it('membatasi widget stok pada sepuluh obat paling sedikit', function () {
-    // Stok menaik: OBAT STOK 01 paling sedikit, OBAT STOK 12 paling banyak.
-    foreach (range(1, 12) as $i) {
+it('memuat seluruh obat aktif di widget stok, bukan hanya yang terlihat', function () {
+    // Stok menaik: OBAT STOK 01 paling sedikit, OBAT STOK 14 paling banyak.
+    foreach (range(1, 14) as $i) {
+        $obat = makeMedicine(['name' => sprintf('OBAT STOK %02d', $i)]);
+        receiveInto($obat, $i);
+    }
+
+    $render = Livewire::test(LowStockMedicinesWidget::class)->assertOk()->html();
+
+    foreach (range(1, 14) as $i) {
+        expect($render)->toContain(sprintf('OBAT STOK %02d', $i));
+    }
+
+    // Yang paling tipis harus berada di atas yang paling banyak.
+    expect(strpos($render, 'OBAT STOK 01'))->toBeLessThan(strpos($render, 'OBAT STOK 14'));
+});
+
+it('menemukan obat lewat pencarian di widget stok', function () {
+    foreach (range(1, 14) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT STOK %02d', $i)]);
         receiveInto($obat, $i);
     }
 
     Livewire::test(LowStockMedicinesWidget::class)
+        ->set('tableSearch', 'OBAT STOK 14')
         ->assertOk()
-        ->assertSee('OBAT STOK 01')
-        ->assertSee('OBAT STOK 10')
-        ->assertDontSee('OBAT STOK 11')
-        ->assertDontSee('OBAT STOK 12');
+        ->assertSee('OBAT STOK 14')
+        ->assertDontSee('OBAT STOK 01');
 });
 
-it('tetap menemukan obat di luar sepuluh teratas lewat pencarian', function () {
+it('memuat seluruh batch dalam ambang di widget kedaluwarsa', function () {
     foreach (range(1, 12) as $i) {
-        $obat = makeMedicine(['name' => sprintf('OBAT STOK %02d', $i)]);
-        receiveInto($obat, $i);
+        $obat = makeMedicine(['name' => sprintf('OBAT ED %02d', $i)]);
+        receiveInto($obat, 10, today()->addDays($i * 5)->toDateString(), sprintf('B-ED-%02d', $i));
     }
 
-    Livewire::test(LowStockMedicinesWidget::class)
-        ->set('tableSearch', 'OBAT STOK 12')
-        ->assertOk()
-        ->assertSee('OBAT STOK 12');
+    $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->html();
+
+    foreach (range(1, 12) as $i) {
+        expect($render)->toContain(sprintf('B-ED-%02d', $i));
+    }
+
+    expect(strpos($render, 'B-ED-01'))->toBeLessThan(strpos($render, 'B-ED-12'));
 });
 
-it('membatasi widget kedaluwarsa pada lima batch terdekat', function () {
-    foreach (range(1, 6) as $i) {
+it('menemukan batch lewat pencarian di widget kedaluwarsa', function () {
+    foreach (range(1, 12) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT ED %02d', $i)]);
-        receiveInto($obat, 10, today()->addDays($i * 10)->toDateString(), sprintf('B-ED-%02d', $i));
+        receiveInto($obat, 10, today()->addDays($i * 5)->toDateString(), sprintf('B-ED-%02d', $i));
     }
 
     Livewire::test(ExpiringMedicinesWidget::class)
+        ->set('tableSearch', 'OBAT ED 12')
         ->assertOk()
-        ->assertSee('B-ED-01')
-        ->assertSee('B-ED-05')
-        ->assertDontSee('B-ED-06');
+        ->assertSee('B-ED-12')
+        ->assertDontSee('B-ED-01');
 });
 
-it('tetap menemukan batch di luar lima terdekat lewat pencarian', function () {
-    foreach (range(1, 6) as $i) {
-        $obat = makeMedicine(['name' => sprintf('OBAT ED %02d', $i)]);
-        receiveInto($obat, 10, today()->addDays($i * 10)->toDateString(), sprintf('B-ED-%02d', $i));
-    }
-
-    Livewire::test(ExpiringMedicinesWidget::class)
-        ->set('tableSearch', 'OBAT ED 06')
-        ->assertOk()
-        ->assertSee('B-ED-06');
-});
-
-it('membatasi widget prioritas restock pada lima obat teratas', function () {
+it('memuat seluruh peringkat di widget prioritas restock', function () {
     $this->seed(SawCriteriaSeeder::class);
 
-    // Rasio stok menaik: yang stoknya paling tipis menempati peringkat teratas.
-    foreach (range(1, 7) as $i) {
+    foreach (range(1, 12) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT SAW %02d', $i), 'min_stock' => 20]);
         receiveInto($obat, $i * 20);
         sellFrom($obat, $i);
     }
 
     $render = Livewire::test(SawTop10RestockWidget::class)->assertOk()->html();
-    $tampil = collect(range(1, 7))
-        ->filter(fn (int $i): bool => str_contains($render, sprintf('OBAT SAW %02d', $i)))
-        ->count();
 
-    expect($tampil)->toBe(5);
+    foreach (range(1, 12) as $i) {
+        expect($render)->toContain(sprintf('OBAT SAW %02d', $i));
+    }
 });
 
-it('tetap menemukan obat di luar lima teratas peringkat lewat pencarian', function () {
+it('menemukan obat lewat pencarian di widget prioritas restock', function () {
     $this->seed(SawCriteriaSeeder::class);
 
-    foreach (range(1, 7) as $i) {
+    foreach (range(1, 12) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT SAW %02d', $i), 'min_stock' => 20]);
         receiveInto($obat, $i * 20);
         sellFrom($obat, $i);
     }
 
     Livewire::test(SawTop10RestockWidget::class)
-        ->set('tableSearch', 'OBAT SAW 07')
+        ->set('tableSearch', 'OBAT SAW 12')
         ->assertOk()
-        ->assertSee('OBAT SAW 07');
+        ->assertSee('OBAT SAW 12')
+        ->assertDontSee('OBAT SAW 01');
 });

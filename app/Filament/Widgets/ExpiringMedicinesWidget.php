@@ -19,8 +19,8 @@ class ExpiringMedicinesWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
-    /** Baris yang ditampilkan; pencarian menyaring seluruh batch dulu, baru dipotong sebanyak ini. */
-    private const BARIS = 5;
+    /** Tinggi kotak, dalam jumlah baris yang terlihat sekaligus. Sisanya dicapai dengan menggulir. */
+    private const BARIS_TERLIHAT = 10;
 
     public function table(Table $table): Table
     {
@@ -29,7 +29,7 @@ class ExpiringMedicinesWidget extends BaseWidget
 
         return $table
             ->heading('Obat Mendekati Kedaluwarsa')
-            ->description(self::BARIS.' batch paling dekat kedaluwarsa (ambang '.AmbangEd::PANTAU.' hari). Pakai pencarian untuk batch lain.')
+            ->description('Batch bersisa dengan ED ≤ '.AmbangEd::PANTAU.' hari, terdekat di atas. Gulir atau cari untuk sisanya.')
             ->recordClasses(fn (MedicineStock $record): ?string => AmbangEd::kelasBaris(self::sisaHari($record)))
             ->query(function () use ($today, $threshold): Builder {
                 // F5: lapisan (baris D kartu stok) yang sisanya > 0 bukan item RO yang mungkin sudah habis terjual.
@@ -43,8 +43,6 @@ class ExpiringMedicinesWidget extends BaseWidget
                         'medicine:id,code,name,stock_status',
                     ])
                     ->orderBy('expired_date');
-
-                $query->limit(self::BARIS);
 
                 return $query;
             })
@@ -69,7 +67,7 @@ class ExpiringMedicinesWidget extends BaseWidget
             ])
             ->searchable()
             ->paginated(false)
-            ->extraAttributes(['class' => 'sipokat-widget-gulir']);
+            ->extraAttributes(['class' => 'sipokat-widget-gulir sipokat-gulir-'.self::BARIS_TERLIHAT]);
     }
 
     /** Sisa hari menuju ED lapisan ini; negatif berarti sudah kedaluwarsa. */

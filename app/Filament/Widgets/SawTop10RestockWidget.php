@@ -27,29 +27,24 @@ class SawTop10RestockWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
-    /** Baris yang ditampilkan; pencarian menyaring seluruh peringkat dulu, baru dipotong sebanyak ini. */
-    private const BARIS = 5;
+    /** Tinggi kotak, dalam jumlah baris yang terlihat sekaligus. Sisanya dicapai dengan menggulir. */
+    private const BARIS_TERLIHAT = 10;
+
+    /** @var array<string, mixed>|null */
+    protected ?array $hasil = null;
 
     public function table(Table $table): Table
     {
-        try {
-            $result = app(SawCalculationService::class)->calculateCached(today()->subDays(29), today());
-            $rows = array_slice($this->saring($result['rows']), 0, self::BARIS);
-            $description = 'Dihitung '.$result['calculated_at']->translatedFormat(Tanggal::TAMPIL_JAM)
-            .' atas kondisi terkini (periode permintaan '.$result['period_start']->translatedFormat(Tanggal::TAMPIL)
-            .' - '.$result['period_end']->translatedFormat(Tanggal::TAMPIL).')';
-        } catch (\Throwable $e) {
-            $rows = [];
-            $description = 'Perhitungan tidak dapat dijalankan: '.$e->getMessage();
-        }
-
         return $table
             ->heading('Prioritas Restock (SAW)')
-            ->description($description)
-            ->records(fn (): Collection => collect($rows))
+            ->description(fn (): string => $this->keterangan())
+            // Penyaringan dilakukan **di dalam** closure, bukan sebelum tabel dibangun: objek tabel
+            // di-cache oleh Filament, sehingga baris yang dihitung di luar closure akan tetap berisi
+            // hasil render pertama dan kotak pencarian tidak pernah berpengaruh.
+            ->records(fn (): Collection => collect($this->saring($this->hasil()['rows'])))
             ->searchable()
             ->paginated(false)
-            ->extraAttributes(['class' => 'sipokat-widget-gulir'])
+            ->extraAttributes(['class' => 'sipokat-widget-gulir sipokat-gulir-'.self::BARIS_TERLIHAT])
             ->columns([
                 TextColumn::make('rank')
                     ->label('Tingkat')
@@ -65,6 +60,30 @@ class SawTop10RestockWidget extends BaseWidget
                     ->label('Nama Obat')
                     ->wrap(),
             ]);
+    }
+
+    /** Hasil SAW untuk render ini; dihitung sekali lalu dipakai ulang dalam satu permintaan. */
+    protected function hasil(): array
+    {
+        try {
+            return $this->hasil ??= app(SawCalculationService::class)
+                ->calculateCached(today()->subDays(29), today());
+        } catch (\Throwable $e) {
+            return $this->hasil ??= ['rows' => [], 'galat' => $e->getMessage()];
+        }
+    }
+
+    protected function keterangan(): string
+    {
+        $hasil = $this->hasil();
+
+        if (isset($hasil['galat'])) {
+            return 'Perhitungan tidak dapat dijalankan: '.$hasil['galat'];
+        }
+
+        return 'Dihitung '.$hasil['calculated_at']->translatedFormat(Tanggal::TAMPIL_JAM)
+            .' atas kondisi terkini (periode permintaan '.$hasil['period_start']->translatedFormat(Tanggal::TAMPIL)
+            .' sampai '.$hasil['period_end']->translatedFormat(Tanggal::TAMPIL).')';
     }
 
     /**
