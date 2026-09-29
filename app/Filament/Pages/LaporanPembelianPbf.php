@@ -2,11 +2,10 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\LaporanSeragam;
 use App\Models\ReceiveOrderItem;
-use App\Support\LaporanExcel;
 use App\Support\Tanggal;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
-use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
@@ -23,11 +22,15 @@ use Illuminate\Support\Collection;
  * Menjawab pertanyaan yang tidak terjawab menu mana pun: PBF mana yang paling banyak dipakai dan
  * berapa nilainya. Dihitung dari item penerimaan (harga sudah termasuk PPN, R13), bukan dari PO,
  * karena yang benar-benar dibeli adalah yang diterima.
+ *
+ * Bentuk halamannya sama dengan Rekap dan Fast/Slow Moving: filter, tiga aksi header, ringkasan,
+ * lalu tabel (`LaporanSeragam`).
  */
 class LaporanPembelianPbf extends Page implements HasSchemas
 {
     use HasPageShield;
     use InteractsWithSchemas;
+    use LaporanSeragam;
 
     protected string $view = 'filament.pages.laporan-pembelian-pbf';
 
@@ -132,33 +135,39 @@ class LaporanPembelianPbf extends Page implements HasSchemas
         return $mulai->translatedFormat(Tanggal::TAMPIL).' s/d '.$sampai->translatedFormat(Tanggal::TAMPIL);
     }
 
-    protected function getHeaderActions(): array
+    public function judulLaporan(): string
     {
+        return 'Laporan Pembelian per PBF';
+    }
+
+    public function ringkasan(): array
+    {
+        $terbesar = $this->rows->first();
+
         return [
-            Action::make('tampilkan')
-                ->label('Tampilkan Laporan')
-                ->icon(Heroicon::OutlinedArrowPath)
-                ->action('generate'),
-            Action::make('excel')
-                ->label('Ekspor Excel')
-                ->icon(Heroicon::OutlinedArrowDownTray)
-                ->color('success')
-                ->action('unduhExcel'),
+            'Jumlah PBF' => number_format($this->rows->count(), 0, ',', '.'),
+            'Jumlah Faktur' => number_format($this->rows->sum('faktur'), 0, ',', '.'),
+            'Nilai Pembelian' => 'Rp '.number_format($this->totalNilai(), 0, ',', '.'),
+            'PBF Terbesar' => $terbesar === null
+                ? '-'
+                : $terbesar['kode'].' ('.number_format($this->porsi($terbesar['nilai']), 1, ',', '.').'%)',
         ];
     }
 
-    public function unduhExcel()
+    public function kolomEkspor(): array
     {
-        $this->generate();
+        return ['Kode PBF', 'Nama PBF', 'Jumlah Faktur', 'Ragam Obat', 'Jumlah Satuan', 'Nilai Pembelian', 'Porsi (%)'];
+    }
 
-        return LaporanExcel::unduh(
-            'Laporan Pembelian per PBF',
-            $this->labelPeriode(),
-            ['Kode PBF', 'Nama PBF', 'Jumlah Faktur', 'Ragam Obat', 'Jumlah Satuan', 'Nilai Pembelian', 'Porsi (%)'],
-            $this->rows->map(fn (array $r): array => [
-                $r['kode'], $r['nama'], $r['faktur'], $r['ragam_obat'], $r['jumlah'], round($r['nilai']), $this->porsi($r['nilai']),
-            ]),
-            'laporan-pembelian-pbf-'.now()->format('Ymd_His').'.xlsx',
-        );
+    public function barisEkspor(): iterable
+    {
+        return $this->rows->map(fn (array $r): array => [
+            $r['kode'], $r['nama'], $r['faktur'], $r['ragam_obat'], $r['jumlah'], round($r['nilai']), $this->porsi($r['nilai']),
+        ]);
+    }
+
+    public function namaBerkas(): string
+    {
+        return 'laporan-pembelian-pbf';
     }
 }

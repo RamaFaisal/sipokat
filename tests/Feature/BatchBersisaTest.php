@@ -89,9 +89,13 @@ it('menampilkan batch kembar sebagai satu baris di laporan kedaluwarsa', functio
     receiveInto($obat, 40, $ed, 'B-LAPORAN');
     receiveInto($obat, 20, $ed, 'B-LAPORAN');
 
-    $render = Livewire::test(LaporanKedaluwarsa::class)->assertOk()->html();
+    // Dihitung dari baris laporan, bukan dari jumlah kemunculan teksnya: keluaran Livewire ikut
+    // memuat cuplikan properti `rows`, jadi tiap baris muncul dua kali di HTML.
+    $baris = collect(Livewire::test(LaporanKedaluwarsa::class)->assertOk()->get('rows'))
+        ->where('batch', 'B-LAPORAN');
 
-    expect(substr_count($render, 'B-LAPORAN'))->toBe(1);
+    expect($baris)->toHaveCount(1)
+        ->and($baris->first()['sisa'])->toBe(60);
 });
 
 it('tetap mencatat dua lapisan terpisah di kartu stok', function () {

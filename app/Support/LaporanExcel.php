@@ -20,9 +20,16 @@ class LaporanExcel
     /**
      * @param  array<int, string>  $header
      * @param  iterable<int, array<int, string|int|float|null>>  $baris
+     * @param  array<string, string>  $ringkasan  angka ringkas yang dicetak di atas tabel
      */
-    public static function unduh(string $judul, string $periode, array $header, iterable $baris, string $namaBerkas): StreamedResponse
-    {
+    public static function unduh(
+        string $judul,
+        string $periode,
+        array $header,
+        iterable $baris,
+        string $namaBerkas,
+        array $ringkasan = [],
+    ): StreamedResponse {
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle(mb_substr($judul, 0, 31));
@@ -36,13 +43,26 @@ class LaporanExcel
         $sheet->setCellValue('A2', 'Apotek Anugrah Husada - '.$periode);
         $sheet->mergeCells("A2:{$kolomTerakhir}2");
 
-        $sheet->fromArray($header, null, 'A4');
-        $sheet->getStyle("A4:{$kolomTerakhir}4")->getFont()->setBold(true);
-        $sheet->getStyle("A4:{$kolomTerakhir}4")->getFill()
-            ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E5E7EB');
-        $sheet->getStyle("A4:{$kolomTerakhir}4")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Ringkasan dicetak di atas tabel, sejajar dengan laporan Rekap dan Fast/Slow Moving.
+        $barisJudulTabel = 4;
+        foreach ($ringkasan as $label => $nilai) {
+            $sheet->setCellValue('A'.$barisJudulTabel, $label);
+            $sheet->getStyle('A'.$barisJudulTabel)->getFont()->setBold(true);
+            $sheet->setCellValue('B'.$barisJudulTabel, $nilai);
+            $barisJudulTabel++;
+        }
+        if ($ringkasan !== []) {
+            $barisJudulTabel++;
+        }
 
-        $nomorBaris = 5;
+        $sheet->fromArray($header, null, 'A'.$barisJudulTabel);
+        $sheet->getStyle("A{$barisJudulTabel}:{$kolomTerakhir}{$barisJudulTabel}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$barisJudulTabel}:{$kolomTerakhir}{$barisJudulTabel}")->getFill()
+            ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E5E7EB');
+        $sheet->getStyle("A{$barisJudulTabel}:{$kolomTerakhir}{$barisJudulTabel}")
+            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        $nomorBaris = $barisJudulTabel + 1;
         foreach ($baris as $isi) {
             $sheet->fromArray(array_values($isi), null, 'A'.$nomorBaris);
             $nomorBaris++;

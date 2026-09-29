@@ -13,6 +13,7 @@ use App\Support\AmbangEd;
 use App\Support\MenuLaporan;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Menu Laporan bertab dengan empat laporan baru (butir 7 / K7).
@@ -140,3 +141,123 @@ it('menampilkan selisih opname beserta arah dan nilainya', function () {
         ->assertSee('rusak kemasan')
         ->assertSee('Kurang');
 });
+
+/**
+ * Keseragaman enam tab Laporan (2026-09-29).
+ *
+ * Empat laporan baru sempat berbeda bentuk dari dua laporan lama: tabel Filament dengan filter
+ * sendiri, hanya ekspor Excel, tanpa ringkasan. Yang dijaga di bawah ini adalah ketiganya sekarang
+ * sama: nama aksi header, adanya ringkasan, dan ekspor Excel maupun PDF yang benar-benar jadi
+ * berkas.
+ */
+it('menyediakan tiga aksi header yang sama di seluruh tab laporan', function (string $kelas) {
+    Livewire::test($kelas)
+        ->assertActionExists('generate')
+        ->assertActionExists('export')
+        ->assertActionExists('exportPdf');
+})->with([
+    'rekap' => LaporanRekap::class,
+    'moving' => LaporanMoving::class,
+    'kedaluwarsa' => LaporanKedaluwarsa::class,
+    'stok per obat' => LaporanStokObat::class,
+    'pembelian per PBF' => LaporanPembelianPbf::class,
+    'hasil opname' => LaporanOpname::class,
+]);
+
+it('mencetak ringkasan yang sama dengan isi tabelnya', function () {
+    $obat = makeMedicine(['name' => 'OBAT RINGKAS ED']);
+    receiveInto($obat, 10, today()->addDays(20)->toDateString(), 'B-RINGKAS');
+    sellFrom($obat, 4);
+
+    $halaman = Livewire::test(LaporanKedaluwarsa::class);
+    $ringkasan = $halaman->instance()->ringkasan();
+
+    // Sisa 6 x HPP 5.000 = 30.000, angka yang sama dengan kolom Nilai Terancam.
+    expect($ringkasan['Jumlah Batch'])->toBe('1')
+        ->and($ringkasan['Nilai Terancam'])->toBe('Rp 30.000')
+        ->and($ringkasan['Mendesak (≤ '.AmbangEd::MENDESAK.' Hari)'])->toBe('1 batch');
+
+    $halaman->assertSee('Rp 30.000');
+});
+
+it('menyaring laporan kedaluwarsa menurut rentang dan tingkat yang dipilih', function () {
+    $mepet = makeMedicine(['name' => 'OBAT MEPET']);
+    receiveInto($mepet, 5, today()->addDays(10)->toDateString(), 'B-MEPET-2');
+
+    $jauh = makeMedicine(['name' => 'OBAT JAUH']);
+    receiveInto($jauh, 5, today()->addDays(200)->toDateString(), 'B-JAUH-2');
+
+    $halaman = Livewire::test(LaporanKedaluwarsa::class);
+
+    // Bawaan 90 hari: hanya yang mepet.
+    $halaman->assertSee('B-MEPET-2')->assertDontSee('B-JAUH-2');
+
+    // Rentang 365 hari memuat keduanya.
+    $halaman->set('data.horizon', 365)->call('generate')
+        ->assertSee('B-MEPET-2')
+        ->assertSee('B-JAUH-2');
+
+    // Tingkat "waspada" (31 sampai 60 hari) menyingkirkan keduanya.
+    $halaman->set('data.tingkat', 'waspada')->call('generate')
+        ->assertDontSee('B-MEPET-2')
+        ->assertDontSee('B-JAUH-2');
+});
+
+it('membatasi laporan opname pada periode dan arah yang dipilih', function () {
+    $obat = makeMedicine(['name' => 'OBAT OPNAME FILTER']);
+    receiveInto($obat, 20);
+
+    $opname = MedicineStockOpname::create([
+        'opname_number' => 'OPM-FILTER-1',
+        'opname_date' => today()->toDateString(),
+    ]);
+    MedicineStockOpnameItem::create([
+        'medicine_stock_opname_id' => $opname->id,
+        'medicine_id' => $obat->id,
+        'qty' => 2,
+        'type_account' => 'C',
+        'hpp' => 5000,
+    ]);
+
+    $halaman = Livewire::test(LaporanOpname::class);
+    $halaman->assertSee('OPM-FILTER-1');
+
+    // Arah "Lebih" tidak memuat penyesuaian kurang.
+    $halaman->set('data.arah', 'D')->call('generate')->assertDontSee('OPM-FILTER-1');
+
+    // Periode yang seluruhnya sebelum opname juga tidak memuatnya.
+    $halaman->set('data.arah', 'semua')
+        ->set('data.period_start', today()->subDays(60)->toDateString())
+        ->set('data.period_end', today()->subDays(30)->toDateString())
+        ->call('generate')
+        ->assertDontSee('OPM-FILTER-1');
+
+    expect($halaman->instance()->ringkasan()['Baris Penyesuaian'])->toBe('0');
+});
+
+it('mengunduh Excel dan PDF dari tiap laporan baru', function (string $kelas) {
+    $obat = makeMedicine(['name' => 'OBAT EKSPOR']);
+    receiveInto($obat, 10, today()->addDays(20)->toDateString(), 'B-EKSPOR');
+
+    $opname = MedicineStockOpname::create([
+        'opname_number' => 'OPM-EKSPOR-1',
+        'opname_date' => today()->toDateString(),
+    ]);
+    MedicineStockOpnameItem::create([
+        'medicine_stock_opname_id' => $opname->id,
+        'medicine_id' => $obat->id,
+        'qty' => 1,
+        'type_account' => 'D',
+        'hpp' => 5000,
+    ]);
+
+    $halaman = Livewire::test($kelas)->instance();
+
+    expect($halaman->exportExcel())->toBeInstanceOf(StreamedResponse::class)
+        ->and($halaman->exportPdf())->toBeInstanceOf(StreamedResponse::class);
+})->with([
+    'kedaluwarsa' => LaporanKedaluwarsa::class,
+    'stok per obat' => LaporanStokObat::class,
+    'pembelian per PBF' => LaporanPembelianPbf::class,
+    'hasil opname' => LaporanOpname::class,
+]);

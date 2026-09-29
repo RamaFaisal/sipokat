@@ -211,6 +211,26 @@ saat halaman dibuka (`mount()` memanggil `generate()`) dan tiap kali filter diub
 hasil, tidak ada snapshot, tidak ada cache. Angkanya selalu kondisi terkini, dan empat laporan baru
 akan mengikuti pola yang sama.
 
+**Disamakan bentuknya 2026-09-29.** Empat laporan baru sempat berbeda dari dua laporan lama: dua di
+antaranya memakai tabel Filament dengan filter dan tombol ekspor di toolbar, semuanya tanpa ringkasan
+dan tanpa PDF. Sekarang keenamnya sama: filter di atas, tiga aksi header (`generate`, `export`,
+`exportPdf`), kartu ringkasan, lalu tabel. Yang dipakai bersama:
+
+| Berkas | Peran |
+|---|---|
+| `app/Filament/Pages/Concerns/LaporanSeragam.php` | Aksi header + `exportExcel`/`exportPdf`; halaman menyediakan `judulLaporan`, `labelPeriode`, `ringkasan`, `kolomEkspor`, `barisEkspor`, `namaBerkas` |
+| `resources/views/filament/pages/partials/laporan-ringkasan.blade.php` | Kartu ringkasan, isinya dari `ringkasan()` yang sama dengan yang tercetak |
+| `resources/views/pdf/laporan.blade.php` | Cetakan PDF bertabel tunggal |
+| `app/Support/LaporanExcel.php` | Penulis Excel, ringkasan dicetak di atas tabel |
+
+Dua laporan lama tetap memakai penulis ekspornya sendiri: susunannya beberapa blok ringkasan dan dua
+tabel, tidak muat di penulis bersama, sedangkan nama aksi dan urutan tombolnya sudah sama.
+
+Filter yang dulu ada di toolbar tabel dipindah ke form: Akan Kedaluwarsa memakai rentang pantauan
+(30/60/90/180/365 hari) + tingkat, Hasil Stok Opname memakai periode + arah. Rentang bawaan opname
+adalah tahun berjalan, bukan 30 hari, karena opname dilakukan sesekali dan laporan yang selalu kosong
+tidak berguna.
+
 ---
 
 ## 5. Detail penjualan: subtotal, batch, catatan, dan total kosong

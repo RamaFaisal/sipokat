@@ -2,12 +2,11 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\LaporanSeragam;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
-use App\Support\LaporanExcel;
 use App\Support\Tanggal;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
-use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
@@ -27,11 +26,15 @@ use Illuminate\Support\Collection;
  *
  * Dihitung dengan tiga agregat, bukan panggilan service per obat: 127 obat berarti 127 panggilan
  * dan tiga di antaranya menyentuh tabel yang sama.
+ *
+ * Bentuk halamannya sama dengan Rekap dan Fast/Slow Moving: filter, tiga aksi header, ringkasan,
+ * lalu tabel (`LaporanSeragam`).
  */
 class LaporanStokObat extends Page implements HasSchemas
 {
     use HasPageShield;
     use InteractsWithSchemas;
+    use LaporanSeragam;
 
     protected string $view = 'filament.pages.laporan-stok-obat';
 
@@ -156,33 +159,35 @@ class LaporanStokObat extends Page implements HasSchemas
         return $mulai->translatedFormat(Tanggal::TAMPIL).' s/d '.$sampai->translatedFormat(Tanggal::TAMPIL);
     }
 
-    protected function getHeaderActions(): array
+    public function judulLaporan(): string
+    {
+        return 'Laporan Rekap Stok per Obat';
+    }
+
+    public function ringkasan(): array
     {
         return [
-            Action::make('tampilkan')
-                ->label('Tampilkan Laporan')
-                ->icon(Heroicon::OutlinedArrowPath)
-                ->action('generate'),
-            Action::make('excel')
-                ->label('Ekspor Excel')
-                ->icon(Heroicon::OutlinedArrowDownTray)
-                ->color('success')
-                ->action('unduhExcel'),
+            'Obat Bermutasi' => number_format($this->rows->count(), 0, ',', '.'),
+            'Total Masuk' => number_format($this->rows->sum('masuk'), 0, ',', '.').' satuan',
+            'Total Keluar' => number_format($this->rows->sum('keluar'), 0, ',', '.').' satuan',
+            'Stok Akhir' => number_format($this->rows->sum('akhir'), 0, ',', '.').' satuan',
         ];
     }
 
-    public function unduhExcel()
+    public function kolomEkspor(): array
     {
-        $this->generate();
+        return ['Kode', 'Nama Obat', 'Satuan', 'Stok Awal', 'Masuk', 'Keluar', 'Stok Akhir'];
+    }
 
-        return LaporanExcel::unduh(
-            'Laporan Rekap Stok per Obat',
-            $this->labelPeriode(),
-            ['Kode', 'Nama Obat', 'Satuan', 'Stok Awal', 'Masuk', 'Keluar', 'Stok Akhir'],
-            $this->rows->map(fn (array $r): array => [
-                $r['code'], $r['name'], $r['unit'], $r['awal'], $r['masuk'], $r['keluar'], $r['akhir'],
-            ]),
-            'laporan-stok-obat-'.now()->format('Ymd_His').'.xlsx',
-        );
+    public function barisEkspor(): iterable
+    {
+        return $this->rows->map(fn (array $r): array => [
+            $r['code'], $r['name'], $r['unit'], $r['awal'], $r['masuk'], $r['keluar'], $r['akhir'],
+        ]);
+    }
+
+    public function namaBerkas(): string
+    {
+        return 'laporan-stok-obat';
     }
 }
