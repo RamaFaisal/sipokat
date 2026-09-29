@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\ReceiveOrders\Schemas;
 
+use App\Support\Tanggal;
 use App\Filament\Forms\PackLine;
 use App\Models\Medicine;
 use App\Models\PurchaseOrder;
 use App\Models\ReceiveOrder;
+use App\Settings\GeneralSettings;
 use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\CheckboxList;
@@ -99,6 +101,19 @@ class ReceiveOrderForm
                             ->default(now())
                             ->required()
                             ->live(onBlur: true),
+                        // Tarif melekat pada faktur, bukan pada aplikasi (K1): satu angka global akan
+                        // ikut mengubah cetakan faktur lama begitu tarif pemerintah berubah.
+                        // Dikosongkan = faktur tidak mencantumkan pajak, cetakan tidak memecah DPP/PPN.
+                        TextInput::make('ppn_rate')
+                            ->label('Tarif PPN faktur')
+                            ->columnSpan(2)
+                            ->numeric()
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->suffix('%')
+                            ->default(fn () => app(GeneralSettings::class)->ppn_rate)
+                            ->helperText('Kosongkan bila faktur tidak mencantumkan PPN.'),
                         Hidden::make('received_by')
                             ->default(fn () => auth()->id()),
                     ]),

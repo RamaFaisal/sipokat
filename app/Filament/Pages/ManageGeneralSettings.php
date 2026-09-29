@@ -57,13 +57,13 @@ class ManageGeneralSettings extends SettingsPage
                                 ->prefixIcon(Heroicon::GlobeAlt),
 
                             TextInput::make('ppn_rate')
-                                ->label('Tarif PPN')
                                 ->numeric()
                                 ->integer()
                                 ->minValue(0)
                                 ->maxValue(100)
                                 ->suffix('%')
-                                ->helperText('Hanya untuk pecahan DPP/PPN pada cetakan penerimaan. Harga faktur PBF sudah termasuk PPN.'),
+                                ->label('Tarif PPN bawaan')
+                                ->helperText('Nilai awal kolom PPN saat membuat penerimaan. Tarif yang dipakai mencetak diambil dari fakturnya masing-masing.'),
                         ]),
                     ])
                     ->columnSpanFull(),

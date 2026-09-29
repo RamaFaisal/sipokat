@@ -280,7 +280,7 @@
             <tbody>
                 @php
                     $totalAmount = 0;
-                    $ppnRate = (int) app(\App\Settings\GeneralSettings::class)->ppn_rate;
+                    $ppnRate = $record->ppn_rate; // null = faktur tidak mencantumkan PPN
                 @endphp
                 @foreach ($record->items as $index => $item)
                     @php $subtotal = $item->qty * $item->price; $totalAmount += $subtotal; @endphp
@@ -289,9 +289,9 @@
                         <td>
                             {{ $item->medicine->name ?? '-' }}
                         </td>
-                        <td>{{ $item->batch_number }} / {{ $item->expired_date?->format('m-Y') }}</td>
+                        <td>{{ $item->batch_number }} / {{ $item->expired_date?->translatedFormat(\App\Support\Tanggal::BULAN_TAHUN) }}</td>
                         {{-- Seperti faktur: dalam kemasan (R1b). Harga per kemasan = harga satuan jual × isi. --}}
-                        <td class="text-center">{{ $item->pack_qty }} {{ $item->packUnit->name ?? '' }}($item->pack_size > 1) <small>(isi {{ $item->pack_size }})</small></td>
+                        <td class="text-center">{{ $item->pack_qty }} {{ $item->packUnit->name ?? '' }}@if ($item->pack_size > 1) <small>(isi {{ $item->pack_size }})</small>@endif</td>
                         <td class="text-right">Rp {{ number_format($item->price * $item->pack_size, 0, ',', '.') }}</td>
                         <td class="text-right">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
                     </tr>
@@ -304,23 +304,25 @@
             <div class="summary-left">
                 <div class="notes-section">
                     <div class="notes-title">Keterangan</div>
-                    <div class="notes-text">Harga sudah termasuk PPN sesuai faktur PBF. DPP dan PPN di samping adalah pecahan dari total (tarif {{ $ppnRate }}%), bukan tambahan.</div>
+                    <div class="notes-text">@if ($ppnRate)Harga sudah termasuk PPN sesuai faktur PBF. DPP dan PPN di samping adalah pecahan dari total (tarif {{ $ppnRate }}%), bukan tambahan.@else Faktur PBF tidak mencantumkan PPN, jadi total di samping ditulis apa adanya sesuai faktur.@endif</div>
                 </div>
             </div>
             <div class="summary-right">
                 <table class="summary-table">
-                    @php
-                        $dpp = $ppnRate > 0 ? $totalAmount / (1 + $ppnRate / 100) : $totalAmount;
-                        $ppn = $totalAmount - $dpp;
-                    @endphp
-                    <tr>
-                        <td class="label">Dasar Pengenaan Pajak</td>
-                        <td class="value">Rp {{ number_format($dpp, 0, ',', '.') }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">PPN {{ $ppnRate }}%</td>
-                        <td class="value">Rp {{ number_format($ppn, 0, ',', '.') }}</td>
-                    </tr>
+                    @if ($ppnRate)
+                        @php
+                            $dpp = $totalAmount / (1 + $ppnRate / 100);
+                            $ppn = $totalAmount - $dpp;
+                        @endphp
+                        <tr>
+                            <td class="label">Dasar Pengenaan Pajak</td>
+                            <td class="value">Rp {{ number_format($dpp, 0, ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">PPN {{ $ppnRate }}%</td>
+                            <td class="value">Rp {{ number_format($ppn, 0, ',', '.') }}</td>
+                        </tr>
+                    @endif
                     <tr class="grand-total">
                         <td class="label">Total</td>
                         <td class="value">Rp {{ number_format($totalAmount, 0, ',', '.') }}</td>
