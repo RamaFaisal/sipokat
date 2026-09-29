@@ -7,21 +7,21 @@ use App\Models\MedicineStock;
 use App\Models\Order;
 use App\Support\AmbangEd;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
-use Filament\Support\Icons\Heroicon;
-use Filament\Widgets\StatsOverviewWidget as BaseWidget;
-use Filament\Widgets\StatsOverviewWidget\Stat;
+use Filament\Widgets\Widget;
 use Illuminate\Support\Carbon;
 
 /**
- * Empat angka ringkas dashboard dalam satu widget.
+ * Empat angka ringkas dashboard, dengan markup dan kelas milik sendiri.
  *
- * Sebelum 2026-09-29 keempatnya adalah widget terpisah dengan `columnSpan` 1. Begitu grid dashboard
- * dijadikan tiga kolom supaya tiga widget tabel muat sebaris (K2, K5), empat kartu berukuran satu
- * kolom menyisakan baris timpang 3 + 1. `StatsOverviewWidget` memang menyusun beberapa stat
- * berdampingan, jadi menyatukannya menyelesaikan tata letak sekaligus memangkas empat izin Shield
- * menjadi satu.
+ * Bukan `StatsOverviewWidget` bawaan. Di sana tata letaknya ditentukan variabel CSS
+ * (`--cols-default`, `--cols-md`) beserta kelas `fi-grid-cols` milik paket, sehingga jumlah kolom
+ * per lebar layar dan jarak antar kartu hanya bisa diubah dengan menimpa aturan paket dari luar.
+ * Di sini gridnya ditulis langsung di blade sebagai kelas Tailwind biasa, jadi satu tempat saja
+ * yang menentukan keduanya dan hasilnya bisa dibaca tanpa menelusuri CSS vendor.
+ *
+ * Nama kelas sengaja tidak diubah supaya izin Shield `View:RingkasanStatWidget` tetap berlaku.
  */
-class RingkasanStatWidget extends BaseWidget
+class RingkasanStatWidget extends Widget
 {
     use HasWidgetShield;
 
@@ -29,20 +29,12 @@ class RingkasanStatWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    /**
-     * Bawaan Filament untuk empat stat adalah empat kolom pada hampir semua lebar, sehingga di layar
-     * sempit kartunya terhimpit dan angkanya terpotong. Di sini dibuat bertahap: satu kolom di ponsel,
-     * dua mulai tablet (768px), empat di layar lebar (1280px).
-     *
-     * @var array<string, int>
-     */
-    protected int|array|null $columns = [
-        'default' => 1,
-        'md' => 2,
-        'xl' => 4,
-    ];
+    protected string $view = 'filament.widgets.ringkasan-stat';
 
-    protected function getStats(): array
+    /**
+     * @return array<int, array{label: string, nilai: string, keterangan: string, ikon: string, warna: string}>
+     */
+    public function kartu(): array
     {
         return [
             $this->totalObat(),
@@ -52,30 +44,38 @@ class RingkasanStatWidget extends BaseWidget
         ];
     }
 
-    private function totalObat(): Stat
+    /** @return array{label: string, nilai: string, keterangan: string, ikon: string, warna: string} */
+    private function totalObat(): array
     {
         $jumlah = Medicine::where('status', 'active')->count();
 
-        return Stat::make('Total Obat Aktif', number_format($jumlah, 0, ',', '.'))
-            ->description('Jumlah obat aktif')
-            ->icon(Heroicon::OutlinedRectangleStack)
-            ->color('primary')
-            ->extraAttributes(['class' => 'pl-2']);
+        return [
+            'label' => 'Total Obat Aktif',
+            'nilai' => number_format($jumlah, 0, ',', '.'),
+            'keterangan' => 'Jumlah obat aktif',
+            'ikon' => 'heroicon-o-rectangle-stack',
+            'warna' => 'primary',
+        ];
     }
 
-    private function stokKritis(): Stat
+    /** @return array{label: string, nilai: string, keterangan: string, ikon: string, warna: string} */
+    private function stokKritis(): array
     {
         $jumlah = Medicine::where('status', 'active')
             ->whereIn('stock_status', ['empty', 'almost_empty'])
             ->count();
 
-        return Stat::make('Obat Stok Kritis', number_format($jumlah, 0, ',', '.'))
-            ->description('Status stok habis atau menipis')
-            ->icon(Heroicon::OutlinedExclamationTriangle)
-            ->color($jumlah > 0 ? 'danger' : 'success');
+        return [
+            'label' => 'Obat Stok Kritis',
+            'nilai' => number_format($jumlah, 0, ',', '.'),
+            'keterangan' => 'Status stok habis atau menipis',
+            'ikon' => 'heroicon-o-exclamation-triangle',
+            'warna' => $jumlah > 0 ? 'danger' : 'success',
+        ];
     }
 
-    private function mendekatiEd(): Stat
+    /** @return array{label: string, nilai: string, keterangan: string, ikon: string, warna: string} */
+    private function mendekatiEd(): array
     {
         $hariIni = Carbon::now()->startOfDay();
 
@@ -91,22 +91,45 @@ class RingkasanStatWidget extends BaseWidget
             ->distinct('medicine_id')
             ->count('medicine_id');
 
-        return Stat::make('Obat Mendekati ED', number_format($jumlah, 0, ',', '.'))
-            ->description('Batch bersisa dengan ED ≤ '.AmbangEd::PANTAU.' hari')
-            ->icon(Heroicon::OutlinedClock)
-            ->color($jumlah > 0 ? 'warning' : 'success');
+        return [
+            'label' => 'Obat Mendekati ED',
+            'nilai' => number_format($jumlah, 0, ',', '.'),
+            'keterangan' => 'Batch bersisa dengan ED ≤ '.AmbangEd::PANTAU.' hari',
+            'ikon' => 'heroicon-o-clock',
+            'warna' => $jumlah > 0 ? 'warning' : 'success',
+        ];
     }
 
-    private function penjualanBulanIni(): Stat
+    /** @return array{label: string, nilai: string, keterangan: string, ikon: string, warna: string} */
+    private function penjualanBulanIni(): array
     {
         $total = Order::query()
             ->whereDate('order_date', '>=', Carbon::now()->startOfMonth()->toDateString())
             ->whereDate('order_date', '<=', Carbon::now()->endOfMonth()->toDateString())
             ->sum('grand_total');
 
-        return Stat::make('Penjualan Bulan Ini', 'Rp '.number_format((float) $total, 0, ',', '.'))
-            ->description(Carbon::now()->translatedFormat('F Y'))
-            ->icon(Heroicon::OutlinedBanknotes)
-            ->color('success');
+        return [
+            'label' => 'Penjualan Bulan Ini',
+            'nilai' => 'Rp '.number_format((float) $total, 0, ',', '.'),
+            'keterangan' => Carbon::now()->translatedFormat('F Y'),
+            'ikon' => 'heroicon-o-banknotes',
+            'warna' => 'success',
+        ];
+    }
+
+    /**
+     * Kelas warna ditulis utuh, bukan dirangkai dari potongan.
+     *
+     * Tailwind memindai berkas ini dan hanya menghasilkan kelas yang tertulis lengkap; rangkaian
+     * seperti "text-{$warna}-600" tidak akan pernah ikut terkompilasi dan warnanya hilang diam-diam.
+     */
+    public function kelasWarna(string $warna): string
+    {
+        return match ($warna) {
+            'danger' => 'text-danger-600 dark:text-danger-400',
+            'warning' => 'text-warning-600 dark:text-warning-400',
+            'success' => 'text-success-600 dark:text-success-400',
+            default => 'text-primary-600 dark:text-primary-400',
+        };
     }
 }

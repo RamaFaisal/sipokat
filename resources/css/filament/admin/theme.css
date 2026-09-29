@@ -207,14 +207,3 @@ body {
     height: 30rem;
     overflow-y: auto;
 }
-
-/* 10. Kartu statistik dashboard
-   Jarak antar kartu dipertegas dan disamakan dengan jarak antar widget, supaya baris statistik
-   tidak terbaca sebagai satu blok rapat. Jumlah kolomnya diatur di RingkasanStatWidget. */
-.fi-wi-stats-overview .fi-sc.fi-grid {
-    gap: 2.5rem;
-}
-
-.fi-wi-stats-overview .fi-wi-stats-overview-stat {
-    height: 100%;
-}
