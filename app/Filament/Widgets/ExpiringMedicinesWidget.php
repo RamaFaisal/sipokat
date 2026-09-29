@@ -19,8 +19,13 @@ class ExpiringMedicinesWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
-    /** Tinggi kotak, dalam jumlah baris yang terlihat sekaligus. Sisanya dicapai dengan menggulir. */
-    private const BARIS_TERLIHAT = 10;
+    /**
+     * Sepuluh batch yang paling dekat kedaluwarsa. Berbeda dari dua widget lain yang memuat seluruh
+     * datanya: di sini yang jauh dari ED tidak menambah informasi, hanya memanjangkan daftar.
+     * Pencarian tetap menjangkau seluruh batch dalam ambang, karena penyaringan berjalan sebelum
+     * pemotongan ini.
+     */
+    private const BARIS = 10;
 
     public function table(Table $table): Table
     {
@@ -29,7 +34,7 @@ class ExpiringMedicinesWidget extends BaseWidget
 
         return $table
             ->heading('Obat Mendekati Kedaluwarsa')
-            ->description('Batch bersisa dengan ED ≤ '.AmbangEd::PANTAU.' hari, terdekat di atas. Gulir atau cari untuk sisanya.')
+            ->description(self::BARIS.' batch paling dekat kedaluwarsa, dalam ambang '.AmbangEd::PANTAU.' hari.')
             ->recordClasses(fn (MedicineStock $record): ?string => AmbangEd::kelasBaris(self::sisaHari($record)))
             ->query(function () use ($today, $threshold): Builder {
                 // F5: lapisan (baris D kartu stok) yang sisanya > 0 bukan item RO yang mungkin sudah habis terjual.
@@ -42,7 +47,8 @@ class ExpiringMedicinesWidget extends BaseWidget
                     ->with([
                         'medicine:id,code,name,stock_status',
                     ])
-                    ->orderBy('expired_date');
+                    ->orderBy('expired_date')
+                    ->limit(self::BARIS);
 
                 return $query;
             })
@@ -67,7 +73,7 @@ class ExpiringMedicinesWidget extends BaseWidget
             ])
             ->searchable()
             ->paginated(false)
-            ->extraAttributes(['class' => 'sipokat-widget-gulir sipokat-gulir-'.self::BARIS_TERLIHAT]);
+            ->extraAttributes(['class' => 'sipokat-widget-gulir']);
     }
 
     /** Sisa hari menuju ED lapisan ini; negatif berarti sudah kedaluwarsa. */

@@ -19,10 +19,10 @@
 | Stok Opname per batch | ✅ | Hitung fisik per lapisan; selisih → penyesuaian pada lapisan itu; jalur retur/pemusnahan obat kedaluwarsa (Bagian 6) |
 | **SPK SAW (inti skripsi)** | ✅ | C1 rasio stok÷min, C2 permintaan/bulan, C3 ED batch terjauh yang bersisa, C4 HPP; skala hasil wawancara; peringkat padat; "Buat PO" dari ranking (Bagian 7) |
 | Notifikasi stok & ED | ✅ | `sipokat:check-stock-and-expiry` harian 08:00 (Filament DB notification) |
-| Dashboard & widget | ✅ | Satu kartu statistik (4 angka), lalu tiga widget sebaris: Stok, Kedaluwarsa, Tingkatan SAW; masing-masing memuat seluruh datanya, 10 baris terlihat sekaligus, sisanya digulir, bisa dicari; grafik penjualan di bawah |
+| Dashboard & widget | ✅ | Satu kartu statistik (4 angka), lalu tiga widget sebaris: Stok dan Tingkatan SAW memuat seluruh data, Kedaluwarsa 10 batch terdekat; ketiganya setinggi sama, digulir, bisa dicari; grafik penjualan di bawah |
 | Laporan | ✅ | Satu menu **Laporan** bertab: Rekap penjualan/pembelian, Fast/slow moving, Akan kedaluwarsa, Rekap stok per obat, Pembelian per PBF, Hasil stok opname. Kartu stok per obat (per batch + HPP) tetap di menu Inventory |
 | Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat sintetis) · `FakturNpmSeeder` (14 faktur asli NPM Mei 2024 → bulan berjalan, 137 lapisan untuk 127 obat riil) · template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
-| Pengujian | ✅ | 200 tes Pest / 1.833 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
+| Pengujian | ✅ | 200 tes Pest / 1.813 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
 | Roles & Permissions | ✅ | `RoleSeeder` (2026-09-24, B1): `admin` akses penuh, `petugas` transaksi + SPK dengan master baca-saja, `pemilik` baca-saja. Nama peran lama diganti oleh migrasi. Halaman & widget sudah memakai trait Shield |
 | Deploy VPS (MySQL) + cron | 🔜 | E9 jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |
 

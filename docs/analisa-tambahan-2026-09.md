@@ -16,7 +16,7 @@
 | K2 | Grafik Penjualan & PO Terbuka | **Grafik Penjualan tetap, PO Terbuka dibuang** dari dashboard | §1 |
 | K3 | Singkatan bulan | **"07 Sep 2026"** (singkatan Indonesia) | §3.3, §8 |
 | K4 | Data isi per strip | **Tidak tersedia**, jadi satuan jual per strip **tidak dibangun**, ditulis sebagai batasan naskah | §13 |
-| K5 | Isi widget dashboard | **Seluruh data, 10 baris terlihat sekaligus, sisanya digulir**, bisa dicari; tinggi ketiganya sama (direvisi 2026-09-29) | §1.1 |
+| K5 | Isi widget dashboard | Stok dan SAW memuat **seluruh data**, Kedaluwarsa **10 batch terdekat**; ketiganya setinggi sama, digulir, bisa dicari (direvisi 2026-09-29) | §1.1 |
 | K6 | Ambang warna ED | **30 / 60 / 90 hari**, seragam di widget, kartu stok, dan notifikasi | §1.2 |
 | K7 | Laporan baru | **Keempatnya**: akan kedaluwarsa, rekap stok per obat, pembelian per PBF, hasil stok opname. **Semua sebelum sidang** | §4 |
 | K8 | Catatan kosong di detail penjualan | **Belum dicek peneliti**, jadi diperiksa sendiri ke data | §5 |
@@ -48,9 +48,14 @@ SAW Top-10, Stok Menipis, Mendekati ED, Grafik Penjualan, PO Terbuka.
 Penggabungan 4 kartu statistik jadi satu widget diperlukan supaya grid bisa dijadikan 3 kolom tanpa
 menyisakan kartu yang timpang (4 kartu di grid 3 menyisakan 3 + 1).
 
-**Aturan ketiga widget tengah (K5, direvisi 2026-09-29):** memuat seluruh datanya, punya kotak
-pencarian, dan digulir di dalam kotaknya. Angka 10 adalah **jumlah baris yang terlihat sekaligus**
-(kelas CSS `sipokat-gulir-10`), bukan jumlah baris yang dimuat; tinggi ketiganya sama.
+**Aturan ketiga widget tengah (K5, direvisi 2026-09-29):** punya kotak pencarian, digulir di dalam
+kotaknya, dan tingginya dikunci sama lewat `height` (bukan `max-height`, yang hanya membatasi
+sehingga widget berisi sedikit baris tetap lebih pendek).
+
+Widget Stok dan Prioritas Restock memuat seluruh datanya. Widget Kedaluwarsa dipotong pada **10
+batch terdekat**: batch yang masih jauh dari ED tidak menambah informasi, hanya memanjangkan daftar.
+Pencarian tetap menjangkau seluruh batch dalam ambang, karena penyaringan berjalan sebelum
+pemotongan.
 
 Pencarian bekerja atas seluruh data, bukan atas baris yang kebetulan terlihat. Ada tesnya di
 `DashboardWidgetTest`, dua per widget: satu memastikan tidak ada baris yang hilang dan urutannya
@@ -89,8 +94,8 @@ seluruh widget, bukan 127, dan `FIELD()` yang khusus MySQL itu ikut hilang.
 
 ### 1.2 Widget Kedaluwarsa
 
-Isi: nama obat dan sisa kedaluwarsa, urut ED terdekat, seluruh batch bersisa yang masuk ambang,
-bisa dicari, baris diberi warna.
+Isi: nama obat dan sisa kedaluwarsa, urut ED terdekat, sepuluh batch terdekat dari yang masuk
+ambang, bisa dicari, baris diberi warna.
 
 Widget sudah ada dan sudah urut ED terdekat. Yang kurang: kolomnya delapan, terlalu ramai untuk
 sepertiga lebar, dan belum ada pewarnaan baris. `->recordClasses()` tersedia di Filament 4 yang

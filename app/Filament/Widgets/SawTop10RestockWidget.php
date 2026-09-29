@@ -27,9 +27,6 @@ class SawTop10RestockWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
-    /** Tinggi kotak, dalam jumlah baris yang terlihat sekaligus. Sisanya dicapai dengan menggulir. */
-    private const BARIS_TERLIHAT = 10;
-
     /** @var array<string, mixed>|null */
     protected ?array $hasil = null;
 
@@ -44,7 +41,7 @@ class SawTop10RestockWidget extends BaseWidget
             ->records(fn (): Collection => collect($this->saring($this->hasil()['rows'])))
             ->searchable()
             ->paginated(false)
-            ->extraAttributes(['class' => 'sipokat-widget-gulir sipokat-gulir-'.self::BARIS_TERLIHAT])
+            ->extraAttributes(['class' => 'sipokat-widget-gulir'])
             ->columns([
                 TextColumn::make('rank')
                     ->label('Tingkat')
@@ -82,8 +79,8 @@ class SawTop10RestockWidget extends BaseWidget
         }
 
         return 'Dihitung '.$hasil['calculated_at']->translatedFormat(Tanggal::TAMPIL_JAM)
-            .' atas kondisi terkini (periode permintaan '.$hasil['period_start']->translatedFormat(Tanggal::TAMPIL)
-            .' sampai '.$hasil['period_end']->translatedFormat(Tanggal::TAMPIL).')';
+            .', periode permintaan '.$hasil['period_start']->translatedFormat(Tanggal::TAMPIL)
+            .' sampai '.$hasil['period_end']->translatedFormat(Tanggal::TAMPIL).'.';
     }
 
     /**

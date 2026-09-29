@@ -51,7 +51,7 @@ it('menemukan obat lewat pencarian di widget stok', function () {
         ->assertDontSee('OBAT STOK 01');
 });
 
-it('memuat seluruh batch dalam ambang di widget kedaluwarsa', function () {
+it('menampilkan sepuluh batch paling dekat kedaluwarsa', function () {
     foreach (range(1, 12) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT ED %02d', $i)]);
         receiveInto($obat, 10, today()->addDays($i * 5)->toDateString(), sprintf('B-ED-%02d', $i));
@@ -59,11 +59,13 @@ it('memuat seluruh batch dalam ambang di widget kedaluwarsa', function () {
 
     $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->html();
 
-    foreach (range(1, 12) as $i) {
+    foreach (range(1, 10) as $i) {
         expect($render)->toContain(sprintf('B-ED-%02d', $i));
     }
 
-    expect(strpos($render, 'B-ED-01'))->toBeLessThan(strpos($render, 'B-ED-12'));
+    expect($render)->not->toContain('B-ED-11')
+        ->and($render)->not->toContain('B-ED-12')
+        ->and(strpos($render, 'B-ED-01'))->toBeLessThan(strpos($render, 'B-ED-10'));
 });
 
 it('menemukan batch lewat pencarian di widget kedaluwarsa', function () {
