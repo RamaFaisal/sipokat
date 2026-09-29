@@ -149,13 +149,14 @@ it('menawarkan hanya item PO yang masih bersisa untuk dicentang', function () {
         ->and($options[$b->id])->toContain('sisa 5');
 });
 
-it('menomori RO per hari: RO{YYYYMMDD}-0001, -0002', function () {
+it('menomori RO per hari: RO{YYYYMMDD}0001, 0002', function () {
     $a = makeMedicine();
     $po = poWith([[$a, 10, 1000]]);
     $first = roFor($po, [[$a, 1, 1000]]);
     $second = roFor($po, [[$a, 1, 1000]]);
 
-    $prefix = 'RO'.now()->format('Ymd').'-';
+    // Satu format dengan PO, penjualan, dan opname sejak 2026-09-28 (K12): tanpa pemisah.
+    $prefix = 'RO'.now()->format('Ymd');
     expect($first->receive_order_number)->toBe($prefix.'0001')
         ->and($second->receive_order_number)->toBe($prefix.'0002');
 });

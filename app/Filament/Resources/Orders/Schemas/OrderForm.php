@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Support\Tanggal;
 use App\Filament\Forms\PackLine;
 use App\Models\Medicine;
 use App\Models\Order;
 use App\Services\StockCardService;
+use App\Support\DocumentNumber;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -167,19 +169,15 @@ class OrderForm
             ]);
     }
 
-    /** ORD-{YYYYMMDD}XXXX berdasarkan nomor terakhir dengan prefiks itu (bukan tanggal order, yang bisa mundur). */
-    public static function generateOrderCode(): string
+    /**
+     * ORD{YYYYMMDD}{XXXX}. Bawaannya hari ini, bukan tanggal order: kasir boleh memundurkan
+     * tanggal penjualan, dan nomor yang ikut mundur akan menyalip nomor yang sudah terpakai.
+     * Pemanggil yang memang mencatat penjualan bertanggal lampau (seeder simulasi, importir
+     * data riil) memberikan tanggalnya sendiri supaya nomor cocok dengan tanggal dokumennya.
+     */
+    public static function generateOrderCode(\DateTimeInterface|string|null $date = null): string
     {
-        $prefix = 'ORD-'.now()->format('Ymd');
-
-        $last = Order::withTrashed()
-            ->where('order_code', 'like', $prefix.'%')
-            ->orderByDesc('order_code')
-            ->value('order_code');
-
-        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return $prefix.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        return DocumentNumber::next(Order::CODE_PREFIX, 'orders', 'order_code', $date);
     }
 
     protected static function hppHint(Get $get): ?string
@@ -254,7 +252,7 @@ class OrderForm
             $options[$layer->id.':'.$take] = sprintf(
                 '%s%s · %d dari %d',
                 $layer->batch_number ?? 'tanpa batch',
-                $layer->expired_date ? ' · ED '.$layer->expired_date->format('m-Y') : '',
+                $layer->expired_date ? ' · ED '.$layer->expired_date->translatedFormat(Tanggal::BULAN_TAHUN) : '',
                 $take,
                 (int) $layer->remaining,
             );

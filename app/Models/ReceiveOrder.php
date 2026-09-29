@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\StockMovementService;
+use App\Support\DocumentNumber;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,17 +17,21 @@ class ReceiveOrder extends Model
 {
     use SoftDeletes;
 
+    public const CODE_PREFIX = 'RO';
+
     protected $fillable = [
         'receive_order_number',
         'invoice_number',
         'purchase_order_id',
         'supplier_id',
         'receive_date',
+        'ppn_rate',
         'received_by',
     ];
 
     protected $casts = [
         'receive_date' => 'date',
+        'ppn_rate' => 'integer',
     ];
 
     protected static function booted(): void
@@ -70,18 +75,9 @@ class ReceiveOrder extends Model
         return (float) $this->items->sum(fn (ReceiveOrderItem $i) => $i->qty * (float) $i->price);
     }
 
-    /** Nomor RO berikutnya: RO{YYYYMMDD}-XXXX, banyak RO per hari (R10). */
+    /** Nomor RO berikutnya: RO{YYYYMMDD}{XXXX}, banyak RO per hari (R10). */
     public static function nextNumber(?\DateTimeInterface $date = null): string
     {
-        $prefix = 'RO'.($date ? $date->format('Ymd') : now()->format('Ymd')).'-';
-
-        $last = static::withTrashed()
-            ->where('receive_order_number', 'like', $prefix.'%')
-            ->orderByDesc('receive_order_number')
-            ->value('receive_order_number');
-
-        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return sprintf('%s%04d', $prefix, $next);
+        return DocumentNumber::next(self::CODE_PREFIX, 'receive_orders', 'receive_order_number', $date);
     }
 }

@@ -12,6 +12,8 @@ class Order extends Model
 {
     use SoftDeletes;
 
+    public const CODE_PREFIX = 'ORD';
+
     protected $fillable = [
         'order_code',
         'order_date',

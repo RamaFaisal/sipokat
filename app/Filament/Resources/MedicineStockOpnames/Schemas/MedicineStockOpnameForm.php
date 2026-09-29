@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\MedicineStockOpnames\Schemas;
 
+use App\Support\Tanggal;
 use App\Filament\Resources\ReceiveOrders\Schemas\ReceiveOrderForm;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
 use App\Models\MedicineStockOpname;
 use App\Services\StockCardService;
+use App\Support\DocumentNumber;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -171,16 +173,10 @@ class MedicineStockOpnameForm
             ]);
     }
 
+    /** OPM{YYYYMMDD}{XXXX}, satu format dengan PO, RO, dan penjualan (K13). */
     public static function nextNumber(): string
     {
-        $last = MedicineStockOpname::withTrashed()
-            ->where('opname_number', 'like', 'OPM%')
-            ->orderByDesc('opname_number')
-            ->value('opname_number');
-
-        $next = $last ? ((int) preg_replace('/\D/', '', $last)) + 1 : 1;
-
-        return 'OPM'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        return DocumentNumber::next(MedicineStockOpname::CODE_PREFIX, 'medicine_stock_opnames', 'opname_number');
     }
 
     /** Baris lapisan untuk satu obat: semua batch (termasuk kedaluwarsa) dengan sisa sistem > 0. */
@@ -205,7 +201,7 @@ class MedicineStockOpnameForm
             ->map(fn (MedicineStock $l) => [
                 'layer_stock_id' => $l->id,
                 'batch_label' => $l->batch_number ?? 'tanpa batch',
-                'expired_label' => $l->expired_date?->format('m-Y').($l->isExpired() ? ' (kedaluwarsa)' : ''),
+                'expired_label' => $l->expired_date?->translatedFormat(Tanggal::BULAN_TAHUN).($l->isExpired() ? ' (kedaluwarsa)' : ''),
                 'system_qty' => $l->remaining,
                 'physical_qty' => $l->remaining,
             ])

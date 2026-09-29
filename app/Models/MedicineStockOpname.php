@@ -12,6 +12,8 @@ class MedicineStockOpname extends Model
 {
     use SoftDeletes;
 
+    public const CODE_PREFIX = 'OPM';
+
     protected $fillable = [
         'opname_number',
         'opname_date',

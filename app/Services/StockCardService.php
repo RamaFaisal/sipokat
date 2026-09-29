@@ -98,7 +98,7 @@ class StockCardService
                 'id' => $transaction->id,
                 'reference_number' => $this->getReferenceNumber($transaction),
                 'supplier' => $this->getSupplierName($transaction),
-                'date' => $transaction->date->locale('id')->translatedFormat('d F Y'),
+                'date' => $transaction->date->translatedFormat(Tanggal::TAMPIL),
                 'refer_table' => $this->getReferTable($transaction),
                 'debit' => $debit,
                 'credit' => $credit,
@@ -124,15 +124,15 @@ class StockCardService
     public function getReferenceNumber($record): string
     {
         if ($record->receive_order_id) {
-            return str_pad($record->receiveOrder->receive_order_number, 6, '0', STR_PAD_LEFT);
+            return (string) $record->receiveOrder->receive_order_number;
         }
 
         if ($record->medicine_stock_opname_id) {
-            return str_pad($record->medicineStockOpname->opname_number, 6, '0', STR_PAD_LEFT);
+            return (string) $record->medicineStockOpname->opname_number;
         }
 
         if ($record->order_id) {
-            return str_pad($record->order->order_code, 6, '0', STR_PAD_LEFT);
+            return (string) $record->order->order_code;
         }
 
         return '-';

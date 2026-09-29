@@ -10,6 +10,7 @@ use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
 use App\Models\Supplier;
 use App\Models\Unit;
+use App\Support\DocumentNumber;
 use App\Support\RealDataTemplate;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -448,13 +449,10 @@ class RealDataImporter
         }
     }
 
+    /** Beda dari OrderForm: memakai tanggal penjualan yang diimpor, bukan hari ini. */
     protected function nextImportedOrderCode(string $date): string
     {
-        $prefix = 'ORD-'.Carbon::parse($date)->format('Ymd');
-        $last = Order::withTrashed()->where('order_code', 'like', $prefix.'%')->orderByDesc('order_code')->value('order_code');
-        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return $prefix.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        return DocumentNumber::next(Order::CODE_PREFIX, 'orders', 'order_code', $date);
     }
 
     // ---------------------------------------------------------------------

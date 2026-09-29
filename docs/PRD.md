@@ -117,12 +117,12 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 **As a** petugas apotek, **I want to** mencatat penerimaan dari supplier & penjualan ke pelanggan dengan tracking otomatis.
 
 **Pemesanan (Purchase Order):**
-- Auto-number `PO{YYYYMMDD}-XXXX`; per PBF; dibuat manual atau dari ranking SAW (jumlah bawaan ⌈min_stock ÷ isi⌉ kemasan, harga perkiraan = harga beli terakhir)
+- Auto-number `PO{YYYYMMDD}{XXXX}`; per PBF; dibuat manual atau dari ranking SAW (jumlah bawaan ⌈min_stock ÷ isi⌉ kemasan, harga perkiraan = harga beli terakhir)
 - Baris: obat, kemasan, isi, jumlah kemasan, harga/kemasan → tersimpan juga dalam satuan jual
 - Status turunan dari penerimaan: pending / partial / received; **closed** manual (aksi massal "Tutup PO"); edit/hapus hanya saat pending
 
 **Obat Masuk (Receive Order):**
-- Auto-number `RO{YYYYMMDD}-XXXX`; **satu RO = satu faktur PBF**; `invoice_number` unik per PBF
+- Auto-number `RO{YYYYMMDD}{XXXX}`; **satu RO = satu faktur PBF**; `invoice_number` unik per PBF
 - Boleh tanpa PO. Dari PO: centang item PO → baris terisi otomatis dengan sisa; qty ≤ sisa PO (kelebihan = baris di luar PO)
 - Per baris: obat, kemasan + isi + jumlah + harga/kemasan (dikonversi ke satuan jual), **batch_number**, **ED bulan-tahun** (disimpan tanggal 1; harus > tanggal terima)
 - `StockMovementService::recordReceipt` → satu baris D (lapisan) per baris RO dengan batch/ED/harga; HPP obat di-replay
@@ -130,7 +130,7 @@ Apotek Anugrah Husada di Demak menghadapi 3 masalah operasional utama dalam peng
 - Cetak RO (PDF) menampilkan DPP/PPN (PPN 11% dari Pengaturan Umum, tampilan saja)
 
 **Obat Keluar (Order/Penjualan):**
-- Auto-number `ORD-{YYYYMMDD}XXXX`
+- Auto-number `ORD{YYYYMMDD}{XXXX}`
 - Validasi: `qty ≤ StockCardService::availableStock()`; `price ≥ HPP saat itu`
 - `recordSale` mengalokasikan **FEFO** ke lapisan belum kedaluwarsa (ED terdekat dulu; satu baris jual bisa jadi beberapa baris C dengan `layer_stock_id`)
 - Tanpa status/pembayaran/diskon; **tanpa edit** hapus (baris C dihapus sungguhan, stok kembali ke lapisan asal) lalu buat ulang

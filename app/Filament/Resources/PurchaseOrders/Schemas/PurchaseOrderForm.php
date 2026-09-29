@@ -6,6 +6,7 @@ use App\Filament\Forms\PackLine;
 use App\Models\Medicine;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
+use App\Support\DocumentNumber;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
@@ -97,18 +98,9 @@ class PurchaseOrderForm
             ]);
     }
 
-    /** PO{YYYYMMDD}-XXXX (D4). */
+    /** PO{YYYYMMDD}{XXXX}, satu format dengan RO, penjualan, dan opname (D4). */
     public static function generatePONumber(?\DateTimeInterface $date = null): string
     {
-        $prefix = 'PO'.($date ? $date->format('Ymd') : now()->format('Ymd')).'-';
-
-        $last = PurchaseOrder::withTrashed()
-            ->where('po_number', 'like', $prefix.'%')
-            ->orderByDesc('po_number')
-            ->value('po_number');
-
-        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return sprintf('%s%04d', $prefix, $next);
+        return DocumentNumber::next(PurchaseOrder::CODE_PREFIX, 'purchase_orders', 'po_number', $date);
     }
 }

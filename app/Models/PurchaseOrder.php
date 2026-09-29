@@ -19,6 +19,8 @@ class PurchaseOrder extends Model
 {
     use SoftDeletes;
 
+    public const CODE_PREFIX = 'PO';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_PARTIAL = 'partial';
