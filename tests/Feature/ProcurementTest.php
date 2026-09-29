@@ -8,6 +8,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
 use App\Services\StockMovementService;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Karakterisasi pengadaan (rencana-revisi-2026-09 Bagian 2 & 3): konversi kemasan,
@@ -215,4 +216,18 @@ it('edit RO: item baru menjadi lapisan baru, item yang dihapus (belum terjual) h
     expect(MedicineStock::layers()->where('receive_order_id', $ro->id)->count())->toBe(1)
         ->and($a->fresh()->currentStock())->toBe(0)
         ->and($b->fresh()->currentStock())->toBe(5);
+});
+
+it('menampilkan batas koreksi di form edit RO, bukan di form penerimaan baru', function () {
+    Gate::before(fn () => true);
+    $this->actingAs(App\Models\User::factory()->create());
+
+    $a = makeMedicine();
+    $po = poWith([[$a, 10, 1000]]);
+    $ro = roFor($po, [[$a, 10, 1000]]);
+
+    $kalimat = 'Jumlah hanya boleh diturunkan sampai batas yang sudah terjual';
+
+    $this->get("/admin/receive-orders/{$ro->id}/edit")->assertOk()->assertSee($kalimat);
+    $this->get('/admin/receive-orders/create')->assertOk()->assertDontSee($kalimat);
 });

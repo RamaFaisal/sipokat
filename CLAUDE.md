@@ -22,7 +22,7 @@
 | Dashboard & widget | ✅ | Satu kartu statistik (4 angka), lalu tiga widget sebaris: Stok, Kedaluwarsa, Tingkatan SAW (seluruh data, bisa dicari, digulir); grafik penjualan di bawah |
 | Laporan | ✅ | Satu menu **Laporan** bertab: Rekap penjualan/pembelian, Fast/slow moving, Akan kedaluwarsa, Rekap stok per obat, Pembelian per PBF, Hasil stok opname. Kartu stok per obat (per batch + HPP) tetap di menu Inventory |
 | Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat sintetis) · `FakturNpmSeeder` (14 faktur asli NPM Mei 2024 → bulan berjalan, 137 lapisan untuk 127 obat riil) · template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
-| Pengujian | ✅ | 193 tes Pest / 1.767 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
+| Pengujian | ✅ | 194 tes Pest / 1.747 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
 | Roles & Permissions | ✅ | `RoleSeeder` (2026-09-24, B1): `admin` akses penuh, `petugas` transaksi + SPK dengan master baca-saja, `pemilik` baca-saja. Nama peran lama diganti oleh migrasi. Halaman & widget sudah memakai trait Shield |
 | Deploy VPS (MySQL) + cron | 🔜 | E9 jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |
 
@@ -57,7 +57,7 @@ Rincian dan alasannya: `docs/rencana-revisi-2026-09.md`. Ini yang harus dipatuhi
 - Baris D (dari RO/opname) = **lapisan** dengan `batch_number`, `expired_date` (disimpan tanggal 1 bulan ED), `hpp` (harga beli per satuan jual), `hpp_avg` (HPP setelah baris itu). Baris C menunjuk `layer_stock_id`.
 - Kedaluwarsa = `expired_date <= hari ini`. Stok **tersedia** = Σ sisa lapisan belum kedaluwarsa; stok **fisik** = Σ semua lapisan.
 - HPP rata-rata bergerak, bilangan bulat dibulatkan ke atas: `(saldo × HPP + qty × harga) ÷ (saldo + qty)`. Dihitung ulang (`replayHpp`) tiap kali ledger obat berubah.
-- Hapus dokumen (RO/penjualan/opname) → baris ledger **dihapus sungguhan** lalu HPP di-replay. RO yang lapisannya sudah terpakai tidak bisa dihapus/diubah qty-nya (R8).
+- Hapus dokumen (RO/penjualan/opname) → baris ledger **dihapus sungguhan** lalu HPP di-replay. RO yang lapisannya sudah terpakai tidak bisa dihapus; qty-nya masih boleh diubah asal **tidak turun di bawah jumlah yang sudah terpakai** (R8). Batch, ED, dan harga selalu boleh diubah. Koreksi di luar itu lewat Stok Opname.
 
 **Pengadaan (R1–R15, P1–P12, Q0–Q9)**
 - PO: per PBF, dibuat manual atau dari ranking SAW (jumlah bawaan ⌈min_stock ÷ isi⌉ kemasan, harga = harga beli terakhir). Status diturunkan dari penerimaan: pending / partial / received / closed (tutup manual, aksi massal).

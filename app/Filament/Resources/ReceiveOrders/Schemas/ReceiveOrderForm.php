@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\ReceiveOrders\Schemas;
 
-use App\Support\Tanggal;
 use App\Filament\Forms\PackLine;
 use App\Models\Medicine;
 use App\Models\PurchaseOrder;
 use App\Models\ReceiveOrder;
 use App\Settings\GeneralSettings;
+use App\Support\Tanggal;
 use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\CheckboxList;
@@ -134,6 +134,12 @@ class ReceiveOrderForm
 
                 Section::make('Item faktur')
                     ->columnSpanFull()
+                    // Batas koreksi (R8) ditampilkan sebelum ditabrak. Hanya saat mengedit: pada
+                    // penerimaan baru belum ada stok terpakai, jadi kalimat ini cuma jadi teks mati.
+                    ->description(fn (?ReceiveOrder $record): ?string => $record === null ? null :
+                        'Batch, kedaluwarsa, dan harga boleh diubah kapan saja. Jumlah hanya boleh diturunkan'
+                        .' sampai batas yang sudah terjual, dan baris yang batch-nya sudah terjual tidak bisa'
+                        .' dihapus. Untuk koreksi di luar itu, gunakan Stok Opname.')
                     ->schema([
                         Repeater::make('items')
                             ->relationship()
