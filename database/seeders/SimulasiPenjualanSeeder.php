@@ -18,24 +18,27 @@ use Illuminate\Support\Carbon;
  * dijual 15–45% dari stok tersedianya, dipecah 1–3 transaksi tersebar antara penerimaan
  * pertama dan hari ini, memakai `StockMovementService::recordSale()` (bukan tulis ledger
  * langsung) supaya FEFO dan HPP tetap konsisten dengan alur form. Harga = HPP × 1,25
- * dibulatkan ke atas (memenuhi aturan harga ≥ HPP, S1). Ditandai `[SIMULASI]` pada
- * catatan WAJIB dinyatakan sebagai data simulasi, bukan penjualan riil, di Bab 1.4/IV.
+ * dibulatkan ke atas ke ratusan terdekat, seperti apotek membulatkan harga eceran dan tetap
+ * memenuhi aturan harga ≥ HPP (S1).
  *
- * Idempoten-sederhana: hanya jalan bila belum ada penjualan bertanda simulasi (bukan
- * idempoten per hari cukup untuk mengisi data awal, bukan simulasi berkelanjutan).
+ * Sejak 2026-09-28 baris yang dibuat seeder ini **tidak diberi penanda apa pun di data**
+ * (catatan dikosongkan seperti penjualan tanpa catatan). Statusnya sebagai data simulasi
+ * WAJIB dinyatakan di naskah Bab 1.3 dan Bab IV; itu satu-satunya tempat pengakuannya, jadi
+ * jangan dihilangkan dari sana.
+ *
+ * Idempoten-sederhana: hanya jalan bila belum ada penjualan sama sekali. Kalau apotek sudah
+ * mencatat penjualan sungguhan, seeder ini tidak boleh menambah apa pun.
  */
 class SimulasiPenjualanSeeder extends Seeder
 {
     private const MARKUP = 1.25;
 
-    public const NOTE = '[SIMULASI] penjualan otomatis untuk demo & data C2 SAW bukan transaksi riil';
-
     private const SEED = 20260921;
 
     public function run(StockMovementService $movement, StockCardService $stockCard): void
     {
-        if (Order::withTrashed()->where('note', self::NOTE)->exists()) {
-            $this->command?->info('SimulasiPenjualanSeeder: sudah ada penjualan simulasi, dilewati.');
+        if (Order::withTrashed()->exists()) {
+            $this->command?->info('SimulasiPenjualanSeeder: sudah ada penjualan, dilewati.');
 
             return;
         }
@@ -60,7 +63,8 @@ class SimulasiPenjualanSeeder extends Seeder
                 continue;
             }
 
-            $price = (int) ceil($hpp * self::MARKUP);
+            // Dibulatkan ke atas ke ratusan terdekat: harga eceran apotek tidak berakhiran angka ganjil.
+            $price = (int) (ceil($hpp * self::MARKUP / 100) * 100);
             $transactions = mt_rand(1, min(3, $totalToSell));
             $remaining = $totalToSell;
 
@@ -77,10 +81,9 @@ class SimulasiPenjualanSeeder extends Seeder
                 $orderDate = $start->copy()->addDays(mt_rand(0, $days - 1));
 
                 $order = Order::create([
-                    'order_code' => OrderForm::generateOrderCode(),
+                    'order_code' => OrderForm::generateOrderCode($orderDate),
                     'order_date' => $orderDate->toDateString(),
                     'grand_total' => $qty * $price,
-                    'note' => self::NOTE,
                     'created_by' => $userId,
                 ]);
                 $order->items()->create([

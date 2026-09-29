@@ -43,7 +43,7 @@ memanggil seeder data riil satu-satu: `MedicineDataSeeder` (127 obat, dari
 `database/seeders/data/master-data-obat.csv` yang ikut git, **bukan** dari
 `storage/app/import/*` yang digitignore), `FakturNpmSeeder` (14 faktur NPM asli, digeser ke
 bulan **saat seeder dijalankan**), `PurchaseOrderSeeder` (contoh PO), `SimulasiPenjualanSeeder`
-(penjualan simulasi bertanda `[SIMULASI]` supaya C2 SAW tidak nol **bukan** data riil, harus
+(penjualan simulasi supaya C2 SAW tidak nol **bukan** data riil, tidak diberi penanda di data, harus
 dinyatakan begitu di naskah). Semua idempoten: mengulang `db:seed` tidak melipatgandakan data.
 
 **Penting untuk konsistensi Bab IV**: karena `FakturNpmSeeder` menggeser tanggal faktur ke bulan
