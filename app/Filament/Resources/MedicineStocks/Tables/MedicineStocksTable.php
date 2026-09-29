@@ -5,7 +5,6 @@ namespace App\Filament\Resources\MedicineStocks\Tables;
 use App\Filament\Pages\MedicineStockDetail;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
-use App\Services\StockCardService;
 use App\Support\AmbangEd;
 use App\Support\Tanggal;
 use Carbon\Carbon;
@@ -32,6 +31,16 @@ class MedicineStocksTable
                     ->whereNotNull('expired_date')
                     ->withRemainingStock(),
             ]))
+            // Stok awal dan stok akhir periode juga lewat subquery. Sebelumnya tiap baris
+            // memanggil StockCardService dua kali, jadi satu halaman 25 baris = 50 query.
+            ->modifyQueryUsing(function (Builder $query, $livewire): Builder {
+                [$awalPeriode, $akhirPeriode] = self::periode($livewire);
+
+                return $query->addSelect([
+                    'init_stock' => self::saldoSampai($awalPeriode->copy()->subDay()),
+                    'current_stock' => self::saldoSampai($akhirPeriode),
+                ]);
+            })
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Obat')
@@ -44,35 +53,15 @@ class MedicineStocksTable
                 TextColumn::make('init_stock')
                     ->label('Stok Awal')
                     ->sortable()
+                    ->numeric()
                     ->default(0)
-                    ->formatStateUsing(function ($state, $record, $livewire) {
-                        $filters = $livewire->tableFilters['period'] ?? [];
-                        $year = $filters['year'] ?? now()->year;
-                        $month = $filters['month'] ?? now()->month;
-
-                        $stockService = app(StockCardService::class);
-                        return $stockService->getInitStockForPeriod(
-                            $record->id,
-                            $year,
-                            $month
-                        );
-                    }),
+                    ->alignEnd(),
                 TextColumn::make('current_stock')
-                    ->label('Stok Saat Ini')
-                    ->default(0)
+                    ->label('Stok Akhir Periode')
                     ->sortable()
-                    ->formatStateUsing(function ($state, $record, $livewire) {
-                        $filters = $livewire->tableFilters['period'] ?? [];
-                        $year = $filters['year'] ?? now()->year;
-                        $month = $filters['month'] ?? now()->month;
-
-                        $stockService = app(StockCardService::class);
-                        return $stockService->getCurrentStockForPeriod(
-                            $record->id,
-                            $year,
-                            $month
-                        );
-                    }),
+                    ->numeric()
+                    ->default(0)
+                    ->alignEnd(),
                 // ED **terdekat** yang masih bersisa, berbeda dari C3 SAW yang memakai batch
                 // terjauh (CLAUDE.md §6). Yang ini menjawab "batch mana yang harus dihabiskan
                 // duluan", bukan "sampai kapan stok ini bertahan".
@@ -98,7 +87,7 @@ class MedicineStocksTable
                             ->label('Tahun')
                             ->options(
                                 collect(range(now()->year, now()->year - 10))
-                                    ->mapWithKeys(fn($year) => [$year => $year])
+                                    ->mapWithKeys(fn ($year) => [$year => $year])
                             )
                             ->default(now()->year)
                             ->required()
@@ -108,15 +97,15 @@ class MedicineStocksTable
                         Select::make('month')
                             ->label('Bulan')
                             ->options([
-                                1  => 'Januari',
-                                2  => 'Februari',
-                                3  => 'Maret',
-                                4  => 'April',
-                                5  => 'Mei',
-                                6  => 'Juni',
-                                7  => 'Juli',
-                                8  => 'Agustus',
-                                9  => 'September',
+                                1 => 'Januari',
+                                2 => 'Februari',
+                                3 => 'Maret',
+                                4 => 'April',
+                                5 => 'Mei',
+                                6 => 'Juni',
+                                7 => 'Juli',
+                                8 => 'Agustus',
+                                9 => 'September',
                                 10 => 'Oktober',
                                 11 => 'November',
                                 12 => 'Desember',
@@ -128,30 +117,43 @@ class MedicineStocksTable
                     ])
                     ->columns(3)
                     ->columnSpanFull()
-                    ->query(function (Builder $query, array $data): Builder {
-                        if (
-                            empty($data['year']) ||
-                            empty($data['month']) ||
-                            ! is_numeric($data['year']) ||
-                            ! is_numeric($data['month'])
-                        ) {
-                            return $query;
-                        }
-                        $year  = $data['year']  ?? now()->year;
-                        $month = $data['month'] ?? now()->month;
-                        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-                        $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
-                        return $query;
-                    }),
+                    // Sengaja tidak menyaring baris: pilihan bulan hanya menentukan periode yang
+                    // dipakai kolom Stok Awal dan Stok Akhir, dibaca di modifyQueryUsing().
+                    ->query(fn (Builder $query): Builder => $query),
             ], FiltersLayout::AboveContent)
             ->recordActions([
                 Action::make('detail')
-                    ->url(fn($record): string => MedicineStockDetail::getUrl(['record' => $record]))
+                    ->url(fn ($record): string => MedicineStockDetail::getUrl(['record' => $record]))
                     ->label('Lihat Kartu Stok'),
             ])
             ->toolbarActions([
                 //
             ]);
+    }
+
+    /** Periode yang sedang dipilih pada filter; bawaannya bulan berjalan.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private static function periode($livewire): array
+    {
+        $filter = $livewire->tableFilters['period'] ?? [];
+        $tahun = is_numeric($filter['year'] ?? null) ? (int) $filter['year'] : now()->year;
+        $bulan = is_numeric($filter['month'] ?? null) ? (int) $filter['month'] : now()->month;
+
+        $awal = Carbon::create($tahun, $bulan, 1)->startOfMonth();
+
+        return [$awal, $awal->copy()->endOfMonth()];
+    }
+
+    /** Saldo kartu stok (Σ D dikurangi Σ C) sampai tanggal tertentu, sebagai subquery. */
+    private static function saldoSampai(Carbon $sampai): \Illuminate\Database\Query\Builder
+    {
+        return MedicineStock::query()
+            ->selectRaw("coalesce(sum(case when type_account = 'D' then qty else -qty end), 0)")
+            ->whereColumn('medicine_stocks.medicine_id', 'medicines.id')
+            ->whereDate('date', '<=', $sampai->toDateString())
+            ->toBase();
     }
 
     /** Sisa hari menuju ED; negatif berarti sudah kedaluwarsa. */

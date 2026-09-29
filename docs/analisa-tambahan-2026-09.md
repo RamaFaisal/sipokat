@@ -439,7 +439,7 @@ Ada **dua** tenggat yang sering tertukar, dan butir-butir di bawah dibagi menuru
 |---|---|---|
 | 1 | Nomor PO, RO, penjualan, opname diseragamkan; helper `DocumentNumber`; migrasi menulis ulang nomor lama | ✅ 2026-09-28, data riil ikut dimigrasi 2026-09-29 |
 | 2 | Detail penjualan: `infolist()`, kolom Batch dari baris C sesungguhnya | ✅ 2026-09-29 |
-| 3 | Kolom ED terdekat di kartu stok; ambang 30/60/90 dipusatkan (`App\Support\AmbangEd`) | ✅ 2026-09-29 |
+| 3 | Kolom ED terdekat di kartu stok; ambang 30/60/90 dipusatkan (`App\Support\AmbangEd`); Stok Awal dan Stok Akhir ikut jadi subquery, filter periode diperjelas | ✅ 2026-09-29 |
 | 4 | Menu obat (buang 3 kolom, label Status Obat); PBF jadi kode + tooltip | ✅ 2026-09-29 |
 | 5 | `App\Support\Tanggal`, termasuk tanggal berjam; locale Carbon `id` | ✅ 2026-09-29 |
 | 6 | Dashboard: gabung kartu statistik, buang PO Terbuka, tiga widget sebaris | ✅ 2026-09-29 |

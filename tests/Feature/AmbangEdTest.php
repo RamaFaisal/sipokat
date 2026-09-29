@@ -91,3 +91,32 @@ it('tidak menampilkan batch di luar ambang pantauan', function () {
         ->assertOk()
         ->assertDontSee('B-LAMA');
 });
+
+it('menghitung stok awal dan stok akhir periode lewat subquery, bukan panggilan per baris', function () {
+    $obat = makeMedicine(['name' => 'OBAT PERIODE KARTU']);
+
+    // Penerimaan bulan lalu menjadi stok awal; mutasi bulan ini masuk kolom periode berjalan.
+    $ro = receiveInto($obat, 40);
+    $ro->update(['receive_date' => today()->subMonth()->toDateString()]);
+    App\Models\MedicineStock::where('receive_order_id', $ro->id)->update(['date' => today()->subMonth()->toDateString()]);
+
+    receiveInto($obat, 10);
+    sellFrom($obat, 15);
+
+    $awalBulan = today()->startOfMonth();
+    $baris = App\Models\Medicine::query()
+        ->addSelect([
+            'init_stock' => App\Models\MedicineStock::query()
+                ->selectRaw("coalesce(sum(case when type_account = 'D' then qty else -qty end), 0)")
+                ->whereColumn('medicine_stocks.medicine_id', 'medicines.id')
+                ->whereDate('date', '<=', $awalBulan->copy()->subDay()->toDateString()),
+            'current_stock' => App\Models\MedicineStock::query()
+                ->selectRaw("coalesce(sum(case when type_account = 'D' then qty else -qty end), 0)")
+                ->whereColumn('medicine_stocks.medicine_id', 'medicines.id')
+                ->whereDate('date', '<=', $awalBulan->copy()->endOfMonth()->toDateString()),
+        ])
+        ->find($obat->id);
+
+    expect((int) $baris->init_stock)->toBe(40)
+        ->and((int) $baris->current_stock)->toBe(35); // 40 + 10 - 15
+});
