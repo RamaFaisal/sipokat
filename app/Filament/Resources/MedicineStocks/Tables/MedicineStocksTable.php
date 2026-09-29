@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources\MedicineStocks\Tables;
 
-use App\Models\Medicine;
-use App\Services\StockCardService;
 use App\Filament\Pages\MedicineStockDetail;
+use App\Models\Medicine;
+use App\Models\MedicineStock;
+use App\Services\StockCardService;
+use App\Support\AmbangEd;
+use App\Support\Tanggal;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -19,7 +22,16 @@ class MedicineStocksTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->query(Medicine::query())
+            // ED terdekat diambil lewat subquery, bukan panggilan service per baris: satu query
+            // untuk seluruh halaman, dan kolomnya bisa diurutkan di SQL.
+            ->query(Medicine::query()->addSelect([
+                'ed_terdekat' => MedicineStock::query()
+                    ->selectRaw('min(expired_date)')
+                    ->whereColumn('medicine_stocks.medicine_id', 'medicines.id')
+                    ->layers()
+                    ->whereNotNull('expired_date')
+                    ->withRemainingStock(),
+            ]))
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Obat')
@@ -60,6 +72,23 @@ class MedicineStocksTable
                             $year,
                             $month
                         );
+                    }),
+                // ED **terdekat** yang masih bersisa, berbeda dari C3 SAW yang memakai batch
+                // terjauh (CLAUDE.md §6). Yang ini menjawab "batch mana yang harus dihabiskan
+                // duluan", bukan "sampai kapan stok ini bertahan".
+                TextColumn::make('ed_terdekat')
+                    ->label('ED terdekat')
+                    ->sortable()
+                    ->badge()
+                    ->placeholder('-')
+                    ->color(fn ($state) => AmbangEd::warna(self::sisaHari($state)))
+                    ->formatStateUsing(function ($state): string {
+                        $sisa = self::sisaHari($state);
+                        $tanggal = Carbon::parse($state)->translatedFormat(Tanggal::BULAN_TAHUN);
+
+                        return $sisa !== null && $sisa < 0
+                            ? $tanggal.' (lewat)'
+                            : $tanggal.' ('.$sisa.' hari)';
                     }),
             ])
             ->filters([
@@ -123,5 +152,15 @@ class MedicineStocksTable
             ->toolbarActions([
                 //
             ]);
+    }
+
+    /** Sisa hari menuju ED; negatif berarti sudah kedaluwarsa. */
+    private static function sisaHari($state): ?int
+    {
+        if (blank($state)) {
+            return null;
+        }
+
+        return (int) Carbon::today()->diffInDays(Carbon::parse($state)->startOfDay(), false);
     }
 }

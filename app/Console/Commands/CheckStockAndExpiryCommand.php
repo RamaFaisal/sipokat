@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
 use App\Models\User;
+use App\Support\AmbangEd;
 use App\Services\StockMovementService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -14,7 +15,7 @@ use Illuminate\Support\Carbon;
 class CheckStockAndExpiryCommand extends Command
 {
     protected $signature = 'sipokat:check-stock-and-expiry
-                            {--expiry-days=90 : Threshold sisa hari ED untuk peringatan}';
+                            {--expiry-days= : Threshold sisa hari ED; bawaan AmbangEd::PANTAU}';
 
     protected $description = 'Scan obat stok menipis/habis dan batch mendekati kedaluwarsa, kirim notifikasi ke semua user via database notification Filament.';
 
@@ -33,7 +34,7 @@ class CheckStockAndExpiryCommand extends Command
         $this->refreshStockStatuses();
 
         $this->checkLowStock($users);
-        $this->checkExpiring($users, (int) $this->option('expiry-days'));
+        $this->checkExpiring($users, (int) ($this->option('expiry-days') ?: AmbangEd::PANTAU));
 
         return self::SUCCESS;
     }
