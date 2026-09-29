@@ -23,23 +23,6 @@ use Livewire\Livewire;
  * → jual FEFO lintas batch → opname → SAW ulang. Otorisasi Shield dilewati.
  */
 /** Kunci baris pertama repeater (baris bawaan berkunci uuid, bukan angka). */
-function firstRowKey(\Livewire\Features\SupportTesting\Testable $c, string $repeater): string|int
-{
-    return array_key_first($c->get("data.{$repeater}") ?? []) ?? 0;
-}
-
-/** Isi baris pertama repeater alih-alih menambah baris baru berkunci angka. */
-function firstRow(\Livewire\Features\SupportTesting\Testable $c, string $repeater, array $row): array
-{
-    $key = firstRowKey($c, $repeater);
-    $data = [];
-    foreach ($row as $field => $value) {
-        $data["{$repeater}.{$key}.{$field}"] = $value;
-    }
-
-    return $data;
-}
-
 function newOrder(Medicine $obat, int $qty, int $price): \Livewire\Features\SupportTesting\Testable
 {
     $page = Livewire::test(CreateOrder::class);

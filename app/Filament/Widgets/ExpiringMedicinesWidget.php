@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Models\MedicineStock;
 use App\Support\AmbangEd;
 use App\Support\BatchBersisa;
-use App\Support\Tanggal;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -24,23 +23,18 @@ class ExpiringMedicinesWidget extends BaseWidget
     {
         return $table
             ->heading('Obat Mendekati Kedaluwarsa')
-            ->description('Seluruh batch bersisa, kedaluwarsa terdekat di atas. Warna mengikuti ambang '.AmbangEd::PANTAU.' hari.')
+            ->description('Obat dengan kedaluwarsa terdekat di atas. Warna mengikuti ambang '.AmbangEd::PANTAU.' hari.')
             ->recordClasses(fn (MedicineStock $record): ?string => AmbangEd::kelasBaris(BatchBersisa::sisaHari($record)))
-            // Satu baris per batch, bukan per lapisan: batch yang dibeli dua kali tetap satu
-            // tumpukan di rak (App\Support\BatchBersisa).
-            ->query(fn (): Builder => BatchBersisa::query()->with('medicine:id,code,name')->orderBy('expired_date'))
+            // Satu baris per obat, memakai ED terdekat di antara batch yang masih bersisa.
+            // Kolomnya hanya nama dan sisa hari, jadi baris per batch akan tampil ganda tanpa
+            // pembeda (App\Support\BatchBersisa::perObat).
+            ->query(fn (): Builder => BatchBersisa::perObat()->with('medicine:id,code,name')->orderBy('expired_date'))
             ->columns([
                 TextColumn::make('medicine.name')
                     ->label('Nama Obat')
-                    ->description(fn (MedicineStock $record): string => 'Batch '.($record->batch_number ?: 'tanpa nomor'))
                     ->wrap(),
-                TextColumn::make('sisa')
-                    ->label('Sisa')
-                    ->numeric()
-                    ->alignEnd(),
                 TextColumn::make('days_remaining')
                     ->label('Sisa Hari')
-                    ->description(fn (MedicineStock $record): string => $record->expired_date->translatedFormat(Tanggal::BULAN_TAHUN))
                     ->state(fn (MedicineStock $record): int => BatchBersisa::sisaHari($record))
                     ->badge()
                     ->color(fn (int $state): string => AmbangEd::warna($state))

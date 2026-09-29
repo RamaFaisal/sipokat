@@ -117,7 +117,7 @@ class LaporanKedaluwarsa extends Page implements HasTable
     protected function query(): Builder
     {
         return BatchBersisa::query()
-            ->havingRaw('min(medicine_stocks.expired_date) <= ?', [today()->addDays(AmbangEd::PANTAU)->toDateString()])
+            ->whereDate('expired_date', '<=', today()->addDays(AmbangEd::PANTAU)->toDateString())
             ->with(['medicine.unit']);
     }
 

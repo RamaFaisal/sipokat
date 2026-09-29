@@ -80,7 +80,7 @@ it('menjalankan query widget kedaluwarsa dan mewarnai barisnya', function () {
 
     Livewire::test(ExpiringMedicinesWidget::class)
         ->assertOk()
-        ->assertSee('B-SEGERA');
+        ->assertSee('OBAT SEGERA ED');
 });
 
 it('menampilkan batch di luar ambang tetapi tanpa warna peringatan', function () {
@@ -89,7 +89,7 @@ it('menampilkan batch di luar ambang tetapi tanpa warna peringatan', function ()
     $obat = makeMedicine(['name' => 'OBAT MASIH LAMA']);
     receiveInto($obat, 10, today()->addDays(AmbangEd::PANTAU + 30)->toDateString(), 'B-LAMA');
 
-    $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->assertSee('B-LAMA')->html();
+    $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->assertSee('OBAT MASIH LAMA')->html();
 
     expect($render)->not->toContain('bg-danger-50')
         ->and($render)->not->toContain('bg-warning-50')

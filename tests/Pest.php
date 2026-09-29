@@ -173,3 +173,24 @@ function sawRun(
         'results' => collect($result['rows'])->map(fn (array $row) => new Illuminate\Support\Fluent($row)),
     ];
 }
+
+/**
+ * Kunci baris pertama sebuah repeater Filament. Baris bawaan berkunci acak, jadi mengisi
+ * "items.0.qty" akan membuat baris kedua, bukan mengisi yang sudah ada.
+ */
+function firstRowKey(\Livewire\Features\SupportTesting\Testable $c, string $repeater): string|int
+{
+    return array_key_first($c->get("data.{$repeater}") ?? []) ?? 0;
+}
+
+/** Isi baris pertama repeater alih-alih menambah baris baru berkunci angka. */
+function firstRow(\Livewire\Features\SupportTesting\Testable $c, string $repeater, array $row): array
+{
+    $key = firstRowKey($c, $repeater);
+    $data = [];
+    foreach ($row as $field => $value) {
+        $data["{$repeater}.{$key}.{$field}"] = $value;
+    }
+
+    return $data;
+}

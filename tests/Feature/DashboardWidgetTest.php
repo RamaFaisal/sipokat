@@ -37,8 +37,8 @@ it('memuat seluruh obat aktif di widget stok, paling tipis di atas', function ()
     expect(strpos($render, 'OBAT STOK 01'))->toBeLessThan(strpos($render, 'OBAT STOK 14'));
 });
 
-it('memuat seluruh batch bersisa di widget kedaluwarsa, terdekat di atas', function () {
-    // Jarak 40 hari: batch ke-3 dan seterusnya sudah lewat ambang 90 hari, tetapi tetap dimuat.
+it('memuat seluruh obat yang punya batch bersisa, terdekat di atas', function () {
+    // Jarak 40 hari: obat ke-3 dan seterusnya sudah lewat ambang 90 hari, tetapi tetap dimuat.
     foreach (range(1, 12) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT ED %02d', $i)]);
         receiveInto($obat, 10, today()->addDays($i * 40)->toDateString(), sprintf('B-ED-%02d', $i));
@@ -47,10 +47,10 @@ it('memuat seluruh batch bersisa di widget kedaluwarsa, terdekat di atas', funct
     $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->html();
 
     foreach (range(1, 12) as $i) {
-        expect($render)->toContain(sprintf('B-ED-%02d', $i));
+        expect($render)->toContain(sprintf('OBAT ED %02d', $i));
     }
 
-    expect(strpos($render, 'B-ED-01'))->toBeLessThan(strpos($render, 'B-ED-12'));
+    expect(strpos($render, 'OBAT ED 01'))->toBeLessThan(strpos($render, 'OBAT ED 12'));
 });
 
 it('memuat seluruh peringkat di widget prioritas restock', function () {

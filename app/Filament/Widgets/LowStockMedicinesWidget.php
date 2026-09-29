@@ -41,7 +41,6 @@ class LowStockMedicinesWidget extends BaseWidget
                     ->wrap(),
                 TextColumn::make('stok_tersedia')
                     ->label('Sisa')
-                    ->sortable()
                     ->badge()
                     ->color(fn ($state, Medicine $record): string => match (true) {
                         (int) $state <= 0 => 'danger',

@@ -63,17 +63,23 @@ it('membuang batch yang sudah habis terjual', function () {
         ->and($batch->first()->batch_number)->toBe('B-SISA');
 });
 
-it('menampilkan batch kembar sebagai satu baris di widget kedaluwarsa', function () {
-    $obat = makeMedicine(['name' => 'OBAT WIDGET KEMBAR']);
-    $ed = today()->addDays(50)->toDateString();
+it('menampilkan satu baris per obat di widget kedaluwarsa, memakai ED terdekat', function () {
+    // Kolom widget hanya nama dan sisa hari. Dua batch berbeda dengan ED sama akan tampil sebagai
+    // dua baris yang tidak bisa dibedakan, jadi widget dikelompokkan per obat.
+    $obat = makeMedicine(['name' => 'OBAT WIDGET DUA BATCH']);
 
-    receiveInto($obat, 40, $ed, 'B-WIDGET');
-    receiveInto($obat, 20, $ed, 'B-WIDGET');
+    receiveInto($obat, 40, today()->addDays(50)->toDateString(), 'B-DEKAT');
+    receiveInto($obat, 20, today()->addDays(400)->toDateString(), 'B-JAUH');
 
     $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->html();
 
-    expect(substr_count($render, 'B-WIDGET'))->toBe(1)
-        ->and($render)->toContain('60');
+    expect(substr_count($render, 'OBAT WIDGET DUA BATCH'))->toBe(1);
+
+    $baris = App\Support\BatchBersisa::perObat()->where('medicine_id', $obat->id)->first();
+
+    expect((int) $baris->sisa)->toBe(60)
+        ->and((int) $baris->jumlah_batch)->toBe(2)
+        ->and(App\Support\BatchBersisa::sisaHari($baris))->toBe(50);
 });
 
 it('menampilkan batch kembar sebagai satu baris di laporan kedaluwarsa', function () {
@@ -114,4 +120,30 @@ it('menampilkan satu chip FEFO untuk batch yang dibeli dua kali', function () {
 
     // 9 satuan diambil dari dua lapisan, tetapi kasir melihat satu batch: 9 dari 12.
     expect($halaman->get("data.items.{$kunci}.fefo_batches"))->toBe(['B-CHIP:9']);
+});
+
+it('membungkus pengelompokan sebagai subquery agar lolos ONLY_FULL_GROUP_BY', function () {
+    // Tabel Filament menambahkan `order by medicine_stocks.id` sebagai pemecah seri. Pada MySQL
+    // ber-ONLY_FULL_GROUP_BY itu ditolak bila query-nya GROUP BY biasa, karena `id` bukan kolom
+    // yang dikelompokkan. Membungkusnya sebagai tabel turunan membuat `id` jadi kolom biasa.
+    //
+    // SQLite tidak seketat itu, jadi kesalahan ini tidak akan muncul sebagai galat di suite tes.
+    // Yang dijaga di sini bentuk query-nya, bukan galatnya.
+    $sql = BatchBersisa::query()->toSql();
+
+    expect($sql)->toContain('from (select')
+        ->and($sql)->not->toStartWith('select min(');
+});
+
+it('tetap benar saat diurutkan seperti tabel Filament', function () {
+    $obat = makeMedicine();
+    receiveInto($obat, 10, today()->addDays(20)->toDateString(), 'B-A');
+    receiveInto($obat, 10, today()->addDays(40)->toDateString(), 'B-B');
+
+    $baris = BatchBersisa::query()
+        ->orderBy('expired_date')
+        ->orderBy('medicine_stocks.id')
+        ->get();
+
+    expect($baris->pluck('batch_number')->all())->toBe(['B-A', 'B-B']);
 });

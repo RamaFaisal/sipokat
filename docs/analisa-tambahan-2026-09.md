@@ -643,7 +643,7 @@ ED yang paling dekat, karena itu peringatan yang lebih aman.
 
 | Layar | Perlakuan |
 |---|---|
-| Widget Obat Mendekati Kedaluwarsa | Digabung per batch |
+| Widget Obat Mendekati Kedaluwarsa | Digabung per **obat** (ED terdekat di antara batch bersisa) |
 | Laporan Akan Kedaluwarsa | Digabung per batch, sisa dan nilai terancam dijumlahkan |
 | Pratinjau FEFO di form penjualan | Digabung per batch, satu chip per batch |
 | **Kartu Stok** | **Tetap satu baris per dokumen**, sesuai sifatnya sebagai buku besar |
@@ -660,3 +660,33 @@ wajib menunjuk `layer_stock_id`, jadi perlu ditetapkan dulu aturan pembagian sel
 kekurangan mengurangi lapisan tertua lebih dahulu mengikuti FEFO, dan kelebihan ditambahkan ke
 lapisan terbaru. Itu mengubah cara menulis ledger dan menyentuh aturan R8 beserta tesnya, jadi
 diputuskan terpisah.
+
+### 17.5 Widget kedaluwarsa: satu baris per obat
+
+Kolom widget dipangkas atas permintaan peneliti menjadi nama obat dan sisa hari saja. Begitu kolom
+batch hilang, baris per batch menjadi ambigu: dua batch berbeda milik obat yang sama bisa kedaluwarsa
+pada bulan yang sama, sehingga muncul dua baris yang benar-benar tidak bisa dibedakan. Pada data riil
+2026-09-29 itu terjadi pada RECO TM (batch 0091223019 dan 0091223003, keduanya ED Sep 2028).
+
+Karena itu widget memakai `BatchBersisa::perObat()`: satu baris per obat, memakai ED terdekat di
+antara batch yang masih bersisa. Hasilnya 127 baris tanpa nama ganda. Rincian per batch tetap ada di
+Laporan Akan Kedaluwarsa dan Kartu Stok.
+
+### 17.6 Pelajaran: SQLite longgar, MySQL ketat
+
+Versi pertama pengelompokan ini memakai `GROUP BY` biasa. Suite tes hijau, tetapi halaman langsung
+galat di MySQL:
+
+> Expression #2 of ORDER BY clause is not in GROUP BY clause and contains nonaggregated column
+> `sipokat.medicine_stocks.id` ... incompatible with sql_mode=only_full_group_by
+
+Sebabnya tabel Filament menambahkan `order by medicine_stocks.id` sebagai pemecah seri, dan kolom itu
+tidak ada di GROUP BY. SQLite menerimanya, MySQL dengan `ONLY_FULL_GROUP_BY` menolak.
+
+Perbaikannya: pengelompokan dibungkus sebagai subquery, sehingga `id` menjadi kolom biasa milik tabel
+turunan dan pengurutan, penyaringan, serta penghitungan halaman bekerja apa adanya.
+
+Ini kebalikan dari kasus `FIELD()` di §16.1, dan pelajarannya satu: **suite tes berjalan di SQLite,
+jadi kecocokan dengan MySQL tidak pernah teruji di sana.** Query agregat yang baru sebaiknya
+diverifikasi sekali ke MySQL sebelum dianggap selesai. Sebagai penjaga, ada tes yang memastikan
+bentuk query-nya tetap subquery (`BatchBersisaTest`), karena bentuk itulah yang membuatnya aman.
