@@ -29,7 +29,7 @@ class ExpiringMedicinesWidget extends BaseWidget
     {
         return $table
             ->heading(TautanWidget::judul('Obat Mendekati Kedaluwarsa', LaporanKedaluwarsa::canAccess() ? LaporanKedaluwarsa::getUrl() : null))
-            ->description(self::BARIS.' obat dengan kedaluwarsa terdekat. Warna mengikuti ambang '.AmbangEd::PANTAU.' hari.')
+            ->description(self::BARIS.' obat dengan kedaluwarsa terdekat.')
             ->recordClasses(fn (MedicineStock $record): ?string => AmbangEd::kelasBaris(BatchBersisa::sisaHari($record)))
             // Satu baris per obat, memakai ED terdekat di antara batch yang masih bersisa.
             // Kolomnya hanya nama dan sisa hari, jadi baris per batch akan tampil ganda tanpa

@@ -85,7 +85,7 @@ class SawTop10RestockWidget extends BaseWidget
             return 'Perhitungan tidak dapat dijalankan: '.$hasil['galat'];
         }
 
-        return 'Periode permintaan '.$hasil['period_start']->translatedFormat(Tanggal::TAMPIL)
+        return 'Periode '.$hasil['period_start']->translatedFormat(Tanggal::TAMPIL)
             .' sampai '.$hasil['period_end']->translatedFormat(Tanggal::TAMPIL).'.';
     }
 }

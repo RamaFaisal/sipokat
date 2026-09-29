@@ -207,8 +207,7 @@ body {
 .sipokat-widget-gulir .fi-ta-ctn {
     display: flex;
     flex-direction: column;
-    /* Enam baris ditambah kepala kartu. Ubah angka ini bila jumlah barisnya diubah. */
-    height: 24rem;
+    height: 29rem;
 }
 
 .sipokat-widget-gulir .fi-ta-content-ctn {
