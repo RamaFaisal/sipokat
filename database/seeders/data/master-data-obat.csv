@@ -29,7 +29,7 @@ COLFIN SYR,Obat Bebas Terbatas,Botol,FLS,1,10 Botol
 COLPICA,Obat Bebas Terbatas,Tablet,BOX,100,200 Tablet
 COPARCETIN KAPLET,Obat Bebas Terbatas,Kaplet,BOX,100,200 Kaplet
 COPARCETIN SYR,Obat Bebas Terbatas,Botol,FLS,1,10 Botol
-CTM 4MG KLG TRIMAN,Obat Bebas Terbatas,Tablet,KLG,1000,1000 Tablet
+CTM 4MG KLG TRIMAN,Obat Bebas Terbatas,KLG,KLG,1,1 Kaleng
 CYCLOFEM INJ 0.5ML,Obat Keras,Vial,BOX,5,10 Vial
 "DANASONE 0,5MG",Obat Keras,Tablet,BOX,200,400 Tablet
 DEXTEEM PLUS 2,Obat Bebas Terbatas,Tablet,BOX,100,200 Tablet
@@ -54,7 +54,7 @@ GASELA 150 MG,Obat Keras,Tablet,BOX,100,200 Tablet
 GEN OINT SK,Obat Keras,Tube,TUBE,1,10 Tube
 GENALTEN CR 5GR,Obat Keras,Tube,TUBE,1,10 Tube
 GENTAMICIN CR BERNO 5GR 0.1%,Obat Keras,Tube,TUBE,1,10 Tube
-GG TRIMAN KLG,Obat Bebas Terbatas,Tablet,KLG,1000,1000 Tablet
+GG TRIMAN KLG,Obat Bebas Terbatas,KLG,KLG,1,1 Kaleng
 GINIFAR,Obat Keras,Tablet,BOX,100,200 Tablet
 GLIBENCLAMIDE 5MG INF,Obat Keras,Tablet,BOX,100,200 Tablet
 GLIMEPIRIDE 1MG DEXA,Obat Keras,Tablet,STRIP,10,20 Tablet
@@ -76,7 +76,7 @@ HUFANOXIL 500MG,Obat Keras,Tablet,BOX,100,200 Tablet
 HUFRALGIN,Obat Bebas Terbatas,Tablet,BOX,100,200 Tablet
 HYDROCOTISONE CR BERNO 5GR,Obat Keras,Tube,TUBE,1,10 Tube
 IFARSYL KAPLET,Obat Bebas Terbatas,Kaplet,BOX,100,200 Kaplet
-"IFIDEX 0,5MG KLG",Obat Keras,Tablet,KLG,1000,1000 Tablet
+"IFIDEX 0,5MG KLG",Obat Keras,KLG,KLG,1,1 Kaleng
 INAMID 2MG,Obat Keras,Tablet,BOX,100,200 Tablet
 "KALMETHASONE 0,5MG",Obat Keras,Tablet,BOX,200,400 Tablet
 KETOROLAC INJ MEPRO,Obat Keras,Ampul,AMP,1,20 Ampul
