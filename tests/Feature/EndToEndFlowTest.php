@@ -187,9 +187,9 @@ it('menjalankan alur obat → RO → jual → SAW → PO dari ranking → RO dar
     $salePage = Livewire::test(CreateOrder::class);
     $saleKey = firstRowKey($salePage, 'items');
     $salePage->fillForm(['order_date' => today()->toDateString()] + firstRow($salePage, 'items', ['medicine_id' => $obat->id, 'qty' => 22, 'price' => 6000]));
-    $layerIds = $stockCard->layers($obat->id)->pluck('id')->all();
+    // Chip dikenali dari nomor batch, bukan id lapisan: batch yang dibeli dua kali tampil satu chip.
     expect($salePage->get("data.items.{$saleKey}.subtotal"))->toBe('132.000')
-        ->and($salePage->get("data.items.{$saleKey}.fefo_batches"))->toBe([$layerIds[0].':5', $layerIds[1].':17']);
+        ->and($salePage->get("data.items.{$saleKey}.fefo_batches"))->toBe(['B1:5', 'B2:17']);
     $salePage->call('create')->assertHasNoFormErrors();
 
     $order2 = Order::latest('id')->firstOrFail();

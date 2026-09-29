@@ -69,16 +69,16 @@ it('memuat seluruh peringkat di widget prioritas restock', function () {
     }
 });
 
-it('menyebutkan waktu perhitungan dan periode permintaan di widget prioritas restock', function () {
+it('menyebutkan periode permintaan di widget prioritas restock', function () {
     $this->seed(SawCriteriaSeeder::class);
     $obat = makeMedicine(['min_stock' => 20]);
     receiveInto($obat, 100);
     sellFrom($obat, 10);
 
+    // Waktu perhitungan tetap ditampilkan di halaman SPK; di widget cukup periodenya.
     Livewire::test(SawTop10RestockWidget::class)
         ->assertOk()
-        ->assertSee('Dihitung')
-        ->assertSee('periode permintaan');
+        ->assertSee('Periode permintaan');
 });
 
 it('tidak lagi menampilkan kotak pencarian di ketiga widget', function (string $kelas) {

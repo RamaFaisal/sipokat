@@ -606,3 +606,57 @@ lima baris izin milik widget yang sudah tidak ada dihapus manual dari basis data
 baru tidak akan memilikinya karena kelasnya memang tidak ada.
 
 Empat halaman laporan baru menambah empat izin; `RoleSeeder` sudah memuatnya untuk ketiga peran.
+
+---
+
+## 17. Batch kembar: satu batch, dua penerimaan (2026-09-29)
+
+Widget kedaluwarsa menampilkan dua baris untuk batch yang sama, misalnya MICROGYNON LIBI 10'S batch
+2310430 dengan sisa 38 dan 28. Itu benar sebagai data: keduanya lapisan berbeda dari dua faktur
+berbeda (01955/NPM/5/24 tanggal 07 Sep dan 02026/NPM/5/24 tanggal 11 Sep). Tetapi salah sebagai
+jawaban atas pertanyaan "batch mana yang akan kedaluwarsa", karena di rak hanya ada satu tumpukan.
+
+### 17.1 Sebaran kasusnya
+
+Pada data riil 2026-09-29, dari 140 lapisan:
+
+| Pola | Jumlah |
+|---|---|
+| Batch sama dan ED sama, lebih dari satu lapisan | 9 kelompok, masing-masing 2 lapisan |
+| Di antaranya berasal dari satu faktur yang sama | 1 (ALLOPURINOL 100MG NOVA, dua baris dalam satu faktur) |
+| Batch **berbeda** tetapi ED sama | 1 (RECO TM, ED Sep 2028) |
+| Batch dengan ED berbeda (salah ketik) | 0 |
+| Lapisan tanpa nomor batch | 0 |
+
+Setelah digabung, 140 lapisan menjadi 131 baris.
+
+### 17.2 Kuncinya nomor batch, bukan tanggal kedaluwarsa
+
+RECO TM membuktikan kenapa. Dua batch berbeda bisa kebetulan kedaluwarsa pada bulan yang sama, dan
+menyatukannya akan menghapus nomor batch, yaitu identitas yang dipakai saat retur ke PBF atau
+pemusnahan. Pengelompokan memakai `medicine_id` + `batch_number` (`App\Support\BatchBersisa`).
+
+Bila suatu saat satu batch tercatat dengan dua ED berbeda karena salah ketik, yang ditampilkan adalah
+ED yang paling dekat, karena itu peringatan yang lebih aman.
+
+### 17.3 Di mana digabung, di mana tidak
+
+| Layar | Perlakuan |
+|---|---|
+| Widget Obat Mendekati Kedaluwarsa | Digabung per batch |
+| Laporan Akan Kedaluwarsa | Digabung per batch, sisa dan nilai terancam dijumlahkan |
+| Pratinjau FEFO di form penjualan | Digabung per batch, satu chip per batch |
+| **Kartu Stok** | **Tetap satu baris per dokumen**, sesuai sifatnya sebagai buku besar |
+| Alokasi FEFO, HPP, koreksi R8 | Tetap per lapisan, tidak tersentuh |
+
+Nilai terancam dihitung dari HPP tiap lapisan, tidak mengasumsikan harga kedua faktur sama. Pada data
+sekarang kebetulan sembilan kelompok itu berharga sama, tetapi faktur berikutnya bisa berbeda.
+
+### 17.4 Yang belum dikerjakan: Stok Opname
+
+Form opname masih menampilkan lapisan satu per satu, sehingga untuk batch kembar petugas melihat dua
+baris padahal di rak hanya ada satu tumpukan. Menggabungkannya bukan pekerjaan tampilan: penyesuaian
+wajib menunjuk `layer_stock_id`, jadi perlu ditetapkan dulu aturan pembagian selisihnya, misalnya
+kekurangan mengurangi lapisan tertua lebih dahulu mengikuti FEFO, dan kelebihan ditambahkan ke
+lapisan terbaru. Itu mengubah cara menulis ledger dan menyentuh aturan R8 beserta tesnya, jadi
+diputuskan terpisah.

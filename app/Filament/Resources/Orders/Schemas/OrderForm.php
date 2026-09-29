@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
-use App\Support\Tanggal;
 use App\Filament\Forms\PackLine;
 use App\Models\Medicine;
 use App\Models\Order;
 use App\Services\StockCardService;
 use App\Support\DocumentNumber;
+use App\Support\Tanggal;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -240,26 +240,40 @@ class OrderForm
             return ['options' => [], 'selected' => [], 'hint' => 'Tidak ada stok yang belum kedaluwarsa.'];
         }
 
-        $options = [];
+        // Alokasi tetap dihitung per lapisan (itulah yang ditulis ke kartu stok), tetapi
+        // ditampilkan per **batch**: batch yang dibeli dua kali tetap satu tumpukan di rak, dan
+        // kasir tidak perlu tahu dari faktur mana barangnya berasal.
+        $perBatch = [];
         $left = $qty;
         foreach ($layers as $layer) {
-            if ($left <= 0) {
-                break;
+            $batch = $layer->batch_number ?: 'tanpa batch';
+            $perBatch[$batch] ??= ['ambil' => 0, 'sisa' => 0, 'ed' => $layer->expired_date];
+            $perBatch[$batch]['sisa'] += (int) $layer->remaining;
+
+            if ($left > 0) {
+                $take = min($left, (int) $layer->remaining);
+                $perBatch[$batch]['ambil'] += $take;
+                $left -= $take;
             }
-            $take = min($left, (int) $layer->remaining);
-            // Kunci menyertakan jumlah yang diambil: nilai chip berubah setiap alokasi berubah, sehingga
-            // label di browser ikut dirender ulang (nilai yang sama tidak memicu gambar ulang chip).
-            $options[$layer->id.':'.$take] = sprintf(
-                '%s%s · %d dari %d',
-                $layer->batch_number ?? 'tanpa batch',
-                $layer->expired_date ? ' · ED '.$layer->expired_date->translatedFormat(Tanggal::BULAN_TAHUN) : '',
-                $take,
-                (int) $layer->remaining,
-            );
-            $left -= $take;
         }
 
-        $hint = 'Tersedia '.$available.' dalam '.$layers->count().' batch, ED terdekat dipakai lebih dulu.';
+        $options = [];
+        foreach ($perBatch as $batch => $data) {
+            if ($data['ambil'] <= 0) {
+                continue;
+            }
+            // Kunci menyertakan jumlah yang diambil: nilai chip berubah setiap alokasi berubah, sehingga
+            // label di browser ikut dirender ulang (nilai yang sama tidak memicu gambar ulang chip).
+            $options[$batch.':'.$data['ambil']] = sprintf(
+                '%s%s · %d dari %d',
+                $batch,
+                $data['ed'] ? ' · ED '.$data['ed']->translatedFormat(Tanggal::BULAN_TAHUN) : '',
+                $data['ambil'],
+                $data['sisa'],
+            );
+        }
+
+        $hint = 'Tersedia '.$available.' dalam '.count($perBatch).' batch, ED terdekat dipakai lebih dulu.';
         if ($left > 0) {
             $hint = 'Kurang '.$left.' stok tersedia hanya '.$available.'.';
         }

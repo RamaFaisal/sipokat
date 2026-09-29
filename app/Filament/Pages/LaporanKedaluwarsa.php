@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\MedicineStock;
 use App\Support\AmbangEd;
+use App\Support\BatchBersisa;
 use App\Support\LaporanExcel;
 use App\Support\Tanggal;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
@@ -44,7 +45,7 @@ class LaporanKedaluwarsa extends Page implements HasTable
             ->heading('Batch Mendekati Kedaluwarsa')
             ->description('Batch yang masih bersisa dengan ED sampai '.AmbangEd::PANTAU.' hari ke depan, termasuk yang sudah lewat.')
             ->defaultSort('expired_date')
-            ->recordClasses(fn (MedicineStock $record): ?string => AmbangEd::kelasBaris($this->sisaHari($record)))
+            ->recordClasses(fn (MedicineStock $record): ?string => AmbangEd::kelasBaris(BatchBersisa::sisaHari($record)))
             ->columns([
                 TextColumn::make('medicine.code')
                     ->label('Kode')
@@ -62,19 +63,18 @@ class LaporanKedaluwarsa extends Page implements HasTable
                     ->sortable(),
                 TextColumn::make('sisa_hari')
                     ->label('Sisa Hari')
-                    ->state(fn (MedicineStock $record): int => $this->sisaHari($record))
+                    ->state(fn (MedicineStock $record): int => BatchBersisa::sisaHari($record))
                     ->badge()
                     ->color(fn ($state): string => AmbangEd::warna((int) $state))
                     ->formatStateUsing(fn ($state): string => (int) $state < 0 ? 'lewat '.abs((int) $state).' hari' : $state.' hari')
                     ->alignEnd(),
                 TextColumn::make('sisa')
                     ->label('Sisa Stok')
-                    ->state(fn (MedicineStock $record): int => $record->remaining)
+                    ->numeric()
                     ->suffix(fn (MedicineStock $record): string => ' '.($record->medicine?->unit?->name ?? ''))
                     ->alignEnd(),
                 TextColumn::make('nilai')
                     ->label('Nilai Terancam')
-                    ->state(fn (MedicineStock $record): float => $record->remaining * (float) $record->hpp)
                     ->money('IDR')
                     ->weight('semibold')
                     ->alignEnd(),
@@ -109,28 +109,29 @@ class LaporanKedaluwarsa extends Page implements HasTable
             ->paginated([25, 50, 100]);
     }
 
+    /**
+     * Satu baris per batch, bukan per lapisan. Batch yang dibeli dua kali tetap satu tumpukan di
+     * rak, dan laporan ini menjawab "apa yang perlu ditindak", bukan "dari faktur mana asalnya".
+     * Rincian per faktur tetap ada di Kartu Stok.
+     */
     protected function query(): Builder
     {
-        return MedicineStock::layers()
-            ->withRemainingStock()
-            ->whereNotNull('expired_date')
-            ->whereDate('expired_date', '<=', today()->addDays(AmbangEd::PANTAU)->toDateString())
-            ->whereHas('medicine', fn (Builder $q) => $q->where('status', 'active'))
-            ->withSum('consumptions', 'qty')
+        return BatchBersisa::query()
+            ->havingRaw('min(medicine_stocks.expired_date) <= ?', [today()->addDays(AmbangEd::PANTAU)->toDateString()])
             ->with(['medicine.unit']);
     }
 
     public function unduhExcel()
     {
-        $baris = $this->query()->orderBy('expired_date')->get()->map(fn (MedicineStock $l): array => [
-            $l->medicine?->code,
-            $l->medicine?->name,
-            $l->batch_number ?: 'tanpa nomor',
-            $l->expired_date->translatedFormat(Tanggal::TAMPIL),
-            $this->sisaHari($l),
-            $l->remaining,
-            $l->medicine?->unit?->name,
-            round($l->remaining * (float) $l->hpp),
+        $baris = $this->query()->orderBy('expired_date')->get()->map(fn (MedicineStock $b): array => [
+            $b->medicine?->code,
+            $b->medicine?->name,
+            $b->batch_number ?: 'tanpa nomor',
+            $b->expired_date->translatedFormat(Tanggal::TAMPIL),
+            BatchBersisa::sisaHari($b),
+            (int) $b->sisa,
+            $b->medicine?->unit?->name,
+            round((float) $b->nilai),
         ]);
 
         return LaporanExcel::unduh(
@@ -140,10 +141,5 @@ class LaporanKedaluwarsa extends Page implements HasTable
             $baris,
             'laporan-kedaluwarsa-'.now()->format('Ymd_His').'.xlsx',
         );
-    }
-
-    private function sisaHari(MedicineStock $lapisan): int
-    {
-        return (int) today()->diffInDays($lapisan->expired_date->startOfDay(), false);
     }
 }
