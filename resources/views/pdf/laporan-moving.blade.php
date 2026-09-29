@@ -117,7 +117,7 @@
 <body>
 
 <div class="doc-title">LAPORAN FAST / SLOW MOVING</div>
-<div class="doc-sub">Apotek Anugrah Husada &mdash; Periode {{ $meta['periode'] }}</div>
+<div class="doc-sub">Apotek Anugrah Husada - Periode {{ $meta['periode'] }}</div>
 <div class="doc-meta">
     Rentang {{ $meta['days'] }} hari &nbsp;·&nbsp; Menampilkan maksimal {{ $topN }} obat per kategori
     &nbsp;·&nbsp; Dicetak {{ $printedAt }}
@@ -148,7 +148,7 @@
     <div class="block">
         <h2 class="section">
             {{ $section['title'] }}
-            <span class="hint">&mdash; {{ $section['hint'] }}</span>
+            <span class="hint">- {{ $section['hint'] }}</span>
         </h2>
 
         @if ($section['rows']->isEmpty())

@@ -112,7 +112,7 @@
 <body>
 
 <div class="doc-title">LAPORAN REKAP PENJUALAN &amp; PEMBELIAN</div>
-<div class="doc-sub">Apotek Anugrah Husada &mdash; Periode {{ $summary['periode'] }}</div>
+<div class="doc-sub">Apotek Anugrah Husada - Periode {{ $summary['periode'] }}</div>
 <div class="doc-meta">
     Tipe: {{ $tipeLabel }} &nbsp;·&nbsp; Dicetak {{ $printedAt }}
 </div>
