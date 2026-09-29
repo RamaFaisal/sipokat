@@ -2,7 +2,10 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Pages\MedicineStockDetail;
+use App\Filament\Resources\MedicineStocks\MedicineStockResource;
 use App\Models\Medicine;
+use App\Support\TautanWidget;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -25,16 +28,20 @@ class LowStockMedicinesWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
+    /** Baris yang ditampilkan. Selebihnya lewat menu Kartu Stok, yang dicapai dari judul widget. */
+    private const BARIS = 6;
+
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Stok Obat')
-            ->description('Seluruh obat aktif, stok tersedia paling sedikit di atas.')
+            ->heading(TautanWidget::judul('Stok Obat', MedicineStockResource::canViewAny() ? MedicineStockResource::getUrl() : null))
+            ->description(self::BARIS.' obat dengan stok tersedia paling sedikit.')
             ->query(fn (): Builder => Medicine::query()
                 ->withAvailableStock()
                 ->where('status', 'active')
                 ->orderBy('stok_tersedia')
-                ->orderBy('name'))
+                ->orderBy('name')
+                ->limit(self::BARIS))
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Obat')
@@ -52,6 +59,9 @@ class LowStockMedicinesWidget extends BaseWidget
                     ->alignEnd(),
             ])
             ->defaultSort('stok_tersedia')
+            ->recordUrl(fn (Medicine $record): ?string => MedicineStockDetail::canAccess()
+                ? MedicineStockDetail::getUrl(['record' => $record->getKey()])
+                : null)
             ->paginated(false)
             ->extraAttributes(['class' => 'sipokat-widget-gulir']);
     }

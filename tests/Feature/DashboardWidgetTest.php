@@ -1,7 +1,12 @@
 <?php
 
+use App\Filament\Pages\LaporanKedaluwarsa;
+use App\Filament\Pages\MedicineStockDetail;
+use App\Filament\Pages\SawCalculation;
+use App\Filament\Resources\MedicineStocks\MedicineStockResource;
 use App\Filament\Widgets\ExpiringMedicinesWidget;
 use App\Filament\Widgets\LowStockMedicinesWidget;
+use App\Filament\Widgets\RingkasanStatWidget;
 use App\Filament\Widgets\SawTop10RestockWidget;
 use App\Models\User;
 use Database\Seeders\SawCriteriaSeeder;
@@ -9,11 +14,12 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 
 /**
- * Ketiga widget dashboard memuat **seluruh** datanya dan digulir di dalam kartunya. Tidak ada
- * kotak pencarian dan tidak ada pemotongan jumlah baris, sehingga tidak ada data yang hanya bisa
- * dicapai lewat kata kunci; tinggi kartu dikunci lewat CSS, bukan lewat jumlah baris.
+ * Ketiga widget tabel dashboard menampilkan **enam baris paling mendesak**, tanpa kotak pencarian.
+ * Selebihnya dicapai lewat menu terkait, yang dituju dengan mengeklik judul widget; tiap baris
+ * menuju kartu stok obatnya.
  *
- * Yang dijaga di sini: tidak ada baris yang hilang, dan urutannya benar (paling mendesak di atas).
+ * Yang dijaga di sini: batas enam baris, urutan yang benar (paling mendesak di atas), dan kedua
+ * tautan itu benar-benar ada di keluaran.
  */
 beforeEach(function () {
     seedMasterFixtures();
@@ -21,51 +27,80 @@ beforeEach(function () {
     $this->actingAs(User::factory()->create());
 });
 
-it('memuat seluruh obat aktif di widget stok, paling tipis di atas', function () {
-    // Stok menaik: OBAT STOK 01 paling sedikit, OBAT STOK 14 paling banyak.
-    foreach (range(1, 14) as $i) {
+/** Jumlah obat bernomor 01 sampai $sampai yang muncul di keluaran widget. */
+function jumlahTampil(string $kelas, string $pola, int $sampai): int
+{
+    $render = Livewire::test($kelas)->assertOk()->html();
+
+    return collect(range(1, $sampai))
+        ->filter(fn (int $i): bool => str_contains($render, sprintf($pola, $i)))
+        ->count();
+}
+
+it('menampilkan enam obat berstok paling tipis, yang paling tipis di atas', function () {
+    // Stok menaik: OBAT STOK 01 paling sedikit.
+    foreach (range(1, 9) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT STOK %02d', $i)]);
         receiveInto($obat, $i);
     }
 
     $render = Livewire::test(LowStockMedicinesWidget::class)->assertOk()->html();
 
-    foreach (range(1, 14) as $i) {
-        expect($render)->toContain(sprintf('OBAT STOK %02d', $i));
-    }
-
-    expect(strpos($render, 'OBAT STOK 01'))->toBeLessThan(strpos($render, 'OBAT STOK 14'));
+    expect(jumlahTampil(LowStockMedicinesWidget::class, 'OBAT STOK %02d', 9))->toBe(6)
+        ->and($render)->toContain('OBAT STOK 01')
+        ->and($render)->not->toContain('OBAT STOK 09')
+        ->and(strpos($render, 'OBAT STOK 01'))->toBeLessThan(strpos($render, 'OBAT STOK 06'));
 });
 
-it('memuat seluruh obat yang punya batch bersisa, terdekat di atas', function () {
-    // Jarak 40 hari: obat ke-3 dan seterusnya sudah lewat ambang 90 hari, tetapi tetap dimuat.
-    foreach (range(1, 12) as $i) {
+it('menampilkan enam obat dengan kedaluwarsa terdekat', function () {
+    foreach (range(1, 9) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT ED %02d', $i)]);
         receiveInto($obat, 10, today()->addDays($i * 40)->toDateString(), sprintf('B-ED-%02d', $i));
     }
 
     $render = Livewire::test(ExpiringMedicinesWidget::class)->assertOk()->html();
 
-    foreach (range(1, 12) as $i) {
-        expect($render)->toContain(sprintf('OBAT ED %02d', $i));
-    }
-
-    expect(strpos($render, 'OBAT ED 01'))->toBeLessThan(strpos($render, 'OBAT ED 12'));
+    expect(jumlahTampil(ExpiringMedicinesWidget::class, 'OBAT ED %02d', 9))->toBe(6)
+        ->and($render)->toContain('OBAT ED 01')
+        ->and($render)->not->toContain('OBAT ED 09');
 });
 
-it('memuat seluruh peringkat di widget prioritas restock', function () {
+it('menampilkan enam obat teratas peringkat restock', function () {
     $this->seed(SawCriteriaSeeder::class);
 
-    foreach (range(1, 12) as $i) {
+    foreach (range(1, 9) as $i) {
         $obat = makeMedicine(['name' => sprintf('OBAT SAW %02d', $i), 'min_stock' => 20]);
         receiveInto($obat, $i * 20);
         sellFrom($obat, $i);
     }
 
-    $render = Livewire::test(SawTop10RestockWidget::class)->assertOk()->html();
+    expect(jumlahTampil(SawTop10RestockWidget::class, 'OBAT SAW %02d', 9))->toBe(6);
+});
 
-    foreach (range(1, 12) as $i) {
-        expect($render)->toContain(sprintf('OBAT SAW %02d', $i));
+it('menjadikan judul widget tautan ke menu terkait', function () {
+    $this->seed(SawCriteriaSeeder::class);
+    $obat = makeMedicine(['min_stock' => 20]);
+    receiveInto($obat, 50, today()->addDays(30)->toDateString());
+    sellFrom($obat, 5);
+
+    expect(Livewire::test(LowStockMedicinesWidget::class)->html())
+        ->toContain(MedicineStockResource::getUrl())
+        ->and(Livewire::test(ExpiringMedicinesWidget::class)->html())
+        ->toContain(LaporanKedaluwarsa::getUrl())
+        ->and(Livewire::test(SawTop10RestockWidget::class)->html())
+        ->toContain(SawCalculation::getUrl());
+});
+
+it('menjadikan tiap baris tautan ke kartu stok obatnya', function () {
+    $this->seed(SawCriteriaSeeder::class);
+    $obat = makeMedicine(['min_stock' => 20]);
+    receiveInto($obat, 50, today()->addDays(30)->toDateString());
+    sellFrom($obat, 5);
+
+    $tujuan = MedicineStockDetail::getUrl(['record' => $obat->id]);
+
+    foreach ([LowStockMedicinesWidget::class, ExpiringMedicinesWidget::class, SawTop10RestockWidget::class] as $kelas) {
+        expect(Livewire::test($kelas)->html())->toContain($tujuan);
     }
 });
 
@@ -89,9 +124,7 @@ it('tidak lagi menampilkan kotak pencarian di ketiga widget', function (string $
         $this->seed(SawCriteriaSeeder::class);
     }
 
-    $render = Livewire::test($kelas)->assertOk()->html();
-
-    expect($render)->not->toContain('fi-ta-search-field');
+    expect(Livewire::test($kelas)->assertOk()->html())->not->toContain('fi-ta-search-field');
 })->with([
     'stok' => LowStockMedicinesWidget::class,
     'kedaluwarsa' => ExpiringMedicinesWidget::class,
@@ -99,7 +132,7 @@ it('tidak lagi menampilkan kotak pencarian di ketiga widget', function (string $
 ]);
 
 it('menyusun kartu statistik bertahap menurut lebar layar', function () {
-    $render = Livewire::test(App\Filament\Widgets\RingkasanStatWidget::class)->assertOk()->html();
+    $render = Livewire::test(RingkasanStatWidget::class)->assertOk()->html();
 
     // Grid ditulis sendiri di blade, bukan lewat variabel CSS Filament: satu kolom di ponsel,
     // dua mulai md (768px), empat mulai xl (1280px).

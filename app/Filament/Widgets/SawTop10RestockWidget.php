@@ -2,8 +2,11 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Pages\MedicineStockDetail;
+use App\Filament\Pages\SawCalculation;
 use App\Services\SawCalculationService;
 use App\Support\Tanggal;
+use App\Support\TautanWidget;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -27,17 +30,23 @@ class SawTop10RestockWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 1;
 
+    /** Baris yang ditampilkan. Peringkat selengkapnya di halaman SPK, dicapai dari judul widget. */
+    private const BARIS = 6;
+
     /** @var array<string, mixed>|null */
     protected ?array $hasil = null;
 
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Prioritas Restock (SAW)')
+            ->heading(TautanWidget::judul('Prioritas Restock (SAW)', SawCalculation::canAccess() ? SawCalculation::getUrl() : null))
             ->description(fn (): string => $this->keterangan())
             // Baris diambil di dalam closure, bukan sebelum tabel dibangun: objek tabel di-cache
             // Filament, sehingga baris yang dihitung di luar closure akan membeku pada render pertama.
-            ->records(fn (): Collection => collect($this->hasil()['rows']))
+            ->records(fn (): Collection => collect(array_slice($this->hasil()['rows'], 0, self::BARIS)))
+            ->recordUrl(fn ($record): ?string => MedicineStockDetail::canAccess()
+                ? MedicineStockDetail::getUrl(['record' => $record['medicine_id']])
+                : null)
             ->paginated(false)
             ->extraAttributes(['class' => 'sipokat-widget-gulir'])
             ->columns([
