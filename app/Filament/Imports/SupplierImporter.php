@@ -43,13 +43,7 @@ class SupplierImporter extends Importer
                 ->guess(['Fax', 'fax'])
                 ->example('(024) 8664123')
                 ->rules(['nullable', 'string', 'max:50']),
-            ImportColumn::make('status')
-                ->label('Status (active/inactive)')
-                ->exampleHeader('Status')
-                ->guess(['Status', 'status'])
-                ->example('active')
-                ->castStateUsing(fn ($state) => in_array($state, ['active', 'inactive'], true) ? $state : 'active')
-                ->rules(['nullable', 'in:active,inactive']),
+            // Tanpa kolom status: PBF hasil import diaktifkan di resolveRecord().
         ];
     }
 
@@ -60,7 +54,9 @@ class SupplierImporter extends Importer
         return Supplier::query()
             ->whereRaw('LOWER(name) = ?', [strtolower($name)])
             ->first()
-            ?? new Supplier(['name' => $name]);
+            // Kolom status tidak lagi diimpor, sedangkan bawaan kolomnya di database 'inactive'.
+            // PBF hasil import harus langsung terpakai, jadi diaktifkan di sini.
+            ?? new Supplier(['name' => $name, 'status' => 'active']);
     }
 
     public static function getCompletedNotificationBody(Import $import): string

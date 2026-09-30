@@ -64,13 +64,8 @@ class MedicineImporter extends Importer
                 ->example('20')
                 ->numeric()
                 ->rules(['nullable', 'integer', 'min:1']),
-            ImportColumn::make('status')
-                ->label('Status (active/inactive)')
-                ->exampleHeader('Status')
-                ->guess(['Status', 'status'])
-                ->example('active')
-                ->castStateUsing(fn ($state) => in_array($state, ['active', 'inactive'], true) ? $state : 'active')
-                ->rules(['nullable', 'in:active,inactive']),
+            // Tanpa kolom status: obat baru selalu aktif, mengikuti bawaan kolomnya di database.
+            // Menonaktifkan obat dilakukan dari form Obat, bukan lewat berkas import.
         ];
     }
 
