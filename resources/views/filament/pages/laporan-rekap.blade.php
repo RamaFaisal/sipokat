@@ -3,7 +3,7 @@
 
     <x-filament::section>
         <x-slot name="heading">Filter Periode</x-slot>
-        <x-slot name="description">Pilih rentang tanggal + tipe laporan, lalu klik "Tampilkan Laporan" di header. Klik "Export Excel" untuk download.</x-slot>
+        <x-slot name="description">Tabel langsung menyesuaikan begitu filter diubah. Klik "Export Excel" atau "Export PDF" untuk mengunduh seluruh barisnya.</x-slot>
         {{ $this->form }}
     </x-filament::section>
 
@@ -62,8 +62,12 @@
 
         @if ($this->rows->isNotEmpty())
             <x-filament::section>
-                <x-slot name="heading">Detail Per Obat (Top {{ min(50, $this->rows->count()) }})</x-slot>
-                <x-slot name="description">Diurutkan berdasarkan nilai penjualan tertinggi. Export Excel untuk data lengkap.</x-slot>
+                <x-slot name="heading">Detail Per Obat</x-slot>
+                <x-slot name="description">Diurutkan dari nilai tertinggi pada sisi yang sedang dipilih. Kolom mengikuti tipe laporan.</x-slot>
+
+                @php($halaman = $this->halaman())
+
+                @include('filament.pages.partials.laporan-pencarian', ['paginator' => $halaman, 'petunjuk' => 'Cari kode, nama obat, atau kategori'])
 
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
@@ -72,37 +76,45 @@
                                 <th class="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Kode</th>
                                 <th class="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Nama Obat</th>
                                 <th class="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Kategori</th>
-                                <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Qty Beli</th>
-                                <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Nilai Beli</th>
-                                <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Qty Jual</th>
-                                <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Nilai Jual</th>
-                                <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Margin</th>
+                                @if ($this->tampilBeli())
+                                    <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Qty Beli</th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Nilai Beli</th>
+                                @endif
+                                @if ($this->tampilJual())
+                                    <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Qty Jual</th>
+                                    <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Nilai Jual</th>
+                                @endif
+                                @if ($this->tampilMargin())
+                                    <th class="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">Margin</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            @foreach ($this->rows->take(50) as $row)
+                            @foreach ($halaman as $row)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                     <td class="px-3 py-2 text-xs font-mono text-gray-600 dark:text-gray-400">{{ $row['code'] }}</td>
                                     <td class="px-3 py-2 text-gray-900 dark:text-gray-100">{{ $row['name'] }}</td>
                                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $row['category'] }}</td>
-                                    <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['beli_qty']) }}</td>
-                                    <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['beli_nilai'], 0, ',', '.') }}</td>
-                                    <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['jual_qty']) }}</td>
-                                    <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['jual_nilai'], 0, ',', '.') }}</td>
-                                    <td class="px-3 py-2 text-right tabular-nums font-medium @if ($row['margin_kotor'] >= 0) text-green-600 @else text-red-600 @endif">
-                                        {{ number_format($row['margin_kotor'], 0, ',', '.') }}
-                                    </td>
+                                    @if ($this->tampilBeli())
+                                        <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['beli_qty']) }}</td>
+                                        <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['beli_nilai'], 0, ',', '.') }}</td>
+                                    @endif
+                                    @if ($this->tampilJual())
+                                        <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['jual_qty']) }}</td>
+                                        <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['jual_nilai'], 0, ',', '.') }}</td>
+                                    @endif
+                                    @if ($this->tampilMargin())
+                                        <td class="px-3 py-2 text-right tabular-nums font-medium @if ($row['margin_kotor'] >= 0) text-green-600 @else text-red-600 @endif">
+                                            {{ number_format($row['margin_kotor'], 0, ',', '.') }}
+                                        </td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                @if ($this->rows->count() > 50)
-                    <p class="mt-3 text-xs text-gray-500 dark:text-gray-400 italic">
-                        Menampilkan 50 dari {{ $this->rows->count() }} obat. Export Excel untuk data lengkap.
-                    </p>
-                @endif
+                @include('filament.pages.partials.laporan-paginasi', ['paginator' => $halaman])
             </x-filament::section>
         @else
             <x-filament::section>

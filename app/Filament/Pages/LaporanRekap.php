@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\TabelBerhalaman;
 use App\Models\Medicine;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -32,6 +33,7 @@ class LaporanRekap extends Page implements HasSchemas
 {
     use HasPageShield;
     use InteractsWithSchemas;
+    use TabelBerhalaman;
 
     protected string $view = 'filament.pages.laporan-rekap';
 
@@ -66,19 +68,24 @@ class LaporanRekap extends Page implements HasSchemas
         return $schema
             ->components([
                 Section::make('Filter Periode')
+                    ->description('Tabel langsung menyesuaikan begitu filter diubah.')
                     ->columns(3)
                     ->schema([
                         DatePicker::make('period_start')
                             ->label('Mulai')
                             ->required()
                             ->native(false)
-                            ->maxDate(now()),
+                            ->maxDate(now())
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                         DatePicker::make('period_end')
                             ->label('Sampai')
                             ->required()
                             ->native(false)
                             ->maxDate(now())
-                            ->afterOrEqual('period_start'),
+                            ->afterOrEqual('period_start')
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                         Select::make('tipe')
                             ->label('Tipe Laporan')
                             ->options([
@@ -87,7 +94,9 @@ class LaporanRekap extends Page implements HasSchemas
                                 'pembelian' => 'Pembelian Saja',
                             ])
                             ->required()
-                            ->native(false),
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                     ]),
             ])
             ->statePath('data');
@@ -97,8 +106,8 @@ class LaporanRekap extends Page implements HasSchemas
     {
         return [
             Action::make('generate')
-                ->label('Tampilkan Laporan')
-                ->icon(Heroicon::OutlinedPlay)
+                ->label('Muat Ulang')
+                ->icon(Heroicon::OutlinedArrowPath)
                 ->color('primary')
                 ->action('generate'),
             Action::make('export')
@@ -118,6 +127,8 @@ class LaporanRekap extends Page implements HasSchemas
 
     public function generate(): void
     {
+        $this->resetPage();
+
         $data = $this->form->getState();
         $start = Carbon::parse($data['period_start'])->startOfDay();
         $end = Carbon::parse($data['period_end'])->endOfDay();
@@ -188,7 +199,12 @@ class LaporanRekap extends Page implements HasSchemas
                 'jual_transaksi' => (int) ($sale->transaksi ?? 0),
                 'margin_kotor' => $saleVal - ($buyVal > 0 && $buyQty > 0 ? ($buyVal / max($buyQty, 1)) * $saleQty : 0),
             ];
-        })->filter()->sortByDesc('jual_nilai')->values();
+        })
+            ->filter()
+            // Pada "Pembelian Saja" seluruh nilai jual nol, jadi mengurutkannya dengan nilai jual
+            // membuat urutan baris praktis acak. Urutan mengikuti sisi yang sedang diminta.
+            ->sortByDesc($tipe === 'pembelian' ? 'beli_nilai' : 'jual_nilai')
+            ->values();
 
         $this->summary = collect([
             'total_jual' => $this->rows->sum('jual_nilai'),
@@ -203,13 +219,41 @@ class LaporanRekap extends Page implements HasSchemas
         ]);
     }
 
+    /**
+     * Tipe laporan yang sedang dipilih.
+     *
+     * Dibaca dari `$summary`, bukan dari `$data`, supaya kolom yang tampil selalu cocok dengan angka
+     * yang sudah dihitung. Kalau diambil dari form, mengubah tipe tanpa menghitung ulang akan
+     * menyembunyikan kolom yang isinya masih ada.
+     */
+    public function tipeLaporan(): string
+    {
+        return (string) ($this->summary['tipe'] ?? 'keduanya');
+    }
+
+    public function tampilBeli(): bool
+    {
+        return $this->tipeLaporan() !== 'penjualan';
+    }
+
+    public function tampilJual(): bool
+    {
+        return $this->tipeLaporan() !== 'pembelian';
+    }
+
+    /** Margin hanya berarti bila kedua sisi ikut dihitung. */
+    public function tampilMargin(): bool
+    {
+        return $this->tipeLaporan() === 'keduanya';
+    }
+
     public function exportPdf()
     {
         if ($this->rows->isEmpty()) {
             return;
         }
 
-        $tipeLabel = match ($this->summary['tipe']) {
+        $tipeLabel = match ($this->tipeLaporan()) {
             'penjualan' => 'Penjualan Saja',
             'pembelian' => 'Pembelian Saja',
             default => 'Penjualan + Pembelian',
@@ -219,6 +263,9 @@ class LaporanRekap extends Page implements HasSchemas
             'rows' => $this->rows,
             'summary' => $this->summary,
             'tipeLabel' => $tipeLabel,
+            'tampilBeli' => $this->tampilBeli(),
+            'tampilJual' => $this->tampilJual(),
+            'tampilMargin' => $this->tampilMargin(),
             'printedAt' => now()->translatedFormat(Tanggal::TAMPIL_JAM),
         ])->setPaper('a4', 'landscape');
 
@@ -228,11 +275,56 @@ class LaporanRekap extends Page implements HasSchemas
         );
     }
 
+    /** @return array<int, string> */
+    public function kolomPencarian(): array
+    {
+        return ['code', 'name', 'category'];
+    }
+
+    /**
+     * Susunan kolom ekspor menurut tipe laporan.
+     *
+     * Tiap kolom membawa judul, cara mengambil nilainya dari satu baris, dan angka barisnya di
+     * baris TOTAL. Dulu sepuluh kolom ditulis tetap, sehingga "Penjualan Saja" tetap menghasilkan
+     * tiga kolom pembelian berisi nol.
+     *
+     * @return array<int, array{judul: string, nilai: callable, total: int|float|null, uang?: bool}>
+     */
+    private function kolomEkspor(): array
+    {
+        $kolom = [
+            ['judul' => 'Kode', 'nilai' => fn (array $r) => $r['code'], 'total' => null],
+            ['judul' => 'Nama Obat', 'nilai' => fn (array $r) => $r['name'], 'total' => null],
+            ['judul' => 'Kategori', 'nilai' => fn (array $r) => $r['category'], 'total' => null],
+        ];
+
+        if ($this->tampilBeli()) {
+            $kolom[] = ['judul' => 'Qty Beli', 'nilai' => fn (array $r) => $r['beli_qty'], 'total' => $this->summary['total_beli_qty']];
+            $kolom[] = ['judul' => 'Nilai Beli (Rp)', 'nilai' => fn (array $r) => $r['beli_nilai'], 'total' => $this->summary['total_beli'], 'uang' => true];
+            $kolom[] = ['judul' => 'Trans. Beli', 'nilai' => fn (array $r) => $r['beli_transaksi'], 'total' => $this->summary['jumlah_transaksi_beli']];
+        }
+
+        if ($this->tampilJual()) {
+            $kolom[] = ['judul' => 'Qty Jual', 'nilai' => fn (array $r) => $r['jual_qty'], 'total' => $this->summary['total_jual_qty']];
+            $kolom[] = ['judul' => 'Nilai Jual (Rp)', 'nilai' => fn (array $r) => $r['jual_nilai'], 'total' => $this->summary['total_jual'], 'uang' => true];
+            $kolom[] = ['judul' => 'Trans. Jual', 'nilai' => fn (array $r) => $r['jual_transaksi'], 'total' => $this->summary['jumlah_transaksi_jual']];
+        }
+
+        if ($this->tampilMargin()) {
+            $kolom[] = ['judul' => 'Margin Kotor (Rp)', 'nilai' => fn (array $r) => $r['margin_kotor'], 'total' => $this->summary['margin_kotor'], 'uang' => true];
+        }
+
+        return $kolom;
+    }
+
     public function exportExcel()
     {
         if ($this->rows->isEmpty()) {
             return;
         }
+
+        $kolom = $this->kolomEkspor();
+        $kolomTerakhir = chr(ord('A') + count($kolom) - 1);
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
@@ -240,19 +332,18 @@ class LaporanRekap extends Page implements HasSchemas
 
         // Header info
         $sheet->setCellValue('A1', 'LAPORAN REKAP PENJUALAN & PEMBELIAN');
-        $sheet->mergeCells('A1:J1');
+        $sheet->mergeCells("A1:{$kolomTerakhir}1");
         $sheet->getStyle('A1')->applyFromArray([
             'font' => ['bold' => true, 'size' => 14],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
         $sheet->setCellValue('A2', 'Periode: '.$this->summary['periode']);
-        $sheet->mergeCells('A2:J2');
+        $sheet->mergeCells("A2:{$kolomTerakhir}2");
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Column headers
-        $headers = ['Kode', 'Nama Obat', 'Kategori', 'Qty Beli', 'Nilai Beli (Rp)', 'Trans. Beli', 'Qty Jual', 'Nilai Jual (Rp)', 'Trans. Jual', 'Margin Kotor (Rp)'];
-        $sheet->fromArray($headers, null, 'A4');
-        $sheet->getStyle('A4:J4')->applyFromArray([
+        $sheet->fromArray(array_column($kolom, 'judul'), null, 'A4');
+        $sheet->getStyle("A4:{$kolomTerakhir}4")->applyFromArray([
             'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF1F4E78']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -262,43 +353,37 @@ class LaporanRekap extends Page implements HasSchemas
         // Data rows
         $row = 5;
         foreach ($this->rows as $r) {
-            $sheet->setCellValue("A{$row}", $r['code']);
-            $sheet->setCellValue("B{$row}", $r['name']);
-            $sheet->setCellValue("C{$row}", $r['category']);
-            $sheet->setCellValue("D{$row}", $r['beli_qty']);
-            $sheet->setCellValue("E{$row}", $r['beli_nilai']);
-            $sheet->setCellValue("F{$row}", $r['beli_transaksi']);
-            $sheet->setCellValue("G{$row}", $r['jual_qty']);
-            $sheet->setCellValue("H{$row}", $r['jual_nilai']);
-            $sheet->setCellValue("I{$row}", $r['jual_transaksi']);
-            $sheet->setCellValue("J{$row}", $r['margin_kotor']);
+            foreach ($kolom as $i => $definisi) {
+                $sheet->setCellValue(chr(ord('A') + $i).$row, ($definisi['nilai'])($r));
+            }
             $row++;
         }
 
         // Total row
         $sheet->setCellValue("A{$row}", 'TOTAL');
         $sheet->mergeCells("A{$row}:C{$row}");
-        $sheet->setCellValue("D{$row}", $this->summary['total_beli_qty']);
-        $sheet->setCellValue("E{$row}", $this->summary['total_beli']);
-        $sheet->setCellValue("F{$row}", $this->summary['jumlah_transaksi_beli']);
-        $sheet->setCellValue("G{$row}", $this->summary['total_jual_qty']);
-        $sheet->setCellValue("H{$row}", $this->summary['total_jual']);
-        $sheet->setCellValue("I{$row}", $this->summary['jumlah_transaksi_jual']);
-        $sheet->setCellValue("J{$row}", $this->summary['margin_kotor']);
-        $sheet->getStyle("A{$row}:J{$row}")->applyFromArray([
+        foreach ($kolom as $i => $definisi) {
+            if ($definisi['total'] !== null) {
+                $sheet->setCellValue(chr(ord('A') + $i).$row, $definisi['total']);
+            }
+        }
+        $sheet->getStyle("A{$row}:{$kolomTerakhir}{$row}")->applyFromArray([
             'font' => ['bold' => true],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFFFE699']],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
 
         // Borders all
-        $sheet->getStyle("A4:J{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $sheet->getStyle("E5:E{$row}")->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle("H5:H{$row}")->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle("J5:J{$row}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("A4:{$kolomTerakhir}{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
-        foreach (range('A', 'J') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+        foreach ($kolom as $i => $definisi) {
+            $huruf = chr(ord('A') + $i);
+
+            if ($definisi['uang'] ?? false) {
+                $sheet->getStyle("{$huruf}5:{$huruf}{$row}")->getNumberFormat()->setFormatCode('#,##0');
+            }
+
+            $sheet->getColumnDimension($huruf)->setAutoSize(true);
         }
 
         $writer = new Xlsx($spreadsheet);

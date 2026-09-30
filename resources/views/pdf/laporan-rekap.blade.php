@@ -117,26 +117,35 @@
     Tipe: {{ $tipeLabel }} &nbsp;·&nbsp; Dicetak {{ $printedAt }}
 </div>
 
+@php($jumlahKartu = 1 + ($tampilJual ? 1 : 0) + ($tampilBeli ? 1 : 0) + ($tampilMargin ? 1 : 0))
+@php($lebarKartu = (int) (100 / $jumlahKartu)."%")
+
 <table class="summary">
     <tr>
-        <td>
+        @if ($tampilJual)
+        <td style="width: {{ $lebarKartu }}">
             <div class="label">Total Penjualan</div>
             <div class="value">Rp {{ number_format($summary['total_jual'], 0, ',', '.') }}</div>
             <div class="note">{{ number_format($summary['total_jual_qty'], 0, ',', '.') }} unit ·
                 {{ number_format($summary['jumlah_transaksi_jual'], 0, ',', '.') }} transaksi</div>
         </td>
-        <td>
+        @endif
+        @if ($tampilBeli)
+        <td style="width: {{ $lebarKartu }}">
             <div class="label">Total Pembelian</div>
             <div class="value">Rp {{ number_format($summary['total_beli'], 0, ',', '.') }}</div>
             <div class="note">{{ number_format($summary['total_beli_qty'], 0, ',', '.') }} unit ·
                 {{ number_format($summary['jumlah_transaksi_beli'], 0, ',', '.') }} transaksi</div>
         </td>
-        <td>
+        @endif
+        @if ($tampilMargin)
+        <td style="width: {{ $lebarKartu }}">
             <div class="label">Margin Kotor</div>
             <div class="value">Rp {{ number_format($summary['margin_kotor'], 0, ',', '.') }}</div>
             <div class="note">Penjualan &minus; HPP</div>
         </td>
-        <td>
+        @endif
+        <td style="width: {{ $lebarKartu }}">
             <div class="label">Jenis Obat</div>
             <div class="value">{{ number_format($rows->count(), 0, ',', '.') }}</div>
             <div class="note">Obat dengan transaksi</div>
@@ -153,13 +162,19 @@
                 <th style="width: 13%">Kode</th>
                 <th style="width: 20%">Nama Obat</th>
                 <th style="width: 10%">Kategori</th>
-                <th style="width: 6%">Qty Beli</th>
-                <th style="width: 11%">Nilai Beli</th>
-                <th style="width: 5%">Trx</th>
-                <th style="width: 6%">Qty Jual</th>
-                <th style="width: 11%">Nilai Jual</th>
-                <th style="width: 5%">Trx</th>
-                <th style="width: 13%">Margin Kotor</th>
+                @if ($tampilBeli)
+                    <th style="width: 6%">Qty Beli</th>
+                    <th style="width: 11%">Nilai Beli</th>
+                    <th style="width: 5%">Trx</th>
+                @endif
+                @if ($tampilJual)
+                    <th style="width: 6%">Qty Jual</th>
+                    <th style="width: 11%">Nilai Jual</th>
+                    <th style="width: 5%">Trx</th>
+                @endif
+                @if ($tampilMargin)
+                    <th style="width: 13%">Margin Kotor</th>
+                @endif
             </tr>
         </thead>
         <tbody>
@@ -168,26 +183,38 @@
                     <td>{{ $r['code'] }}</td>
                     <td>{{ $r['name'] }}</td>
                     <td>{{ $r['category'] }}</td>
-                    <td class="num">{{ number_format($r['beli_qty'], 0, ',', '.') }}</td>
-                    <td class="num">{{ number_format($r['beli_nilai'], 0, ',', '.') }}</td>
-                    <td class="ctr">{{ $r['beli_transaksi'] }}</td>
-                    <td class="num">{{ number_format($r['jual_qty'], 0, ',', '.') }}</td>
-                    <td class="num">{{ number_format($r['jual_nilai'], 0, ',', '.') }}</td>
-                    <td class="ctr">{{ $r['jual_transaksi'] }}</td>
-                    <td class="num">{{ number_format($r['margin_kotor'], 0, ',', '.') }}</td>
+                    @if ($tampilBeli)
+                        <td class="num">{{ number_format($r['beli_qty'], 0, ',', '.') }}</td>
+                        <td class="num">{{ number_format($r['beli_nilai'], 0, ',', '.') }}</td>
+                        <td class="ctr">{{ $r['beli_transaksi'] }}</td>
+                    @endif
+                    @if ($tampilJual)
+                        <td class="num">{{ number_format($r['jual_qty'], 0, ',', '.') }}</td>
+                        <td class="num">{{ number_format($r['jual_nilai'], 0, ',', '.') }}</td>
+                        <td class="ctr">{{ $r['jual_transaksi'] }}</td>
+                    @endif
+                    @if ($tampilMargin)
+                        <td class="num">{{ number_format($r['margin_kotor'], 0, ',', '.') }}</td>
+                    @endif
                 </tr>
             @endforeach
         </tbody>
         <tfoot>
             <tr>
                 <td colspan="3">TOTAL</td>
-                <td class="num">{{ number_format($summary['total_beli_qty'], 0, ',', '.') }}</td>
-                <td class="num">{{ number_format($summary['total_beli'], 0, ',', '.') }}</td>
-                <td class="ctr">{{ $summary['jumlah_transaksi_beli'] }}</td>
-                <td class="num">{{ number_format($summary['total_jual_qty'], 0, ',', '.') }}</td>
-                <td class="num">{{ number_format($summary['total_jual'], 0, ',', '.') }}</td>
-                <td class="ctr">{{ $summary['jumlah_transaksi_jual'] }}</td>
-                <td class="num">{{ number_format($summary['margin_kotor'], 0, ',', '.') }}</td>
+                @if ($tampilBeli)
+                    <td class="num">{{ number_format($summary['total_beli_qty'], 0, ',', '.') }}</td>
+                    <td class="num">{{ number_format($summary['total_beli'], 0, ',', '.') }}</td>
+                    <td class="ctr">{{ $summary['jumlah_transaksi_beli'] }}</td>
+                @endif
+                @if ($tampilJual)
+                    <td class="num">{{ number_format($summary['total_jual_qty'], 0, ',', '.') }}</td>
+                    <td class="num">{{ number_format($summary['total_jual'], 0, ',', '.') }}</td>
+                    <td class="ctr">{{ $summary['jumlah_transaksi_jual'] }}</td>
+                @endif
+                @if ($tampilMargin)
+                    <td class="num">{{ number_format($summary['margin_kotor'], 0, ',', '.') }}</td>
+                @endif
             </tr>
         </tfoot>
     </table>

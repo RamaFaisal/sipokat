@@ -3,7 +3,7 @@
 
     <x-filament::section>
         <x-slot name="heading">Filter Periode</x-slot>
-        <x-slot name="description">Pilih rentang tanggal opname lalu klik "Tampilkan Laporan" di header. Klik "Export Excel" atau "Export PDF" untuk mengunduh.</x-slot>
+        <x-slot name="description">Tabel langsung menyesuaikan begitu filter diubah. Klik "Export Excel" atau "Export PDF" untuk mengunduh seluruh barisnya.</x-slot>
         {{ $this->form }}
     </x-filament::section>
 
@@ -15,6 +15,10 @@
     <x-filament::section>
         <x-slot name="heading">Penyesuaian Stok Opname</x-slot>
         <x-slot name="description">Selisih fisik terhadap sistem, satu baris per batch yang disesuaikan.</x-slot>
+
+        @php($halaman = $this->halaman())
+
+        @include('filament.pages.partials.laporan-pencarian', ['paginator' => $halaman, 'petunjuk' => 'Cari nomor opname, obat, atau batch'])
 
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -31,7 +35,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                    @forelse ($this->rows as $row)
+                    @forelse ($halaman as $row)
                         <tr class="dark:text-gray-300">
                             <td class="px-3 py-2 font-mono text-xs">{{ $row['nomor'] }}</td>
                             <td class="px-3 py-2">{{ $row['tanggal']?->translatedFormat(\App\Support\Tanggal::TAMPIL) }}</td>
@@ -64,5 +68,7 @@
                 </tbody>
             </table>
         </div>
+
+        @include('filament.pages.partials.laporan-paginasi', ['paginator' => $halaman])
     </x-filament::section>
 </x-filament-panels::page>

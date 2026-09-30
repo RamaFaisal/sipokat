@@ -227,9 +227,53 @@ Dua laporan lama tetap memakai penulis ekspornya sendiri: susunannya beberapa bl
 tabel, tidak muat di penulis bersama, sedangkan nama aksi dan urutan tombolnya sudah sama.
 
 Filter yang dulu ada di toolbar tabel dipindah ke form: Akan Kedaluwarsa memakai rentang pantauan
-(30/60/90/180/365 hari) + tingkat, Hasil Stok Opname memakai periode + arah. Rentang bawaan opname
-adalah tahun berjalan, bukan 30 hari, karena opname dilakukan sesekali dan laporan yang selalu kosong
-tidak berguna.
+(< 30/60/90/180/360 hari, plus "> 360 hari" yang arahnya terbalik) + golongan sisa stok, Hasil Stok Opname memakai periode + arah. Rentang bawaan
+opname adalah tahun berjalan, bukan 30 hari, karena opname dilakukan sesekali dan laporan yang selalu
+kosong tidak berguna.
+
+### Masukan lanjutan 2026-09-29
+
+**Rekap mengikuti tipe laporannya.** Barisnya sejak awal sudah ikut tipe (diperiksa dengan dua obat:
+satu hanya punya penjualan, satu hanya punya pembelian). Yang tidak ikut ada tiga, dan itu yang
+membuatnya tampak memuat semua obat: kolom tabel tetap delapan, urutan selalu memakai nilai jual
+sehingga "Pembelian Saja" tersusun praktis acak, dan ekspor selalu menulis sepuluh kolom. Sekarang
+kolom layar, kolom Excel, kolom PDF, dan urutannya ditentukan `tampilBeli()` / `tampilJual()` /
+`tampilMargin()`, yang membaca tipe dari `$summary` supaya selalu cocok dengan angka yang sudah
+dihitung.
+
+**Paginasi.** Lima laporan memakai `Concerns/TabelBerhalaman`: koleksi hasil `generate()` dipotong
+jadi `LengthAwarePaginator` lalu dirender dengan komponen paginasi bawaan Filament. Nomor halaman
+dijepit ke halaman terakhir yang ada, dan `generate()` mengembalikannya ke halaman 1, supaya filter
+yang menyusutkan hasil tidak meninggalkan tabel kosong. Ekspor tetap memakai `$rows` utuh. Fast/Slow
+Moving tidak ikut karena memang laporan Top-N dengan jumlah baris yang diatur sendiri.
+
+Potongan "Menampilkan 50 dari N obat. Export Excel untuk data lengkap" di Rekap dihapus: seluruh
+barisnya kini bisa dibuka di layar.
+
+Barisan nomor halamannya memakai `App\Support\PaginatorRingkas`, bukan paginator biasa. `onEachSide`
+bawaan Laravel tidak bisa memendekkannya dengan benar: ujung kiri dan kanan selalu dua nomor, cabang
+"terlalu dekat awal" mencetak `onEachSide + 4 + onEachSide` nomor sekaligus, dan nilai 0 ikut
+menghapus tetangga halaman yang sedang dibuka. Rekap Stok per Obat dengan 127 obat berisi 13 halaman
+dan tercetak `1 2 3 4 5 6 ... 12 13`. Sekarang: halaman pertama dan terakhir selalu bisa diklik, tiga
+nomor di sekitar halaman yang dibuka, titik-titik hanya bila ada yang dilompati.
+
+    di halaman 1  : 1 2 3 ... 13
+    di halaman 6  : 1 ... 5 6 7 ... 13
+    di halaman 13 : 1 ... 11 12 13
+
+**Pencarian tabel.** Kotak pencarian di atas tiap tabel menyaring **yang terlihat**, bukan isi
+laporannya: ringkasan dan ekspor tetap seluruh baris periode itu. Itu sebabnya kata kuncinya properti
+Livewire tersendiri (`pencarian` di `TabelBerhalaman`), bukan bagian `$data` milik form filter. Kolom
+yang dicocokkan ditentukan tiap halaman lewat `kolomPencarian()`: kode/nama/batch di Akan
+Kedaluwarsa, kode/nama obat di Rekap Stok, kode/nama PBF di Pembelian per PBF, nomor/obat/batch/
+keterangan di Hasil Stok Opname, kode/nama/kategori di Rekap. Mengetik mengembalikan tabel ke halaman
+1.
+
+**Filter langsung.** Tiap isian filter memakai `->live()` + `afterStateUpdated()` yang memanggil
+`generate()`, jadi tabel berubah tanpa menekan tombol. Isian angka "Top N" di Fast/Slow Moving pakai
+`live(onBlur: true)` supaya tidak menghitung ulang tiap ketikan. Tombol header tetap ada dengan label
+"Muat Ulang": gunanya bukan menerapkan filter lagi, melainkan menarik angka terbaru bila petugas lain
+mencatat transaksi selagi halaman terbuka.
 
 ---
 

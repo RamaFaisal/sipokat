@@ -180,27 +180,65 @@ it('mencetak ringkasan yang sama dengan isi tabelnya', function () {
     $halaman->assertSee('Rp 30.000');
 });
 
-it('menyaring laporan kedaluwarsa menurut rentang dan tingkat yang dipilih', function () {
+it('menyaring laporan kedaluwarsa menurut rentang yang dipilih', function () {
     $mepet = makeMedicine(['name' => 'OBAT MEPET']);
     receiveInto($mepet, 5, today()->addDays(10)->toDateString(), 'B-MEPET-2');
 
     $jauh = makeMedicine(['name' => 'OBAT JAUH']);
     receiveInto($jauh, 5, today()->addDays(200)->toDateString(), 'B-JAUH-2');
 
+    $sangatJauh = makeMedicine(['name' => 'OBAT SANGAT JAUH']);
+    receiveInto($sangatJauh, 5, today()->addDays(500)->toDateString(), 'B-JAUH-500');
+
     $halaman = Livewire::test(LaporanKedaluwarsa::class);
 
-    // Bawaan 90 hari: hanya yang mepet.
-    $halaman->assertSee('B-MEPET-2')->assertDontSee('B-JAUH-2');
+    // Bawaan < 90 hari: hanya yang mepet.
+    $halaman->assertSee('B-MEPET-2')->assertDontSee('B-JAUH-2')->assertDontSee('B-JAUH-500');
 
-    // Rentang 365 hari memuat keduanya.
-    $halaman->set('data.horizon', 365)->call('generate')
+    // Mengubah filter saja sudah menghitung ulang, tanpa menekan tombol.
+    $halaman->set('data.horizon', 360)
         ->assertSee('B-MEPET-2')
-        ->assertSee('B-JAUH-2');
+        ->assertSee('B-JAUH-2')
+        ->assertDontSee('B-JAUH-500');
 
-    // Tingkat "waspada" (31 sampai 60 hari) menyingkirkan keduanya.
-    $halaman->set('data.tingkat', 'waspada')->call('generate')
+    // "> 360 hari" arahnya terbalik: justru batch yang masih lama.
+    $halaman->set('data.horizon', 'jauh')
         ->assertDontSee('B-MEPET-2')
-        ->assertDontSee('B-JAUH-2');
+        ->assertDontSee('B-JAUH-2')
+        ->assertSee('B-JAUH-500');
+});
+
+it('menyaring laporan kedaluwarsa menurut golongan sisa stoknya', function () {
+    $sedikit = makeMedicine(['name' => 'OBAT SISA SEDIKIT']);
+    receiveInto($sedikit, 5, today()->addDays(20)->toDateString(), 'B-SISA-5');
+
+    $sedang = makeMedicine(['name' => 'OBAT SISA SEDANG']);
+    receiveInto($sedang, 30, today()->addDays(20)->toDateString(), 'B-SISA-30');
+
+    $banyak = makeMedicine(['name' => 'OBAT SISA BANYAK']);
+    receiveInto($banyak, 80, today()->addDays(20)->toDateString(), 'B-SISA-80');
+
+    $halaman = Livewire::test(LaporanKedaluwarsa::class);
+
+    $halaman->set('data.sisa', 'sedikit')
+        ->assertSee('B-SISA-5')
+        ->assertDontSee('B-SISA-30')
+        ->assertDontSee('B-SISA-80');
+
+    $halaman->set('data.sisa', 'sedang')
+        ->assertDontSee('B-SISA-5')
+        ->assertSee('B-SISA-30')
+        ->assertDontSee('B-SISA-80');
+
+    $halaman->set('data.sisa', 'banyak')
+        ->assertDontSee('B-SISA-5')
+        ->assertDontSee('B-SISA-30')
+        ->assertSee('B-SISA-80');
+
+    $halaman->set('data.sisa', 'semua')
+        ->assertSee('B-SISA-5')
+        ->assertSee('B-SISA-30')
+        ->assertSee('B-SISA-80');
 });
 
 it('membatasi laporan opname pada periode dan arah yang dipilih', function () {
@@ -261,3 +299,165 @@ it('mengunduh Excel dan PDF dari tiap laporan baru', function (string $kelas) {
     'pembelian per PBF' => LaporanPembelianPbf::class,
     'hasil opname' => LaporanOpname::class,
 ]);
+
+/**
+ * Paginasi, filter langsung, dan kolom yang mengikuti tipe laporan (permintaan peneliti 2026-09-29).
+ */
+it('memotong tabel panjang menjadi beberapa halaman tanpa memotong ekspornya', function () {
+    foreach (range(1, 12) as $i) {
+        receiveInto(makeMedicine(['name' => sprintf('OBAT HALAMAN %02d', $i)]), 10);
+    }
+
+    $halaman = Livewire::test(LaporanStokObat::class)->set('perPage', 10);
+    $terpakai = $halaman->instance();
+    $jumlah = $terpakai->rows->count();
+
+    expect($jumlah)->toBeGreaterThanOrEqual(12)
+        ->and($terpakai->halaman()->count())->toBe(10)
+        ->and($terpakai->halaman()->total())->toBe($jumlah)
+        // Ekspor tidak ikut terpotong: seluruh baris tetap ditulis.
+        ->and(collect($terpakai->barisEkspor())->count())->toBe($jumlah);
+
+    $halaman->call('gotoPage', 2);
+
+    expect($halaman->instance()->halaman()->count())->toBe(min(10, $jumlah - 10));
+});
+
+it('mengembalikan tabel ke halaman pertama saat filter berubah', function () {
+    foreach (range(1, 12) as $i) {
+        receiveInto(makeMedicine(['name' => sprintf('OBAT RESET %02d', $i)]), 10);
+    }
+
+    $halaman = Livewire::test(LaporanStokObat::class)->set('perPage', 10)->call('gotoPage', 2);
+
+    expect($halaman->instance()->halaman()->currentPage())->toBe(2);
+
+    // Periode baru menyusutkan hasilnya; tanpa reset, tabel berhenti di halaman yang sudah kosong.
+    $halaman->set('data.period_start', today()->subDays(3)->toDateString());
+
+    expect($halaman->instance()->halaman()->currentPage())->toBe(1);
+});
+
+it('menyesuaikan kolom rekap dengan tipe laporannya', function () {
+    $obat = makeMedicine(['name' => 'OBAT REKAP KOLOM']);
+    receiveInto($obat, 20);
+    sellFrom($obat, 5);
+
+    $halaman = Livewire::test(LaporanRekap::class);
+
+    $halaman->set('data.tipe', 'penjualan')
+        ->assertSee('Qty Jual')
+        ->assertDontSee('Qty Beli')
+        ->assertDontSee('Margin');
+
+    $halaman->set('data.tipe', 'pembelian')
+        ->assertSee('Qty Beli')
+        ->assertDontSee('Qty Jual');
+
+    $halaman->set('data.tipe', 'keduanya')
+        ->assertSee('Qty Beli')
+        ->assertSee('Qty Jual')
+        ->assertSee('Margin');
+});
+
+it('mengurutkan rekap menurut sisi yang sedang diminta', function () {
+    $besar = makeMedicine(['name' => 'OBAT BELI BESAR']);
+    receiveInto($besar, 100); // 100 x 5.000 = 500.000
+
+    $kecil = makeMedicine(['name' => 'OBAT BELI KECIL']);
+    receiveInto($kecil, 10); // 50.000
+    sellFrom($kecil, 8); // nilai jualnya jadi yang tertinggi
+
+    $halaman = Livewire::test(LaporanRekap::class);
+
+    // Pembelian Saja: yang terbesar nilainya di atas, bukan yang penjualannya tinggi.
+    $halaman->set('data.tipe', 'pembelian');
+    expect(collect($halaman->instance()->rows)->first()['name'])->toBe('OBAT BELI BESAR');
+
+    $halaman->set('data.tipe', 'penjualan');
+    expect(collect($halaman->instance()->rows)->first()['name'])->toBe('OBAT BELI KECIL');
+});
+
+it('menulis kolom ekspor Excel sesuai tipe laporan rekap', function () {
+    $obat = makeMedicine(['name' => 'OBAT EKSPOR TIPE']);
+    receiveInto($obat, 20);
+    sellFrom($obat, 5);
+
+    $halaman = Livewire::test(LaporanRekap::class)->set('data.tipe', 'penjualan')->instance();
+
+    expect($halaman->exportExcel())->toBeInstanceOf(StreamedResponse::class)
+        ->and($halaman->exportPdf())->toBeInstanceOf(StreamedResponse::class);
+});
+
+/** Barisan nomor halaman yang benar-benar dicetak, misalnya "1 ... 5 6 7 ... 13". */
+function nomorHalaman(object $halaman): string
+{
+    return collect($halaman->halaman()->render()->offsetGet('elements'))
+        ->map(fn ($e): string => is_string($e) ? '...' : implode(' ', array_keys($e)))
+        ->implode(' ');
+}
+
+it('memendekkan barisan nomor halaman saat laporannya panjang', function () {
+    foreach (range(1, 13) as $i) {
+        receiveInto(makeMedicine(['name' => sprintf('OBAT NOMOR %02d', $i)]), 10);
+    }
+
+    // Satu baris per halaman supaya halamannya banyak tanpa perlu ratusan obat.
+    $halaman = Livewire::test(LaporanStokObat::class)->set('perPage', 1);
+    $terakhir = $halaman->instance()->halaman()->lastPage();
+
+    expect($terakhir)->toBeGreaterThanOrEqual(13)
+        // Halaman pertama dan terakhir selalu bisa diklik, tiga nomor di sekitar yang sedang dibuka.
+        ->and(nomorHalaman($halaman->instance()))->toBe("1 2 3 ... {$terakhir}");
+
+    $halaman->call('gotoPage', 6);
+    expect(nomorHalaman($halaman->instance()))->toBe("1 ... 5 6 7 ... {$terakhir}");
+
+    $halaman->call('gotoPage', $terakhir);
+    expect(nomorHalaman($halaman->instance()))->toBe('1 ... '.($terakhir - 2).' '.($terakhir - 1).' '.$terakhir);
+});
+
+it('menyaring tampilan tabel lewat kotak pencarian tanpa mengubah ringkasan dan ekspor', function () {
+    receiveInto(makeMedicine(['name' => 'PARACETAMOL CARI']), 10);
+    receiveInto(makeMedicine(['name' => 'AMOXICILLIN CARI']), 20);
+
+    $halaman = Livewire::test(LaporanStokObat::class)->set('pencarian', 'paracetamol');
+    $terpakai = $halaman->instance();
+
+    // Huruf kecil tetap cocok dengan nama obat yang tersimpan huruf besar.
+    expect($terpakai->halaman()->pluck('name')->all())->toBe(['PARACETAMOL CARI'])
+        // Ringkasan dan ekspor tetap seluruh baris periode itu, bukan hasil pencarian.
+        ->and($terpakai->rows->count())->toBeGreaterThanOrEqual(2)
+        ->and(collect($terpakai->barisEkspor())->count())->toBe($terpakai->rows->count())
+        ->and($terpakai->ringkasan()['Obat Bermutasi'])->toBe(number_format($terpakai->rows->count(), 0, ',', '.'));
+
+    // Kata kunci yang tidak cocok menghasilkan tabel kosong, bukan seluruh baris.
+    expect(Livewire::test(LaporanStokObat::class)->set('pencarian', 'zzz')->instance()->halaman()->total())->toBe(0);
+});
+
+it('mengembalikan tabel ke halaman pertama saat kata kunci diketik', function () {
+    foreach (range(1, 12) as $i) {
+        receiveInto(makeMedicine(['name' => sprintf('OBAT CARI %02d', $i)]), 10);
+    }
+
+    $halaman = Livewire::test(LaporanStokObat::class)->set('perPage', 1)->call('gotoPage', 5);
+
+    expect($halaman->instance()->halaman()->currentPage())->toBe(5);
+
+    $halaman->set('pencarian', 'OBAT CARI 01');
+
+    expect($halaman->instance()->halaman()->currentPage())->toBe(1);
+});
+
+it('mencari di kolom yang masuk akal untuk tiap laporan', function () {
+    $obat = makeMedicine(['name' => 'OBAT KOLOM CARI']);
+    receiveInto($obat, 10, today()->addDays(20)->toDateString(), 'B-KOLOM-CARI');
+
+    // Kedaluwarsa ikut mencari nomor batch, bukan hanya nama obat.
+    expect(Livewire::test(LaporanKedaluwarsa::class)->set('pencarian', 'b-kolom')->instance()->halaman()->total())->toBe(1);
+
+    // Pembelian per PBF mencari kode dan nama PBF.
+    $pbf = App\Models\Supplier::first();
+    expect(Livewire::test(LaporanPembelianPbf::class)->set('pencarian', $pbf->code)->instance()->halaman()->total())->toBe(1)
+        ->and(Livewire::test(LaporanPembelianPbf::class)->set('pencarian', 'pbf tidak ada')->instance()->halaman()->total())->toBe(0);
+});

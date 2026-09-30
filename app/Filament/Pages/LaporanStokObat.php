@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\LaporanSeragam;
+use App\Filament\Pages\Concerns\TabelBerhalaman;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
 use App\Support\Tanggal;
@@ -35,6 +36,7 @@ class LaporanStokObat extends Page implements HasSchemas
     use HasPageShield;
     use InteractsWithSchemas;
     use LaporanSeragam;
+    use TabelBerhalaman;
 
     protected string $view = 'filament.pages.laporan-stok-obat';
 
@@ -63,19 +65,24 @@ class LaporanStokObat extends Page implements HasSchemas
         return $schema
             ->components([
                 Section::make('Periode')
+                    ->description('Tabel langsung menyesuaikan begitu periode diubah.')
                     ->columns(2)
                     ->schema([
                         DatePicker::make('period_start')
                             ->label('Mulai')
                             ->required()
                             ->native(false)
-                            ->maxDate(now()),
+                            ->maxDate(now())
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                         DatePicker::make('period_end')
                             ->label('Sampai')
                             ->required()
                             ->native(false)
                             ->maxDate(now())
-                            ->afterOrEqual('period_start'),
+                            ->afterOrEqual('period_start')
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                     ]),
             ])
             ->statePath('data');
@@ -83,6 +90,8 @@ class LaporanStokObat extends Page implements HasSchemas
 
     public function generate(): void
     {
+        $this->resetPage();
+
         [$mulai, $sampai] = $this->periode();
 
         // Stok awal = seluruh mutasi sebelum periode; masuk/keluar = mutasi di dalam periode.
@@ -172,6 +181,12 @@ class LaporanStokObat extends Page implements HasSchemas
             'Total Keluar' => number_format($this->rows->sum('keluar'), 0, ',', '.').' satuan',
             'Stok Akhir' => number_format($this->rows->sum('akhir'), 0, ',', '.').' satuan',
         ];
+    }
+
+    /** @return array<int, string> */
+    public function kolomPencarian(): array
+    {
+        return ['code', 'name', 'unit'];
     }
 
     public function kolomEkspor(): array

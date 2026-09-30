@@ -54,9 +54,11 @@ trait LaporanSeragam
     protected function getHeaderActions(): array
     {
         return [
+            // Filter sudah menghitung ulang sendiri saat diubah. Tombol ini untuk menarik angka
+            // terbaru bila petugas lain mencatat transaksi selagi halaman terbuka.
             Action::make('generate')
-                ->label('Tampilkan Laporan')
-                ->icon(Heroicon::OutlinedPlay)
+                ->label('Muat Ulang')
+                ->icon(Heroicon::OutlinedArrowPath)
                 ->color('primary')
                 ->action('generate'),
             Action::make('export')

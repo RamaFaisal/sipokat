@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\LaporanSeragam;
+use App\Filament\Pages\Concerns\TabelBerhalaman;
 use App\Models\MedicineStockOpnameItem;
 use App\Support\Tanggal;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
@@ -36,6 +37,7 @@ class LaporanOpname extends Page implements HasSchemas
     use HasPageShield;
     use InteractsWithSchemas;
     use LaporanSeragam;
+    use TabelBerhalaman;
 
     protected string $view = 'filament.pages.laporan-opname';
 
@@ -67,20 +69,24 @@ class LaporanOpname extends Page implements HasSchemas
         return $schema
             ->components([
                 Section::make('Filter Periode')
-                    ->description('Pilih rentang tanggal opname lalu klik "Tampilkan Laporan" di header.')
+                    ->description('Tabel langsung menyesuaikan begitu filter diubah.')
                     ->columns(3)
                     ->schema([
                         DatePicker::make('period_start')
                             ->label('Mulai')
                             ->required()
                             ->native(false)
-                            ->maxDate(now()),
+                            ->maxDate(now())
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                         DatePicker::make('period_end')
                             ->label('Sampai')
                             ->required()
                             ->native(false)
                             ->maxDate(now())
-                            ->afterOrEqual('period_start'),
+                            ->afterOrEqual('period_start')
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                         Select::make('arah')
                             ->label('Arah')
                             ->options([
@@ -89,7 +95,9 @@ class LaporanOpname extends Page implements HasSchemas
                                 'C' => 'Kurang dari sistem',
                             ])
                             ->required()
-                            ->native(false),
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                     ]),
             ])
             ->statePath('data');
@@ -97,6 +105,8 @@ class LaporanOpname extends Page implements HasSchemas
 
     public function generate(): void
     {
+        $this->resetPage();
+
         $this->rows = $this->query()->get()->map(fn (MedicineStockOpnameItem $i): array => [
             'nomor' => $i->medicineStockOpname?->opname_number,
             'tanggal' => $i->medicineStockOpname?->opname_date,
@@ -159,6 +169,12 @@ class LaporanOpname extends Page implements HasSchemas
             'Nilai Lebih' => 'Rp '.number_format($lebih->sum('nilai'), 0, ',', '.'),
             'Nilai Kurang' => 'Rp '.number_format(abs($kurang->sum('nilai')), 0, ',', '.'),
         ];
+    }
+
+    /** @return array<int, string> */
+    public function kolomPencarian(): array
+    {
+        return ['nomor', 'obat', 'batch', 'note'];
     }
 
     public function kolomEkspor(): array

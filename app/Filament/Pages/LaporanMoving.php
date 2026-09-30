@@ -68,20 +68,24 @@ class LaporanMoving extends Page implements HasSchemas
         return $schema
             ->components([
                 Section::make('Filter Periode')
-                    ->description('Periode analisis penjualan obat. Default 90 hari ke belakang.')
+                    ->description('Periode analisis penjualan obat, bawaan 90 hari ke belakang. Hasil langsung menyesuaikan begitu filter diubah.')
                     ->columns(3)
                     ->schema([
                         DatePicker::make('period_start')
                             ->label('Mulai')
                             ->required()
                             ->native(false)
-                            ->maxDate(now()),
+                            ->maxDate(now())
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                         DatePicker::make('period_end')
                             ->label('Sampai')
                             ->required()
                             ->native(false)
                             ->maxDate(now())
-                            ->afterOrEqual('period_start'),
+                            ->afterOrEqual('period_start')
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                         TextInput::make('top_n')
                             ->label('Tampilkan Top N')
                             ->numeric()
@@ -89,6 +93,9 @@ class LaporanMoving extends Page implements HasSchemas
                             ->minValue(5)
                             ->maxValue(100)
                             ->required()
+                            // Menunggu fokus lepas supaya tidak menghitung ulang tiap ketikan angka.
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn () => $this->generate())
                             ->helperText('Jumlah obat tertinggi di tiap kategori (fast / slow / dead stock).'),
                     ]),
             ])
@@ -99,8 +106,8 @@ class LaporanMoving extends Page implements HasSchemas
     {
         return [
             Action::make('generate')
-                ->label('Analisis Sekarang')
-                ->icon(Heroicon::OutlinedPlay)
+                ->label('Muat Ulang')
+                ->icon(Heroicon::OutlinedArrowPath)
                 ->color('primary')
                 ->action('generate'),
             Action::make('export')

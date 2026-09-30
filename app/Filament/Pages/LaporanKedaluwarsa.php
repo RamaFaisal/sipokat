@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\LaporanSeragam;
+use App\Filament\Pages\Concerns\TabelBerhalaman;
 use App\Models\MedicineStock;
 use App\Support\AmbangEd;
 use App\Support\BatchBersisa;
@@ -33,6 +34,7 @@ class LaporanKedaluwarsa extends Page implements HasSchemas
     use HasPageShield;
     use InteractsWithSchemas;
     use LaporanSeragam;
+    use TabelBerhalaman;
 
     protected string $view = 'filament.pages.laporan-kedaluwarsa';
 
@@ -46,11 +48,22 @@ class LaporanKedaluwarsa extends Page implements HasSchemas
 
     public Collection $rows;
 
+    /** Rentang terjauh yang masih dihitung mundur, sekaligus batas pilihan "lebih dari". */
+    private const RENTANG_TERJAUH = 360;
+
+    /** Nilai pilihan "> 360 hari"; bukan angka karena arah bandingnya terbalik. */
+    private const RENTANG_JAUH = 'jauh';
+
+    /** Batas bawah tiap golongan sisa stok, dalam satuan jual. */
+    private const SISA_SEDIKIT = 10;
+
+    private const SISA_BANYAK = 50;
+
     public function mount(): void
     {
         $this->data = [
             'horizon' => AmbangEd::PANTAU,
-            'tingkat' => 'semua',
+            'sisa' => 'semua',
         ];
         $this->rows = collect();
         $this->generate();
@@ -61,30 +74,37 @@ class LaporanKedaluwarsa extends Page implements HasSchemas
         return $schema
             ->components([
                 Section::make('Filter')
-                    ->description('Pilih rentang pantauan lalu klik "Tampilkan Laporan" di header.')
+                    ->description('Tabel langsung menyesuaikan begitu filter diubah.')
                     ->columns(2)
                     ->schema([
                         Select::make('horizon')
-                            ->label('Kedaluwarsa sampai')
+                            ->label('Kedaluwarsa dalam')
                             ->options([
-                                AmbangEd::MENDESAK => AmbangEd::MENDESAK.' hari ke depan',
-                                AmbangEd::WASPADA => AmbangEd::WASPADA.' hari ke depan',
-                                AmbangEd::PANTAU => AmbangEd::PANTAU.' hari ke depan',
-                                180 => '180 hari ke depan',
-                                365 => '365 hari ke depan',
+                                AmbangEd::MENDESAK => '< '.AmbangEd::MENDESAK.' hari',
+                                AmbangEd::WASPADA => '< '.AmbangEd::WASPADA.' hari',
+                                AmbangEd::PANTAU => '< '.AmbangEd::PANTAU.' hari',
+                                180 => '< 180 hari',
+                                self::RENTANG_TERJAUH => '< '.self::RENTANG_TERJAUH.' hari',
+                                // Kebalikan arah dari pilihan di atasnya: batch yang justru masih
+                                // lama, untuk melihat stok yang aman tanpa tercampur yang mepet.
+                                self::RENTANG_JAUH => '> '.self::RENTANG_TERJAUH.' hari',
                             ])
                             ->required()
-                            ->native(false),
-                        Select::make('tingkat')
-                            ->label('Tingkat')
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
+                        Select::make('sisa')
+                            ->label('Sisa stok')
                             ->options([
-                                'semua' => 'Semua tingkat',
-                                'lewat' => 'Sudah kedaluwarsa',
-                                'mendesak' => 'Mendesak (≤ '.AmbangEd::MENDESAK.' hari)',
-                                'waspada' => 'Waspada ('.(AmbangEd::MENDESAK + 1).' sampai '.AmbangEd::WASPADA.' hari)',
+                                'semua' => 'Semua sisa',
+                                'sedikit' => 'Sisa sedikit (< '.self::SISA_SEDIKIT.')',
+                                'sedang' => 'Sisa sedang ('.self::SISA_SEDIKIT.' sampai '.self::SISA_BANYAK.')',
+                                'banyak' => 'Sisa banyak (> '.self::SISA_BANYAK.')',
                             ])
                             ->required()
-                            ->native(false),
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                     ]),
             ])
             ->statePath('data');
@@ -92,6 +112,8 @@ class LaporanKedaluwarsa extends Page implements HasSchemas
 
     public function generate(): void
     {
+        $this->resetPage();
+
         $this->rows = $this->query()->get()->map(fn (MedicineStock $b): array => [
             'code' => $b->medicine?->code,
             'name' => $b->medicine?->name,
@@ -111,31 +133,32 @@ class LaporanKedaluwarsa extends Page implements HasSchemas
      */
     private function query(): Builder
     {
-        $hariIni = today();
-
         $query = BatchBersisa::query()
-            ->whereDate('expired_date', '<=', $hariIni->copy()->addDays($this->horizon())->toDateString())
             ->with(['medicine.unit'])
             ->orderBy('expired_date');
 
-        return match ($this->tingkat()) {
-            'lewat' => $query->whereDate('expired_date', '<=', $hariIni->toDateString()),
-            'mendesak' => $query->whereDate('expired_date', '<=', $hariIni->copy()->addDays(AmbangEd::MENDESAK)->toDateString()),
-            'waspada' => $query
-                ->whereDate('expired_date', '>', $hariIni->copy()->addDays(AmbangEd::MENDESAK)->toDateString())
-                ->whereDate('expired_date', '<=', $hariIni->copy()->addDays(AmbangEd::WASPADA)->toDateString()),
+        $query = $this->rentang() === self::RENTANG_JAUH
+            ? $query->whereDate('expired_date', '>', today()->addDays(self::RENTANG_TERJAUH)->toDateString())
+            : $query->whereDate('expired_date', '<=', today()->addDays((int) $this->rentang())->toDateString());
+
+        // `sisa` kolom biasa milik tabel turunan BatchBersisa, jadi disaring dengan where biasa.
+        return match ($this->golonganSisa()) {
+            'sedikit' => $query->where('sisa', '<', self::SISA_SEDIKIT),
+            'sedang' => $query->where('sisa', '>=', self::SISA_SEDIKIT)->where('sisa', '<=', self::SISA_BANYAK),
+            'banyak' => $query->where('sisa', '>', self::SISA_BANYAK),
             default => $query,
         };
     }
 
-    private function horizon(): int
+    /** Dibaca sebagai teks karena pilihannya campur angka dan penanda "jauh". */
+    private function rentang(): string
     {
-        return (int) ($this->data['horizon'] ?? AmbangEd::PANTAU);
+        return (string) ($this->data['horizon'] ?? AmbangEd::PANTAU);
     }
 
-    private function tingkat(): string
+    private function golonganSisa(): string
     {
-        return (string) ($this->data['tingkat'] ?? 'semua');
+        return (string) ($this->data['sisa'] ?? 'semua');
     }
 
     /** Warna baris mengikuti ambang yang sama dengan dashboard dan notifikasi harian. */
@@ -151,14 +174,18 @@ class LaporanKedaluwarsa extends Page implements HasSchemas
 
     public function labelPeriode(): string
     {
-        $tingkat = match ($this->tingkat()) {
-            'lewat' => 'sudah kedaluwarsa',
-            'mendesak' => 'mendesak',
-            'waspada' => 'waspada',
-            default => 'semua tingkat',
+        $sisa = match ($this->golonganSisa()) {
+            'sedikit' => 'sisa < '.self::SISA_SEDIKIT,
+            'sedang' => 'sisa '.self::SISA_SEDIKIT.' sampai '.self::SISA_BANYAK,
+            'banyak' => 'sisa > '.self::SISA_BANYAK,
+            default => 'semua sisa',
         };
 
-        return 'Sampai '.$this->horizon().' hari ke depan ('.$tingkat.'), per '
+        $rentang = $this->rentang() === self::RENTANG_JAUH
+            ? '> '.self::RENTANG_TERJAUH.' hari'
+            : '< '.$this->rentang().' hari';
+
+        return 'Kedaluwarsa '.$rentang.' ('.$sisa.'), per '
             .today()->translatedFormat(Tanggal::TAMPIL);
     }
 
@@ -173,6 +200,12 @@ class LaporanKedaluwarsa extends Page implements HasSchemas
             'Mendesak (≤ '.AmbangEd::MENDESAK.' Hari)' => number_format($mendesak->count(), 0, ',', '.').' batch',
             'Nilai Terancam' => 'Rp '.number_format($this->rows->sum('nilai'), 0, ',', '.'),
         ];
+    }
+
+    /** @return array<int, string> */
+    public function kolomPencarian(): array
+    {
+        return ['code', 'name', 'batch'];
     }
 
     public function kolomEkspor(): array

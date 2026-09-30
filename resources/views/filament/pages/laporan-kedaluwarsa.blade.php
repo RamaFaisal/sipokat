@@ -3,7 +3,7 @@
 
     <x-filament::section>
         <x-slot name="heading">Filter</x-slot>
-        <x-slot name="description">Pilih rentang pantauan lalu klik "Tampilkan Laporan" di header. Klik "Export Excel" atau "Export PDF" untuk mengunduh.</x-slot>
+        <x-slot name="description">Tabel langsung menyesuaikan begitu filter diubah. Klik "Export Excel" atau "Export PDF" untuk mengunduh seluruh barisnya.</x-slot>
         {{ $this->form }}
     </x-filament::section>
 
@@ -15,6 +15,10 @@
     <x-filament::section>
         <x-slot name="heading">Batch Mendekati Kedaluwarsa</x-slot>
         <x-slot name="description">Batch yang masih bersisa, diurutkan dari yang paling mepet. Batch yang dibeli dua kali tetap satu baris; rinciannya ada di Kartu Stok.</x-slot>
+
+        @php($halaman = $this->halaman())
+
+        @include('filament.pages.partials.laporan-pencarian', ['paginator' => $halaman, 'petunjuk' => 'Cari kode, nama obat, atau batch'])
 
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -30,7 +34,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                    @forelse ($this->rows as $row)
+                    @forelse ($halaman as $row)
                         @php($warna = $this->warna($row['sisa_hari']))
                         <tr @class([
                             'dark:text-gray-300',
@@ -60,5 +64,7 @@
                 </tbody>
             </table>
         </div>
+
+        @include('filament.pages.partials.laporan-paginasi', ['paginator' => $halaman])
     </x-filament::section>
 </x-filament-panels::page>

@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\LaporanSeragam;
+use App\Filament\Pages\Concerns\TabelBerhalaman;
 use App\Models\ReceiveOrderItem;
 use App\Support\Tanggal;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
@@ -31,6 +32,7 @@ class LaporanPembelianPbf extends Page implements HasSchemas
     use HasPageShield;
     use InteractsWithSchemas;
     use LaporanSeragam;
+    use TabelBerhalaman;
 
     protected string $view = 'filament.pages.laporan-pembelian-pbf';
 
@@ -59,19 +61,24 @@ class LaporanPembelianPbf extends Page implements HasSchemas
         return $schema
             ->components([
                 Section::make('Periode')
+                    ->description('Tabel langsung menyesuaikan begitu periode diubah.')
                     ->columns(2)
                     ->schema([
                         DatePicker::make('period_start')
                             ->label('Mulai')
                             ->required()
                             ->native(false)
-                            ->maxDate(now()),
+                            ->maxDate(now())
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                         DatePicker::make('period_end')
                             ->label('Sampai')
                             ->required()
                             ->native(false)
                             ->maxDate(now())
-                            ->afterOrEqual('period_start'),
+                            ->afterOrEqual('period_start')
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->generate()),
                     ]),
             ])
             ->statePath('data');
@@ -79,6 +86,8 @@ class LaporanPembelianPbf extends Page implements HasSchemas
 
     public function generate(): void
     {
+        $this->resetPage();
+
         [$mulai, $sampai] = $this->periode();
 
         $this->rows = ReceiveOrderItem::query()
@@ -152,6 +161,12 @@ class LaporanPembelianPbf extends Page implements HasSchemas
                 ? '-'
                 : $terbesar['kode'].' ('.number_format($this->porsi($terbesar['nilai']), 1, ',', '.').'%)',
         ];
+    }
+
+    /** @return array<int, string> */
+    public function kolomPencarian(): array
+    {
+        return ['kode', 'nama'];
     }
 
     public function kolomEkspor(): array
