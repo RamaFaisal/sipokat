@@ -17,6 +17,8 @@ class MedicinesTable
     {
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with(['category', 'unit', 'packUnit']))
+            // Data yang baru dimasukkan paling dicari, jadi ditaruh di atas.
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('code')
                     ->label('Kode')

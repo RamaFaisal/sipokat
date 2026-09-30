@@ -16,6 +16,8 @@ class SuppliersTable
     public static function configure(Table $table): Table
     {
         return $table
+            // Data yang baru dimasukkan paling dicari, jadi ditaruh di atas.
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 // Urutan kolom mengikuti daftar alamat PBF Dinkes: ID, Nama, Alamat, Telp, Fax.
                 TextColumn::make('code')

@@ -17,6 +17,8 @@ class UnitsTable
     public static function configure(Table $table): Table
     {
         return $table
+            // Data yang baru dimasukkan paling dicari, jadi ditaruh di atas.
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Satuan')
