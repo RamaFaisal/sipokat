@@ -12,7 +12,7 @@
 
 | Aspek | Status | Catatan |
 |-------|--------|---------|
-| Master Data (obat, PBF, satuan) | ✅ | Master riil 127 obat dimuat 2026-09-14 dari `storage/app/import/master-data-obat.xlsx`. Obat: 5 isian (nama, kategori, satuan jual, kemasan beli + isi, batas minimum). Kode `OBT####` otomatis. Tanpa harga, dosis, foto, deskripsi (Bagian 1 rencana). PBF: kolom seperti daftar alamat PBF Dinkes (kode, nama, alamat, telp, fax); `PbfJatengSeeder` 8 PBF Semarang/Demak/Kudus (termasuk NPM) |
+| Master Data (obat, PBF, satuan) | ✅ | Ketiga tabelnya dibuka dengan data terbaru di atas (`created_at` menurun). Master riil 127 obat dimuat 2026-09-14 dari `storage/app/import/master-data-obat.xlsx`. Obat: 5 isian (nama, kategori, satuan jual, kemasan beli + isi, batas minimum). Kode `OBT####` otomatis. Tanpa harga, dosis, foto, deskripsi (Bagian 1 rencana). PBF: kolom seperti daftar alamat PBF Dinkes (kode, nama, alamat, telp, fax); `PbfJatengSeeder` 8 PBF Semarang/Demak/Kudus (termasuk NPM) |
 | Kartu stok per batch + HPP | ✅ | `medicine_stocks` = ledger lapisan: baris D membawa batch/ED, baris C menunjuk lapisan asalnya. HPP rata-rata bergerak per obat (Bagian 4) |
 | Procurement (PO → RO per faktur) | ✅ | PO = catatan internal per PBF setelah konfirmasi WA; satu RO = satu faktur; input dalam kemasan, tersimpan dalam satuan jual (Bagian 2–3) |
 | Penjualan FEFO | ✅ | Alokasi otomatis dari batch ED terdekat, bisa memecah ke beberapa lapisan; harga ≥ HPP; qty ≤ stok tersedia; tanpa edit (hapus → buat ulang) (Bagian 5) |
@@ -22,7 +22,7 @@
 | Dashboard & widget | ✅ | Satu kartu statistik (4 angka), lalu tiga widget sebaris: ketiganya menampilkan 6 baris paling mendesak tanpa kotak pencarian, judulnya tertaut ke menu terkait, tiap baris tertaut ke kartu stok obatnya; ketiganya setinggi sama, digulir, bisa dicari; grafik penjualan di bawah |
 | Laporan | ✅ | Satu menu **Laporan** bertab: Rekap penjualan/pembelian, Fast/slow moving, Akan kedaluwarsa, Rekap stok per obat, Pembelian per PBF, Hasil stok opname. Kartu stok per obat (per batch + HPP) tetap di menu Inventory. Keenamnya sebentuk: filter yang langsung menghitung ulang, tombol Muat Ulang, ringkasan, ekspor Excel dan PDF atas seluruh baris. Lima di antaranya bertabel berhalaman dengan kotak pencarian; Fast/slow moving tetap Top-N |
 | Data demo & data riil | ✅ | `SpkTestDataSeeder` (150 obat sintetis) · `FakturNpmSeeder` (14 faktur asli NPM Mei 2024 → bulan berjalan, 137 lapisan untuk 127 obat riil) · template Excel 4 sheet & importer data riil (`sipokat:data-riil:*`) |
-| Pengujian | ✅ | 236 tes Pest / 1.920 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
+| Pengujian | ✅ | 248 tes Pest / 1.961 asersi, termasuk alur ujung-ke-ujung lewat halaman Filament dan matriks hak akses |
 | Roles & Permissions | ✅ | `RoleSeeder` (2026-09-24, B1): `admin` akses penuh, `petugas` transaksi + SPK dengan master baca-saja, `pemilik` baca-saja. Nama peran lama diganti oleh migrasi. Halaman & widget sudah memakai trait Shield |
 | Deploy VPS (MySQL) + cron | 🔜 | E9 jalur migrasi dari nol sudah diverifikasi di MySQL kosong; langkah di [docs/deploy-vps.md](docs/deploy-vps.md) (dijalankan peneliti di server) |
 
@@ -33,7 +33,7 @@
 | Kode | Requirement | Status | Implementasi |
 |------|-------------|--------|--------------|
 | F-01 | Login & autentikasi | ✅ | Filament panel `/admin`. `User` implements `FilamentUser` (wajib di luar `APP_ENV=local`) |
-| F-02 | Kelola data obat | ✅ | `MedicineResource` + import Excel |
+| F-02 | Kelola data obat | ✅ | `MedicineResource` + import Excel/CSV (`SpreadsheetImporter`), unduhan template ada di dalam modal importnya |
 | F-03 | Catat obat masuk & keluar | ✅ | Masuk: RO → baris D per batch. Keluar: penjualan → baris C FEFO per lapisan. Semua lewat `StockMovementService` |
 | F-04 | Notifikasi stok minimum & ED | ✅ | Stok tersedia < `min_stock`; batch bersisa dengan ED ≤ 90 hari |
 | F-05 | Laporan inventory | ✅ | Kartu stok, Rekap, Moving, dashboard |
