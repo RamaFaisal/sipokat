@@ -100,7 +100,6 @@ class AdminPanelProvider extends PanelProvider
                 'Master Data',
                 'Manajemen Pengguna'
             ])
-            ->spa()
             ->globalSearch(false)
             ->databaseNotifications()
             ->authMiddleware([
