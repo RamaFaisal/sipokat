@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\MedicineStockOpnames\Pages;
 
-use App\Support\Tanggal;
 use App\Filament\Resources\MedicineStockOpnames\MedicineStockOpnameResource;
+use App\Support\Tanggal;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
@@ -58,7 +58,7 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
                             ->state(fn ($record) => $record->medicineStockOpnameItems()->count()),
 
                         TextEntry::make('creator.name')
-                            ->label('Dibuat Oleh'),
+                            ->label('Dicatat Oleh'),
 
                         TextEntry::make('description')
                             ->label('Keterangan')
@@ -94,7 +94,7 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
                     ->alignCenter(),
 
                 TextColumn::make('type_account')
-                    ->label('Jenis Akun')
+                    ->label('Jenis Mutasi')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'D' => 'success',
@@ -102,8 +102,8 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'D' => 'Debit (Masuk)',
-                        'C' => 'Kredit (Keluar)',
+                        'D' => 'Pemasukan',
+                        'C' => 'Pengeluaran',
                         default => $state,
                     }),
                 TextColumn::make('note')
@@ -146,7 +146,7 @@ class ViewMedicineStockOpname extends ViewRecord implements HasForms, HasTable
                             }),
                     ]),
             ])
-            ->defaultSort('created_at', 'desc')
+            ->defaultSort('created_at', 'asc')
             ->contentGrid([
                 'md' => 1,
             ])
