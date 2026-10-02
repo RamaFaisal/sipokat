@@ -449,6 +449,20 @@ it('mengembalikan tabel ke halaman pertama saat kata kunci diketik', function ()
     expect($halaman->instance()->halaman()->currentPage())->toBe(1);
 });
 
+it('menghitung jumlah hari periode fast/slow moving sebagai bilangan bulat inklusif', function () {
+    $halaman = Livewire::test(LaporanMoving::class)
+        ->fillForm([
+            'period_start' => today()->subDays(90)->toDateString(),
+            'period_end' => today()->toDateString(),
+        ])
+        ->call('generate');
+
+    $days = $halaman->instance()->meta['days'];
+
+    // Carbon 3 membalik jadi pecahan (mis. 90,999999...) kalau salah satu sisi endOfDay(); harus bulat.
+    expect($days)->toBeInt()->and($days)->toBe(91);
+});
+
 it('mencari di kolom yang masuk akal untuk tiap laporan', function () {
     $obat = makeMedicine(['name' => 'OBAT KOLOM CARI']);
     receiveInto($obat, 10, today()->addDays(20)->toDateString(), 'B-KOLOM-CARI');

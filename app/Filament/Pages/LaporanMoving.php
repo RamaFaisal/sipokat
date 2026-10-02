@@ -132,7 +132,9 @@ class LaporanMoving extends Page implements HasSchemas
         $end = Carbon::parse($data['period_end'])->endOfDay();
         $topN = (int) $data['top_n'];
 
-        $days = max(1, $start->diffInDays($end) + 1);
+        // Carbon 3 mengembalikan pecahan kalau salah satu sisi berjam (endOfDay()); dibulatkan ke
+        // hari lewat startOfDay() dulu di kedua sisi, sama seperti SawCalculationService::getMonthlyDemand().
+        $days = max(1, (int) $start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) + 1);
 
         // Aggregate semua medicines aktif dengan penjualan dalam periode
         $salesAgg = OrderItem::query()
