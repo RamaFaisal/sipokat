@@ -1,14 +1,17 @@
 <?php
 
 use App\Filament\Forms\PackLine;
+use App\Filament\Pages\LaporanPembelianPbf;
 use App\Filament\Resources\ReceiveOrders\Schemas\ReceiveOrderForm;
 use App\Models\MedicineStock;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
+use App\Models\User;
 use App\Services\StockMovementService;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Livewire;
 
 /**
  * Karakterisasi pengadaan (rencana-revisi-2026-09 Bagian 2 & 3): konversi kemasan,
@@ -74,16 +77,41 @@ it('mengonversi baris kemasan ke satuan jual: 5 Box isi 10 @ 41.000 → 50 @ 4.1
 
     expect($data['qty'])->toBe(50)
         ->and($data['price'])->toBe(4100.0)
-        ->and($data)->not->toHaveKey('pack_price');
+        // pack_price ikut tersimpan (bukan dibuang): nomor faktur harus bertahan lewat pembagian itu.
+        ->and($data['pack_price'])->toBe(41000.0);
 
-    // Saat form diisi ulang, harga per kemasan kembali seperti di faktur.
-    expect(PackLine::hydrate(['pack_size' => 10, 'price' => 4100])['pack_price'])->toBe(41000.0);
+    // Baris lama tanpa pack_price tersimpan: harga per kemasan dihitung balik dari price (fallback).
+    expect(PackLine::hydrate(['pack_size' => 10, 'price' => 4100])['pack_price'])->toBe(41000);
 });
 
 it('mengonversi eceran (satuan jual, isi 1) apa adanya', function () {
     $data = PackLine::dehydrate(['pack_unit_id' => 1, 'pack_size' => 1, 'pack_qty' => 5, 'pack_price' => 4100]);
 
     expect($data['qty'])->toBe(5)->and($data['price'])->toBe(4100.0);
+});
+
+it('membulatkan harga per kemasan ke rupiah bulat saat form edit PO dibuka, walau harga per satuan jual pecahan', function () {
+    Gate::before(fn () => true);
+    $this->actingAs(User::factory()->create());
+
+    $medicine = makeMedicine(['pack_size' => 3]);
+    $po = makePurchaseOrder();
+    PurchaseOrderItem::create([
+        'purchase_order_id' => $po->id,
+        'medicine_id' => $medicine->id,
+        'pack_unit_id' => $medicine->pack_unit_id,
+        'pack_size' => 3,
+        'pack_qty' => 2,
+        'qty' => 6,
+        'price' => 13666.67,
+    ]);
+
+    $page = Livewire::test(\App\Filament\Resources\PurchaseOrders\Pages\EditPurchaseOrder::class, ['record' => $po->getRouteKey()]);
+    $key = firstRowKey($page, 'items');
+
+    // Tanpa dibulatkan, 13.666,67 x 3 = 41.000,01 dibaca topeng (0 desimal) sebagai Rp 4.100.001.
+    expect($page->get("data.items.{$key}.pack_price"))->toBe(41000)
+        ->and($page->get("data.items.{$key}.subtotal"))->toBe('82.000');
 });
 
 it('menyimpan ED bulan-tahun sebagai tanggal 1 bulan itu', function () {
@@ -230,4 +258,52 @@ it('menampilkan batas koreksi di form edit RO, bukan di form penerimaan baru', f
 
     $this->get("/admin/receive-orders/{$ro->id}/edit")->assertOk()->assertSee($kalimat);
     $this->get('/admin/receive-orders/create')->assertOk()->assertDontSee($kalimat);
+});
+
+it('menghitung total dari pack_qty x pack_price, bukan qty x price, saat isi kemasan tidak habis dibagi', function () {
+    // Faktur asli: 50 Box isi 12 @ Rp8.000 + 3 Box isi 10 @ Rp1.700 = Rp405.100. price per satuan
+    // jual (8.000 / 12 dibulatkan jadi 666,67) x qty menghasilkan Rp405.102 bukan ini yang dicetak
+    // di faktur, dan bukan yang boleh ditulis ke pembukuan.
+    $a = makeMedicine();
+    $b = makeMedicine();
+
+    $po = makePurchaseOrder();
+    PurchaseOrderItem::create([
+        'purchase_order_id' => $po->id, 'medicine_id' => $a->id, 'pack_unit_id' => $a->pack_unit_id,
+        'pack_size' => 12, 'pack_qty' => 50, 'qty' => 600, 'price' => 666.67, 'pack_price' => 8000,
+    ]);
+    PurchaseOrderItem::create([
+        'purchase_order_id' => $po->id, 'medicine_id' => $b->id, 'pack_unit_id' => $b->pack_unit_id,
+        'pack_size' => 10, 'pack_qty' => 3, 'qty' => 30, 'price' => 170, 'pack_price' => 1700,
+    ]);
+
+    expect((int) round($po->estimatedTotal()))->toBe(405100);
+
+    $ro = ReceiveOrder::create([
+        'receive_order_number' => ReceiveOrder::nextNumber(),
+        'invoice_number' => 'F-PACK-PRICE',
+        'purchase_order_id' => $po->id,
+        'supplier_id' => $po->supplier_id,
+        'receive_date' => now()->toDateString(),
+    ]);
+    ReceiveOrderItem::create([
+        'receive_order_id' => $ro->id, 'medicine_id' => $a->id, 'medicine_name' => $a->name,
+        'pack_unit_id' => $a->pack_unit_id, 'pack_size' => 12, 'pack_qty' => 50, 'qty' => 600,
+        'price' => 666.67, 'pack_price' => 8000, 'batch_number' => 'B-A',
+        'expired_date' => now()->addYear()->startOfMonth()->toDateString(),
+    ]);
+    ReceiveOrderItem::create([
+        'receive_order_id' => $ro->id, 'medicine_id' => $b->id, 'medicine_name' => $b->name,
+        'pack_unit_id' => $b->pack_unit_id, 'pack_size' => 10, 'pack_qty' => 3, 'qty' => 30,
+        'price' => 170, 'pack_price' => 1700, 'batch_number' => 'B-B',
+        'expired_date' => now()->addYear()->startOfMonth()->toDateString(),
+    ]);
+
+    $ro->refresh();
+    expect((int) round($ro->total()))->toBe(405100)
+        ->and((float) $ro->items()->where('medicine_id', $a->id)->first()->price)->toBe(666.67);
+
+    $halaman = Livewire::test(LaporanPembelianPbf::class);
+    $baris = collect($halaman->get('rows'))->first();
+    expect($baris['nilai'])->toBe(405100.0);
 });

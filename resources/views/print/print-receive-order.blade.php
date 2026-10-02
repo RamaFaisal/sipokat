@@ -280,19 +280,29 @@
             <tbody>
                 @php
                     $totalAmount = 0;
-                    $ppnRate = $record->ppn_rate; // null = faktur tidak mencantumkan PPN
+                    // Tarif dari Pengaturan, bukan dari RO (dibalik 2026-10-01): 0 berarti jangan pecah
+                    // DPP/PPN, cetak totalnya saja.
+                    $ppnRate = app(\App\Settings\GeneralSettings::class)->ppn_rate;
                 @endphp
                 @foreach ($record->items as $index => $item)
-                    @php $subtotal = $item->qty * $item->price; $totalAmount += $subtotal; @endphp
+                    @php
+                        // Harga per kemasan dari faktur; baris yang belum punya pack_price (dibuat lewat
+                        // jalur selain form) dihitung balik dari price sebagai fallback.
+                        $packPrice = $item->pack_price !== null
+                            ? (float) $item->pack_price
+                            : \App\Filament\Forms\PackLine::packPrice($item->price, $item->pack_size);
+                        $subtotal = $item->pack_qty * $packPrice;
+                        $totalAmount += $subtotal;
+                    @endphp
                     <tr>
                         <td>{{ $index + 1 }}</td>
                         <td>
                             {{ $item->medicine->name ?? '-' }}
                         </td>
                         <td>{{ $item->batch_number }} / {{ $item->expired_date?->translatedFormat(\App\Support\Tanggal::BULAN_TAHUN) }}</td>
-                        {{-- Seperti faktur: dalam kemasan (R1b). Harga per kemasan = harga satuan jual × isi. --}}
+                        {{-- Seperti faktur: dalam kemasan (R1b). --}}
                         <td class="text-center">{{ $item->pack_qty }} {{ $item->packUnit->name ?? '' }}@if ($item->pack_size > 1) <small>(isi {{ $item->pack_size }})</small>@endif</td>
-                        <td class="text-right">Rp {{ number_format($item->price * $item->pack_size, 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($packPrice, 0, ',', '.') }}</td>
                         <td class="text-right">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
@@ -304,12 +314,12 @@
             <div class="summary-left">
                 <div class="notes-section">
                     <div class="notes-title">Keterangan</div>
-                    <div class="notes-text">@if ($ppnRate)Harga sudah termasuk PPN sesuai faktur PBF. DPP dan PPN di samping adalah pecahan dari total (tarif {{ $ppnRate }}%), bukan tambahan.@else Faktur PBF tidak mencantumkan PPN, jadi total di samping ditulis apa adanya sesuai faktur.@endif</div>
+                    <div class="notes-text">@if ($ppnRate > 0)Harga sudah termasuk PPN sesuai faktur PBF. DPP dan PPN di samping adalah pecahan dari total (tarif {{ $ppnRate }}%), bukan tambahan.@else Tarif PPN di Pengaturan diatur 0%, jadi total di samping ditulis apa adanya tanpa pemecahan DPP dan PPN.@endif</div>
                 </div>
             </div>
             <div class="summary-right">
                 <table class="summary-table">
-                    @if ($ppnRate)
+                    @if ($ppnRate > 0)
                         @php
                             $dpp = $totalAmount / (1 + $ppnRate / 100);
                             $ppn = $totalAmount - $dpp;

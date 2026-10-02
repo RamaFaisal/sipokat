@@ -154,6 +154,12 @@ padahal faktur aslinya 11%. Tarif melekat pada faktur, bukan pada aplikasi.
 Ongkos: 1 migrasi, 1 field di form RO, 1 percabangan di blade cetakan. Tidak menyentuh kartu stok,
 HPP, maupun SAW, karena tarif ini memang tidak pernah dipakai menghitung apa pun.
 
+**Dibalik 2026-10-01, permintaan peneliti.** Field per RO ternyata tidak terpakai: 15 dari 16 RO
+menyimpan `ppn_rate` kosong, hanya satu yang pernah diisi. Kolom itu dihapus dari `receive_orders`;
+tarif kembali satu angka global di Pengaturan, seperti sebelum K1. Konsekuensinya kembali seperti
+sebelum K1 juga: mencetak ulang faktur lama memakai tarif yang berlaku hari itu, bukan tarif yang
+berlaku saat faktur diterima.
+
 ---
 
 ## 3. Kartu stok: kolom kedaluwarsa dan format tanggal

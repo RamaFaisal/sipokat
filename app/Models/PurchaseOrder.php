@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Filament\Forms\PackLine;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -70,10 +71,21 @@ class PurchaseOrder extends Model
         return in_array($this->status_receive_order, [self::STATUS_PENDING, self::STATUS_PARTIAL], true);
     }
 
-    /** Σ baris (satuan jual × harga per satuan jual) tampil saja, tidak disimpan (P3). */
+    /**
+     * Σ baris (jumlah kemasan × harga per kemasan faktur/perkiraan) tampil saja, tidak disimpan (P3).
+     *
+     * Dihitung dari pack_qty × pack_price, bukan qty × price: qty/price dalam satuan jual
+     * membawa pembulatan 2 desimal yang bisa meleset dari nomor faktur asli saat isi kemasan
+     * tidak habis dibagi. Baris yang belum punya pack_price (dibuat lewat jalur selain form,
+     * mis. "Buat PO" dari ranking SAW) dihitung balik dari price sebagai fallback.
+     */
     public function estimatedTotal(): float
     {
-        return (float) $this->items->sum(fn (PurchaseOrderItem $i) => $i->qty * (float) $i->price);
+        return (float) $this->items->sum(
+            fn (PurchaseOrderItem $i) => $i->pack_qty * (
+                $i->pack_price !== null ? (float) $i->pack_price : PackLine::packPrice($i->price, $i->pack_size)
+            )
+        );
     }
 
     /**

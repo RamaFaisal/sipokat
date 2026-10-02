@@ -6,7 +6,6 @@ use App\Filament\Forms\PackLine;
 use App\Models\Medicine;
 use App\Models\PurchaseOrder;
 use App\Models\ReceiveOrder;
-use App\Settings\GeneralSettings;
 use App\Support\Tanggal;
 use Carbon\Carbon;
 use Closure;
@@ -101,19 +100,6 @@ class ReceiveOrderForm
                             ->default(now())
                             ->required()
                             ->live(onBlur: true),
-                        // Tarif melekat pada faktur, bukan pada aplikasi (K1): satu angka global akan
-                        // ikut mengubah cetakan faktur lama begitu tarif pemerintah berubah.
-                        // Dikosongkan = faktur tidak mencantumkan pajak, cetakan tidak memecah DPP/PPN.
-                        TextInput::make('ppn_rate')
-                            ->label('Tarif PPN faktur')
-                            ->columnSpan(2)
-                            ->numeric()
-                            ->integer()
-                            ->minValue(0)
-                            ->maxValue(100)
-                            ->suffix('%')
-                            ->default(fn () => app(GeneralSettings::class)->ppn_rate)
-                            ->helperText('Kosongkan bila faktur tidak mencantumkan PPN.'),
                         Hidden::make('received_by')
                             ->default(fn () => auth()->id()),
                     ]),
@@ -150,7 +136,7 @@ class ReceiveOrderForm
                                 Hidden::make('medicine_name'),
                                 Select::make('medicine_id')
                                     ->label('Obat')
-                                    ->columnSpan(4)
+                                    ->columnSpan(3)
                                     ->options(fn () => Medicine::query()->where('status', 'active')->orderBy('name')->pluck('name', 'id'))
                                     ->searchable()
                                     ->required()
@@ -162,7 +148,7 @@ class ReceiveOrderForm
                                         $set('medicine_name', $state ? Medicine::query()->whereKey($state)->value('name') : null);
                                     }),
                                 PackLine::packUnitSelect()->columnSpan(2),
-                                PackLine::packQtyInput('Jumlah')
+                                PackLine::packQtyInput()
                                     ->columnSpan(2)
                                     ->rules([
                                         fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
@@ -178,14 +164,14 @@ class ReceiveOrderForm
                                         },
                                     ]),
                                 PackLine::packSizeInput()->columnSpan(2),
-                                PackLine::packPriceInput('Harga per kemasan')->columnSpan(2),
+                                PackLine::packPriceInput()->columnSpan(3),
                                 TextInput::make('batch_number')
                                     ->label('No. batch')
                                     ->required()
                                     ->maxLength(100)
                                     ->columnSpan(3),
                                 TextInput::make('expired_month')
-                                    ->label('ED (bulan-tahun)')
+                                    ->label('Expired Date (bulan-tahun)')
                                     ->placeholder('10-2026')
                                     ->required()
                                     ->regex('/^(0[1-9]|1[0-2])-\d{4}$/')
@@ -195,7 +181,7 @@ class ReceiveOrderForm
                                             $ed = self::parseExpiredMonth($value);
                                             $received = $get('../../receive_date');
                                             if ($ed && $received && $ed->lte(Carbon::parse($received)->startOfDay())) {
-                                                $fail('ED harus lewat dari tanggal terima.');
+                                                $fail('Expired Date harus lewat dari tanggal terima.');
                                             }
                                         },
                                     ])
@@ -302,8 +288,8 @@ class ReceiveOrderForm
                 'pack_unit_id' => $packUnitId,
                 'pack_size' => $packSize,
                 'pack_qty' => $packQty,
-                'pack_price' => round((float) $poItem->price * $packSize, 2),
-                'subtotal' => PackLine::subtotal($packQty, round((float) $poItem->price * $packSize, 2)),
+                'pack_price' => PackLine::packPrice($poItem->price, $packSize),
+                'subtotal' => PackLine::subtotal($packQty, PackLine::packPrice($poItem->price, $packSize)),
                 'batch_number' => null,
                 'expired_month' => null,
             ];

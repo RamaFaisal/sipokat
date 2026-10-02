@@ -33,7 +33,7 @@ class PackLine
         $packSize = max(1, (int) $medicine->pack_size);
         $unitPrice = $medicine->latestPurchasePrice();
         $packQty = $defaultPackQty ?? (int) ceil(max(1, (int) $medicine->min_stock) / $packSize);
-        $packPrice = $unitPrice === null ? null : round($unitPrice * $packSize, 2);
+        $packPrice = self::packPrice($unitPrice, $packSize);
 
         $set('pack_unit_id', $medicine->pack_unit_id);
         $set('pack_size', $packSize);
@@ -50,7 +50,7 @@ class PackLine
     public static function packUnitSelect(): Select
     {
         return Select::make('pack_unit_id')
-            ->label('Satuan input')
+            ->label('Satuan beli')
             ->options(fn () => Unit::query()->orderBy('name')->pluck('name', 'id'))
             ->required()
             ->live()
@@ -63,7 +63,7 @@ class PackLine
             });
     }
 
-    public static function packQtyInput(string $label = 'Jumlah'): TextInput
+    public static function packQtyInput(string $label = 'Jumlah pembelian'): TextInput
     {
         return TextInput::make('pack_qty')
             ->label($label)
@@ -72,6 +72,7 @@ class PackLine
             ->minValue(1)
             ->default(1)
             ->required()
+            ->suffix(fn (Get $get) => self::packUnitName($get) ?: 'kemasan')
             ->live(onBlur: true)
             ->afterStateUpdated(fn (Get $get, Set $set) => self::syncSubtotal($get, $set));
     }
@@ -84,7 +85,7 @@ class PackLine
     public static function packSizeInput(): TextInput
     {
         return TextInput::make('pack_size')
-            ->label('Isi per kemasan')
+            ->label('Isi per satuan beli')
             ->numeric()
             ->integer()
             ->minValue(1)
@@ -103,7 +104,7 @@ class PackLine
             ->afterStateUpdated(fn (Get $get, Set $set) => self::syncSubtotal($get, $set));
     }
 
-    public static function packPriceInput(string $label = 'Harga per kemasan'): TextInput
+    public static function packPriceInput(string $label = 'Harga per satuan beli'): TextInput
     {
         // Masking rupiah: tampil 41.000 (pemisah ribuan titik), tersimpan 41000. Tanpa numeric():
         // cast angkanya membaca "41.000" sebagai 41 dan menulis balik ke kotak; validasi lewat rules
@@ -115,6 +116,8 @@ class PackLine
             ->inputMode('numeric')
             ->rules(['numeric', 'min:0'])
             ->prefix('Rp')
+            // Satuan beli yang dipilih baris ini ("/ Box"); belum ada obat/satuan dipilih → "/ satuan beli".
+            ->suffix(fn (Get $get) => '/ '.(self::packUnitName($get) ?: 'satuan beli'))
             ->required()
             ->live(onBlur: true)
             ->afterStateUpdated(fn (Get $get, Set $set) => self::syncSubtotal($get, $set));
@@ -177,6 +180,21 @@ class PackLine
             ->extraInputAttributes(['class' => 'text-right font-semibold'])
             ->helperText($helper)
             ->afterStateHydrated(fn (Get $get, Set $set) => $set('estimated_total', self::estimatedTotal($get($itemsField) ?? [])));
+    }
+
+    /**
+     * Harga per kemasan dari harga satuan jual, selalu rupiah bulat.
+     *
+     * Harga satuan jual disimpan 2 desimal, jadi hasil kalinya bisa berkoma: 8.000 kemasan isi 12
+     * tersimpan 666,67 dan kembali menjadi 8.000,04. Kotak harga bertopeng tanpa desimal, browser
+     * membaca ",04" itu sebagai digit rupiah dan kotaknya menampilkan 800.004. Pembulatan di sini
+     * mengembalikan angka faktur yang diketik petugas.
+     */
+    public static function packPrice($unitPrice, $packSize): ?int
+    {
+        $unitPrice = self::toNumber($unitPrice);
+
+        return $unitPrice === null ? null : (int) round($unitPrice * max(1, (int) $packSize));
     }
 
     /** Subtotal rupiah bulat berformat (jumlah kemasan × harga per kemasan); null bila belum lengkap. */
@@ -244,7 +262,11 @@ class PackLine
         $data['pack_qty'] = (int) ($data['pack_qty'] ?? 0);
         $data['qty'] = $qty ?? 0;
         $data['price'] = $price ?? 0;
-        unset($data['pack_price'], $data['subtotal'], $data['conversion_preview']);
+        // Harga per kemasan faktur disimpan apa adanya, bukan dihitung balik dari price: price per
+        // satuan jual dibulatkan 2 desimal, jadi price x isi bisa meleset dari nomor faktur asli.
+        // Menyimpan pack_price menjaga nomor faktur bertahan lewat pembagian itu.
+        $data['pack_price'] = self::toNumber($data['pack_price'] ?? null);
+        unset($data['subtotal'], $data['conversion_preview']);
 
         return $data;
     }
@@ -253,7 +275,11 @@ class PackLine
     public static function hydrate(array $data): array
     {
         $packSize = max(1, (int) ($data['pack_size'] ?? 1));
-        $data['pack_price'] = isset($data['price']) ? round((float) $data['price'] * $packSize, 2) : null;
+        // Pakai harga per kemasan yang tersimpan; baris yang belum punya kolom ini terisi (dibuat
+        // sebelum ditambahkan, atau lewat jalur selain form) dihitung balik dari price sebagai fallback.
+        $data['pack_price'] = isset($data['pack_price'])
+            ? (int) round((float) $data['pack_price'])
+            : (isset($data['price']) ? self::packPrice($data['price'], $packSize) : null);
         $data['subtotal'] = self::subtotal($data['pack_qty'] ?? 0, $data['pack_price']);
 
         return $data;
@@ -269,6 +295,20 @@ class PackLine
     protected static function medicineUnitName(Get $get): string
     {
         $unitId = self::medicineUnitId($get);
+
+        return $unitId ? (string) Unit::query()->whereKey($unitId)->value('name') : '';
+    }
+
+    /**
+     * Satuan beli yang dipilih di baris ini, bukan bawaan master obat.
+     *
+     * Petugas boleh mengganti satuan beli per baris mengikuti faktur, jadi akhiran kotak Jumlah
+     * harus membaca pilihan baris itu; kalau diambil dari master, angkanya bisa terbaca "50 Box"
+     * padahal yang diketik 50 Kaleng.
+     */
+    protected static function packUnitName(Get $get): string
+    {
+        $unitId = $get('pack_unit_id');
 
         return $unitId ? (string) Unit::query()->whereKey($unitId)->value('name') : '';
     }

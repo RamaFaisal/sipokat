@@ -14,7 +14,10 @@ class GeneralSettings extends Settings
 
     public ?string $website = null;
 
-    /** Tarif PPN (%) hanya untuk pecahan DPP/PPN di cetakan RO; harga faktur sudah termasuk PPN. */
+    /**
+     * Tarif PPN (%): harga faktur PBF sudah termasuk PPN, angka ini hanya memecahnya jadi
+     * DPP dan PPN di cetakan RO, tidak pernah menambah ke total.
+     */
     public int $ppn_rate = 11;
 
     public static function group(): string

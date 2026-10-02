@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Filament\Forms\PackLine;
 use App\Services\StockMovementService;
 use App\Support\DocumentNumber;
 use Illuminate\Database\Eloquent\Model;
@@ -25,13 +26,11 @@ class ReceiveOrder extends Model
         'purchase_order_id',
         'supplier_id',
         'receive_date',
-        'ppn_rate',
         'received_by',
     ];
 
     protected $casts = [
         'receive_date' => 'date',
-        'ppn_rate' => 'integer',
     ];
 
     protected static function booted(): void
@@ -69,10 +68,21 @@ class ReceiveOrder extends Model
         return $this->belongsTo(User::class, 'received_by');
     }
 
-    /** Σ baris = Total faktur (harga sudah termasuk PPN, R13). */
+    /**
+     * Σ baris = Total faktur (harga sudah termasuk PPN, R13).
+     *
+     * Dihitung dari pack_qty × pack_price, bukan qty × price: qty/price dalam satuan jual
+     * membawa pembulatan 2 desimal yang bisa meleset dari nomor faktur asli saat isi kemasan
+     * tidak habis dibagi. Baris yang belum punya pack_price (dibuat lewat jalur selain form,
+     * mis. seeder data riil) dihitung balik dari price sebagai fallback.
+     */
     public function total(): float
     {
-        return (float) $this->items->sum(fn (ReceiveOrderItem $i) => $i->qty * (float) $i->price);
+        return (float) $this->items->sum(
+            fn (ReceiveOrderItem $i) => $i->pack_qty * (
+                $i->pack_price !== null ? (float) $i->pack_price : PackLine::packPrice($i->price, $i->pack_size)
+            )
+        );
     }
 
     /** Nomor RO berikutnya: RO{YYYYMMDD}{XXXX}, banyak RO per hari (R10). */

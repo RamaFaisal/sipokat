@@ -24,12 +24,14 @@ class ReceiveOrderItem extends Model
         'pack_qty',
         'qty',
         'price',
+        'pack_price',
         'batch_number',
         'expired_date',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'pack_price' => 'decimal:2',
         'expired_date' => 'date',
     ];
 

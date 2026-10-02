@@ -22,10 +22,12 @@ class PurchaseOrderItem extends Model
         'pack_qty',
         'qty',
         'price',
+        'pack_price',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'pack_price' => 'decimal:2',
     ];
 
     public function purchaseOrder(): BelongsTo

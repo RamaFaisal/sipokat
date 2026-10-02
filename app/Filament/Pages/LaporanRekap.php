@@ -159,7 +159,10 @@ class LaporanRekap extends Page implements HasSchemas
                 ->select(
                     'medicine_id',
                     DB::raw('SUM(qty) as total_qty'),
-                    DB::raw('SUM(qty * price) as total_value'),
+                    // Nilai dari pack_qty x pack_price (harga faktur), bukan qty x price: isi kemasan
+                    // yang tidak habis dibagi membuat price (2 desimal) meleset dari nomor faktur
+                    // asli. Baris lama tanpa pack_price dihitung balik dari price.
+                    DB::raw('SUM(pack_qty * COALESCE(pack_price, ROUND(price * pack_size))) as total_value'),
                     DB::raw('COUNT(DISTINCT receive_order_id) as transaksi'),
                 )
                 ->groupBy('medicine_id')

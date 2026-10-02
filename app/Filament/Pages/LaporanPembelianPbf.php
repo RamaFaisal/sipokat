@@ -102,7 +102,10 @@ class LaporanPembelianPbf extends Page implements HasSchemas
             ->selectRaw('count(distinct receive_orders.id) as faktur')
             ->selectRaw('count(distinct receive_order_items.medicine_id) as ragam_obat')
             ->selectRaw('sum(receive_order_items.qty) as jumlah')
-            ->selectRaw('sum(receive_order_items.qty * receive_order_items.price) as nilai')
+            // Nilai dari pack_qty x pack_price (harga faktur), bukan qty x price: isi kemasan yang
+            // tidak habis dibagi membuat price (2 desimal) meleset dari nomor faktur asli. Baris
+            // lama tanpa pack_price dihitung balik dari price (round(price x pack_size)).
+            ->selectRaw('sum(receive_order_items.pack_qty * COALESCE(receive_order_items.pack_price, ROUND(receive_order_items.price * receive_order_items.pack_size))) as nilai')
             ->orderByDesc('nilai')
             ->get()
             ->map(fn ($r): array => [

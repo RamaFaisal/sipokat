@@ -62,7 +62,8 @@ class ManageGeneralSettings extends SettingsPage
                                 ->minValue(0)
                                 ->maxValue(100)
                                 ->suffix('%')
-                                ->label('Tarif PPN bawaan'),
+                                ->label('Tarif PPN bawaan')
+                                ->helperText('Harga faktur PBF sudah termasuk PPN.'),
                         ]),
                     ])
                     ->columnSpanFull(),
