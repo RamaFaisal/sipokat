@@ -76,7 +76,7 @@ class OrderForm
                                     }),
                                 TextInput::make('qty')
                                     ->label('Jumlah')
-                                    ->suffix(fn (Get $get) => self::unitName($get) ?: 'satuan jual')
+                                    ->suffix(fn (Get $get) => self::unitName($get) ?: '-')
                                     ->columnSpan(2)
                                     ->numeric()
                                     ->integer()
@@ -133,7 +133,7 @@ class OrderForm
                                 // pilihan ganda yang dinonaktifkan supaya batch + ED + jumlah per batch terlihat, tanpa bisa diubah.
                                 // Tidak disimpan: alokasi sesungguhnya dihitung ulang StockMovementService saat simpan.
                                 Select::make('fefo_batches')
-                                    ->label('Batch (otomatis FEFO)')
+                                    ->label('Batch (Kedaluwarsa Terdekat)')
                                     ->columnSpan(3)
                                     ->multiple()
                                     ->disabled()

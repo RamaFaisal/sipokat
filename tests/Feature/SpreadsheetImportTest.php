@@ -57,7 +57,7 @@ it('mengimpor PBF dari berkas Excel beserta kode otomatisnya', function () {
 
 it('mengimpor obat dari berkas Excel lewat aturan importer yang sudah ada', function () {
     $path = berkasExcel([
-        ['Nama Obat', 'Kategori', 'Satuan Jual', 'Kemasan Pembelian', 'Isi per Kemasan', 'Stok Minimum'],
+        ['Nama Obat', 'Kategori', 'Satuan Jual', 'Kemasan Pembelian', 'Isi per Kemasan Pembelian', 'Stok Minimum'],
         ['PARACETAMOL EXCEL 500MG', 'Obat Bebas', 'Strip', 'Strip', 10, 20],
     ]);
 
@@ -117,7 +117,7 @@ it('menolak berkas yang kehilangan kolom wajib dan menyebut kolomnya', function 
 
 it('melaporkan baris yang gagal validasi tanpa menggagalkan baris lainnya', function () {
     $path = berkasExcel([
-        ['Nama Obat', 'Kategori', 'Satuan Jual', 'Kemasan Pembelian', 'Isi per Kemasan'],
+        ['Nama Obat', 'Kategori', 'Satuan Jual', 'Kemasan Pembelian', 'Isi per Kemasan Pembelian'],
         ['OBAT KATEGORI SALAH', 'Kategori Ngawur', 'Strip', 'Strip', 10],
         ['OBAT KATEGORI BENAR', 'Obat Bebas', 'Strip', 'Strip', 10],
     ]);
@@ -157,7 +157,7 @@ it('tidak lagi meminta kolom status dan tetap mengaktifkan data hasil import', f
         ['PT. Tanpa Status', 'Semarang', 'inactive'],
     ]);
     $obatPath = berkasExcel([
-        ['Nama Obat', 'Kategori', 'Satuan Jual', 'Kemasan Pembelian', 'Isi per Kemasan'],
+        ['Nama Obat', 'Kategori', 'Satuan Jual', 'Kemasan Pembelian', 'Isi per Kemasan Pembelian'],
         ['OBAT TANPA STATUS', 'Obat Bebas', 'Strip', 'Strip', 10],
     ]);
 

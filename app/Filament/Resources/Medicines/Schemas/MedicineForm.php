@@ -49,7 +49,7 @@ class MedicineForm
                     ->columnSpanFull(),
 
                 Section::make('Satuan dan Kemasan')
-                    ->description('Satuan jual dipakai saat menjual dan menghitung stok. Kemasan pembelian adalah satuan yang tertulis di faktur PBF; sistem mengonversinya ke satuan jual saat penerimaan.')
+                    ->description('Satuan jual dipakai saat menjual dan menghitung stok. Satuan beli adalah satuan yang tertulis di faktur PBF; sistem mengonversinya ke satuan jual saat penerimaan.')
                     ->schema([
                         Grid::make(3)->schema([
                             Select::make('unit_id')
@@ -61,12 +61,12 @@ class MedicineForm
                                     self::refreshDefaultMinStock($set, $get);
                                 }),
                             Select::make('pack_unit_id')
-                                ->label('Kemasan pembelian')
+                                ->label('Satuan beli')
                                 ->required()
                                 ->options(Unit::query()->orderBy('name')->pluck('name', 'id'))
                                 ->helperText('Mis. Box, Karton, Kaleng'),
                             TextInput::make('pack_size')
-                                ->label('Isi per kemasan')
+                                ->label('Isi per satuan beli')
                                 ->required()
                                 ->numeric()
                                 ->integer()
@@ -100,7 +100,7 @@ class MedicineForm
                                     'inactive' => 'Tidak Aktif',
                                 ])
                                 ->default('active'),
-                                TextInput::make('code')
+                            TextInput::make('code')
                                 ->label('Kode')
                                 ->default(fn () => Medicine::peekNextCode())
                                 ->disabled()

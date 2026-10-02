@@ -67,11 +67,11 @@ class PurchaseOrderForm
                                     ->live()
                                     // Jumlah kemasan bawaan 1; ⌈min_stock ÷ isi⌉ hanya untuk PO dari ranking SAW (P5).
                                     ->afterStateUpdated(fn (Set $set, Get $get, $state) => PackLine::applyMedicineDefaults($set, $state ? (int) $state : null, defaultPackQty: 1, get: $get)),
-                                // Dua baris × 3 kolom: Obat · Satuan input · Jumlah kemasan / Isi per kemasan · Harga per kemasan · Subtotal.
+                                // Dua baris × 3 kolom: Obat · Satuan beli · Jumlah pembelian / Isi per satuan beli · Harga per satuan beli · Subtotal.
                                 PackLine::packUnitSelect()->columnSpan(1),
-                                PackLine::packQtyInput('Jumlah kemasan')->columnSpan(1),
+                                PackLine::packQtyInput()->columnSpan(1),
                                 PackLine::packSizeInput()->columnSpan(1),
-                                PackLine::packPriceInput('Harga per kemasan')->columnSpan(1),
+                                PackLine::packPriceInput()->columnSpan(1),
                                 PackLine::subtotalInput()->columnSpan(1),
                             ])
                             ->columns(3)
