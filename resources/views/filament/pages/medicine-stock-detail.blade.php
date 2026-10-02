@@ -1,10 +1,10 @@
 <x-filament::page>
     <x-filament::card>
-        <form wire:submit.prevent="applyFilters" class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
 
             <div class="flex flex-col">
                 <label class="text-sm font-medium py-2 dark:text-gray-300">Tahun</label>
-                <select wire:model="year" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:outline-none p-1.5">
+                <select wire:model.live="year" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:outline-none p-1.5">
                     @foreach (range(now()->year, now()->year - 10) as $y)
                         <option value="{{ $y }}">{{ $y }}</option>
                     @endforeach
@@ -13,7 +13,7 @@
 
             <div class="flex flex-col">
                 <label class="text-sm font-medium py-2 dark:text-gray-300">Bulan</label>
-                <select wire:model="month" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:outline-none p-1.5">
+                <select wire:model.live="month" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:outline-none p-1.5">
                     <option value="1">Januari</option>
                     <option value="2">Februari</option>
                     <option value="3">Maret</option>
@@ -31,7 +31,7 @@
 
             <div class="flex flex-col">
                 <label class="text-sm font-medium py-2 dark:text-gray-300">Supplier</label>
-                <select wire:model="selectedSupplier" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:outline-none p-1.5">
+                <select wire:model.live="selectedSupplier" class="w-full rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:outline-none p-1.5">
                     <option value="">Semua Supplier</option>
                     @foreach ($suppliers as $supplier)
                         <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
@@ -40,13 +40,9 @@
             </div>
 
             <div class="flex items-end gap-8">
-                <x-filament::button type="submit">
-                    Filter
-                </x-filament::button>
-
                 {{ $this->exportAction }}
-            </div>     
-        </form>
+            </div>
+        </div>
 
 
         {{-- Data Table --}}
@@ -67,22 +63,22 @@
                         </th>
                         <th
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                            Tanggal Stok</th>
+                            Tanggal</th>
                         <th
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                            Refer Table</th>
+                            Sumber</th>
                         <th
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                            Debit</th>
+                            Pemasukan</th>
                         <th
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                            Kredit</th>
+                            Pengeluaran</th>
                         <th
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                            Stok</th>
+                            Sisa Stok</th>
                         <th
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                            Batch / ED</th>
+                            Batch / Expired Date</th>
                         <th
                             class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
                             HPP</th>
@@ -116,7 +112,7 @@
                     @empty
                         <tr>
                             <td colspan="10" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-400">
-                                No data available.
+                                Belum ada mutasi pada periode ini.
                             </td>
                         </tr>
                     @endforelse

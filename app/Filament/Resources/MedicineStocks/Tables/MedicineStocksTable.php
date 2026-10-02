@@ -21,6 +21,7 @@ class MedicineStocksTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->deferFilters(false)
             // ED terdekat diambil lewat subquery, bukan panggilan service per baris: satu query
             // untuk seluruh halaman, dan kolomnya bisa diurutkan di SQL.
             ->query(Medicine::query()->addSelect([
@@ -66,7 +67,7 @@ class MedicineStocksTable
                 // terjauh (CLAUDE.md §6). Yang ini menjawab "batch mana yang harus dihabiskan
                 // duluan", bukan "sampai kapan stok ini bertahan".
                 TextColumn::make('ed_terdekat')
-                    ->label('ED terdekat')
+                    ->label('Expired Date terdekat')
                     ->sortable()
                     ->badge()
                     ->placeholder('-')

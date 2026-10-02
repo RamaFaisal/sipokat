@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Support\Tanggal;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
+use App\Support\Tanggal;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -80,6 +80,8 @@ class StockCardService
             });
         }
 
+        // Urut menaik: calculateRunningStock() menjalankan saldo dari yang paling lama, dan urutan
+        // yang sama ini juga yang tampil di kartu stok (Stok Awal di atas, Stok Akhir di bawah).
         return $query->orderBy('date', 'asc')
             ->orderBy('id', 'asc')
             ->get();
