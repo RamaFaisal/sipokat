@@ -145,7 +145,27 @@ class SawCalculation extends Page implements HasSchemas, HasTable
         $ordered = $this->orderedMedicineIds();
 
         return $table
-            ->records(fn (): Collection => collect($result['rows']))
+            // Filament menyuntikkan search/sort lewat nama parameter closure (bukan properti tabel
+            // yang sudah dievaluasi), jadi keduanya harus disaring/disortir di sini; tabelnya sendiri
+            // dicache oleh Livewire begitu dirender pertama kali.
+            ->records(function (?string $search, ?string $sortColumn, ?string $sortDirection) use ($result): Collection {
+                $rows = collect($result['rows']);
+
+                if (filled($search)) {
+                    $needle = mb_strtolower($search);
+                    $rows = $rows->filter(fn (array $row): bool => str_contains(mb_strtolower((string) $row['code']), $needle)
+                        || str_contains(mb_strtolower((string) $row['name']), $needle));
+                }
+
+                // Tanpa kolom yang diklik: pakai urutan bawaan (tingkat padat) dari hasil SAW.
+                if (filled($sortColumn) && $rows->isNotEmpty() && array_key_exists($sortColumn, $rows->first())) {
+                    $rows = $sortDirection === 'desc'
+                        ? $rows->sortByDesc($sortColumn)
+                        : $rows->sortBy($sortColumn);
+                }
+
+                return $rows->values();
+            })
             ->columns([
                 TextColumn::make('rank')
                     ->label('Tingkat')
@@ -303,7 +323,7 @@ class SawCalculation extends Page implements HasSchemas, HasTable
     {
         return [
             Action::make('recalculate')
-                ->label('Refresh')
+                ->label('Muat Ulang')
                 ->icon(Heroicon::OutlinedArrowPath)
                 ->color('primary')
                 ->action(fn () => $this->recalculate()),

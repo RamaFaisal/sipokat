@@ -1,12 +1,16 @@
 <?php
 
+use App\Filament\Pages\SawCalculation as SawCalculationPage;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\SawCriteria;
+use App\Models\User;
 use App\Services\SawCalculationService;
 use Database\Seeders\SawCriteriaSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Livewire\Livewire;
 
 /**
  * Karakterisasi SAW (rencana-revisi-2026-09 Bagian 7). Contoh 5 alternatif di bawah adalah
@@ -219,4 +223,49 @@ it('memisahkan hasil antar periode', function () {
     // Permintaan sama, pembagi hari beda: 30 ÷ 30 × 30 = 30 lawan 30 ÷ 1 × 30 = 900.
     expect((int) $ambil($tigaPuluhHari)['c2_raw'])->toBe(30)
         ->and((int) $ambil($satuHari)['c2_raw'])->toBe(900);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Kotak pencarian & sortir tabel ranking (butir 5 revisi September 2026)
+|--------------------------------------------------------------------------
+|
+| ->records() dievaluasi dengan cache Livewire; kotak pencarian tampil tapi diam kalau closure-nya
+| tidak membaca parameter search/sortColumn/sortDirection yang disuntikkan Filament.
+*/
+
+it('menyaring tabel ranking lewat kotak pencarian, cocok di kode maupun nama', function () {
+    Gate::before(fn () => true);
+    $this->actingAs(User::factory()->create());
+
+    $a = alternative('CARI PARACETAMOL', 10, 20, 5, 300, 1000);
+    $b = alternative('CARI AMOXICILLIN', 10, 20, 5, 300, 1000);
+
+    // getAllTableRecordsCount() bawaan Filament memakai getFilteredTableQuery(), yang null untuk
+    // tabel berbasis records() (bukan query); jadi jumlah baris dibaca langsung dari getTableRecords().
+    $jumlah = fn ($page) => $page->instance()->getTableRecords()->count();
+
+    $page = Livewire::test(SawCalculationPage::class);
+
+    $page->searchTable('paracetamol')->assertSee('CARI PARACETAMOL')->assertDontSee('CARI AMOXICILLIN');
+    expect($jumlah($page))->toBe(1);
+
+    $page->searchTable($b->code)->assertSee('CARI AMOXICILLIN');
+    expect($jumlah($page))->toBe(1);
+
+    $page->searchTable('tidak ada obat begini');
+    expect($jumlah($page))->toBe(0);
+});
+
+it('mengurutkan tabel ranking menurut kolom yang diklik', function () {
+    Gate::before(fn () => true);
+    $this->actingAs(User::factory()->create());
+
+    alternative('SORT HPP MURAH', 10, 20, 5, 300, 1000);
+    alternative('SORT HPP MAHAL', 10, 20, 5, 300, 100000);
+
+    $page = Livewire::test(SawCalculationPage::class);
+
+    $page->sortTable('c4_raw', 'asc')->assertSeeInOrder(['SORT HPP MURAH', 'SORT HPP MAHAL']);
+    $page->sortTable('c4_raw', 'desc')->assertSeeInOrder(['SORT HPP MAHAL', 'SORT HPP MURAH']);
 });
