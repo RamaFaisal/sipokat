@@ -41,9 +41,10 @@ it('memuat contoh template: obat, saldo awal, faktur per nomor, penjualan dan HP
         ->and(ReceiveOrder::where('invoice_number', '02028/NPM/5/24')->exists())->toBeTrue()
         ->and(ReceiveOrder::where('invoice_number', 'like', 'SALDO-AWAL-%')->first()->receive_date->toDateString())->toBe('2024-05-01');
 
-    // ED bulan-tahun → tanggal 1.
+    // ED bulan-tahun → tanggal 1. Contoh di template relatif terhadap hari ini (dua tahun ke
+    // depan), jadi harapannya ikut dihitung, bukan ditulis mati.
     $layer = $stockCard->layers($calortusin->id)->firstWhere('batch_number', 'T10088BC');
-    expect($layer->expired_date->toDateString())->toBe('2026-10-01');
+    expect($layer->expired_date->toDateString())->toBe(now()->addYears(2)->startOfMonth()->toDateString());
 });
 
 it('menolak seluruh muatan bila ada satu baris yang salah (transaksional)', function () {

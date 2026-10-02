@@ -51,26 +51,42 @@ class RealDataTemplate
         ],
     ];
 
-    public const EXAMPLES = [
-        'Obat' => [
-            ['CALORTUSIN KAPLET', 'Obat Keras', 'Strip', 'Box', 10, 20],
-            ['LOSTACEF 125MG DRY SYR', 'Obat Keras', 'Botol', 'Botol', 1, 6],
-            ['ACIFAR CR', 'Obat Bebas', 'Tube', 'Tube', 1, 5],
-        ],
-        'SaldoAwal' => [
-            ['CALORTUSIN KAPLET', 'T10088BC', '10-2026', 35, 4100],
-            ['LOSTACEF 125MG DRY SYR', '31232', '12-2026', 8, 8500],
-        ],
-        'Faktur' => [
-            ['02028/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'CALORTUSIN KAPLET', 'Box', 10, 10, 41000, 'T10088BC', '10-2026'],
-            ['02026/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'LOSTACEF 125MG DRY SYR', 'Botol', 1, 60, 8500, '31232', '12-2026'],
-            ['02027/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'ACIFAR CR', 'Tube', 1, 20, 5900, '40423', '03-2027'],
-        ],
-        'Penjualan' => [
-            ['12-05-2024', 'CALORTUSIN KAPLET', 3, 6000],
-            ['13-05-2024', 'LOSTACEF 125MG DRY SYR', 1, null],
-        ],
-    ];
+    /**
+     * Baris contoh di tiap sheet.
+     *
+     * Metode, bukan konstanta, karena kolom ED harus relatif terhadap hari ini. Dulu ditulis tetap
+     * sebagai bulan-tahun mati, dan begitu kalender melewatinya contohnya menjadi batch yang sudah
+     * kedaluwarsa: penjualan contohnya gagal karena stok tersedia 0, padahal berkasnya belum
+     * disentuh pengguna.
+     *
+     * @return array<string, array<int, array<int, mixed>>>
+     */
+    public static function examples(): array
+    {
+        $edDekat = now()->addYears(2)->format('m-Y');
+        $edJauh = now()->addYears(3)->format('m-Y');
+
+        return [
+            'Obat' => [
+                ['CALORTUSIN KAPLET', 'Obat Keras', 'Strip', 'Box', 10, 20],
+                ['LOSTACEF 125MG DRY SYR', 'Obat Keras', 'Botol', 'Botol', 1, 6],
+                ['ACIFAR CR', 'Obat Bebas', 'Tube', 'Tube', 1, 5],
+            ],
+            'SaldoAwal' => [
+                ['CALORTUSIN KAPLET', 'T10088BC', $edDekat, 35, 4100],
+                ['LOSTACEF 125MG DRY SYR', '31232', $edDekat, 8, 8500],
+            ],
+            'Faktur' => [
+                ['02028/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'CALORTUSIN KAPLET', 'Box', 10, 10, 41000, 'T10088BC', $edDekat],
+                ['02026/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'LOSTACEF 125MG DRY SYR', 'Botol', 1, 60, 8500, '31232', $edDekat],
+                ['02027/NPM/5/24', 'PT. Nisa Permata Mulia', '11-05-2024', 'ACIFAR CR', 'Tube', 1, 20, 5900, '40423', $edJauh],
+            ],
+            'Penjualan' => [
+                ['12-05-2024', 'CALORTUSIN KAPLET', 3, 6000],
+                ['13-05-2024', 'LOSTACEF 125MG DRY SYR', 1, null],
+            ],
+        ];
+    }
 
     public static function build(): Spreadsheet
     {
@@ -93,7 +109,7 @@ class RealDataTemplate
             $sheet->getStyle([1, 2, count($columns), 2])->getFont()->setItalic(true)->getColor()->setRGB('666666');
 
             $row = 3;
-            foreach (self::EXAMPLES[$title] ?? [] as $example) {
+            foreach (self::examples()[$title] ?? [] as $example) {
                 $sheet->fromArray($example, null, 'A'.$row);
                 $row++;
             }

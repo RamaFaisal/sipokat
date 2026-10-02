@@ -369,12 +369,27 @@ class SpkTestDataSeeder extends Seeder
                     'qty' => $qty,
                     'price' => $price,
                     'batch_number' => strtoupper(Str::random(2)).mt_rand(1000, 9999).strtoupper(Str::random(1)),
-                    'expired_date' => Carbon::today()->addDays($edDays)->startOfMonth()->toDateString(),
+                    'expired_date' => self::expiryDate($edDays),
                 ]);
             }
 
             $this->movement->recordReceipt($ro);
         }
+    }
+
+    /**
+     * Tanggal ED dari jarak hari, didorong minimal ke bulan depan.
+     *
+     * ED disimpan tanggal 1 bulannya (R3), jadi "30 hari lagi" pada tanggal 1 jatuh ke tanggal 1
+     * bulan yang sama dan langsung terhitung kedaluwarsa (`ED <= hari ini`). Akibatnya batch yang
+     * baru diterima tidak bisa dijual, dan penjualan demo gagal karena stok tersedia 0.
+     */
+    protected static function expiryDate(int $edDays): string
+    {
+        $ed = Carbon::today()->addDays($edDays)->startOfMonth();
+        $bulanDepan = Carbon::today()->addMonthNoOverflow()->startOfMonth();
+
+        return ($ed->lte(Carbon::today()) ? $bulanDepan : $ed)->toDateString();
     }
 
     // ---------------------------------------------------------------------
