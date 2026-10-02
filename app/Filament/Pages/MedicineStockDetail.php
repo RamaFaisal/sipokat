@@ -113,7 +113,7 @@ class MedicineStockDetail extends Page implements HasTable
     public function exportAction(): Action
     {
         return Action::make('export')
-            ->label('Export to Excel')
+            ->label('Export Excel')
             ->icon('heroicon-o-document-arrow-down')
             ->color('success')
             ->action(function () {
@@ -125,11 +125,11 @@ class MedicineStockDetail extends Page implements HasTable
                 $headers = [
                     'Nomor Referensi',
                     'Supplier',
-                    'Tanggal Stok',
-                    'Refer Table',
-                    'Debit',
-                    'Kredit',
-                    'Stok',
+                    'Tanggal',
+                    'Sumber',
+                    'Pemasukan',
+                    'Pengeluaran',
+                    'Sisa Stok',
                 ];
                 $sheet->fromArray($headers, null, 'A1');
 

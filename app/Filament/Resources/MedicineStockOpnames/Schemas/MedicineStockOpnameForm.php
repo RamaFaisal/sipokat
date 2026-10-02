@@ -2,13 +2,13 @@
 
 namespace App\Filament\Resources\MedicineStockOpnames\Schemas;
 
-use App\Support\Tanggal;
 use App\Filament\Resources\ReceiveOrders\Schemas\ReceiveOrderForm;
 use App\Models\Medicine;
 use App\Models\MedicineStock;
 use App\Models\MedicineStockOpname;
 use App\Services\StockCardService;
 use App\Support\DocumentNumber;
+use App\Support\Tanggal;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -93,7 +93,7 @@ class MedicineStockOpnameForm
                                             ))
                                             ->columnSpan(3),
                                         Placeholder::make('system_info')
-                                            ->label('Sisa sistem')
+                                            ->label('Sisa menurut catatan')
                                             ->content(fn (Get $get) => (string) (int) $get('system_qty'))
                                             ->columnSpan(1),
                                         TextInput::make('physical_qty')
@@ -135,7 +135,7 @@ class MedicineStockOpnameForm
                                             ->maxLength(100)
                                             ->columnSpan(4),
                                         TextInput::make('expired_month')
-                                            ->label('ED (bulan-tahun)')
+                                            ->label('Expired Date (bulan-tahun)')
                                             ->placeholder('10-2026')
                                             ->required()
                                             ->regex('/^(0[1-9]|1[0-2])-\d{4}$/')

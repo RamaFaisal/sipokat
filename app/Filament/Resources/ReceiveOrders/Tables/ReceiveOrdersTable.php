@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\ReceiveOrders\Tables;
 
-use App\Support\Tanggal;
 use App\Models\ReceiveOrder;
+use App\Support\Tanggal;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -86,11 +86,11 @@ class ReceiveOrdersTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     ExportBulkAction::make('export_receive_order')
-                        ->label('Ekspor Penerimaan')
+                        ->label('Export Excel')
                         ->exporter(\App\Filament\Exports\ReceiveOrderExporter::class),
                 ]),
                 ExportAction::make('export_receive_order')
-                    ->label('Ekspor Penerimaan')
+                    ->label('Export Excel')
                     ->exporter(\App\Filament\Exports\ReceiveOrderExporter::class),
             ]);
     }
